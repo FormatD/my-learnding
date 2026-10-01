@@ -5,48 +5,56 @@ namespace Learning;
 public static class Content
 {
     public static string Hash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text))).ToLowerInvariant();
+    public static string MeasurementSignature(KC k)=>Hash(Json.Write(new {behavior=k.Behavior.Trim().Normalize(),boundary=k.Boundary.Trim().Normalize(),k.Type,coverage=(k.RequiredCoverage??["Basic"]).Distinct().OrderBy(x=>x,StringComparer.Ordinal).ToArray()}));
     public static string[] Validate(Catalog c)
     {
         var errors = new List<string>();
+        if(c.Kcs.Length==0 || c.Questions.Length==0)errors.Add("正式内容至少需要一个能力和一道人工作答审核过的测量题");
         var ids = c.Kcs.Select(k => k.Id).ToHashSet();
         if (ids.Count != c.Kcs.Length || c.Kcs.Select(k => k.Code).Distinct().Count() != c.Kcs.Length) errors.Add("KC 身份和编码必须唯一");
         if (c.Questions.Select(q => q.Id).Distinct().Count() != c.Questions.Length) errors.Add("题目身份必须唯一");
         foreach (var k in c.Kcs)
         {
-            if (k.Id == Guid.Empty || k.RevisionId == Guid.Empty || string.IsNullOrWhiteSpace(k.Name) || string.IsNullOrWhiteSpace(k.Behavior) || string.IsNullOrWhiteSpace(k.Boundary)) errors.Add($"{k.Code}: 缺少可测行为、边界或身份");
-            if (!c.Questions.Any(q => q.Mappings.Any(m => m.KCId == k.Id && m.Mode != "None"))) errors.Add($"{k.Code}: 没有经过审核的测量题");
+            if (k.Id == Guid.Empty || k.RevisionId == Guid.Empty || string.IsNullOrWhiteSpace(k.Name) || string.IsNullOrWhiteSpace(k.Behavior) || string.IsNullOrWhiteSpace(k.Boundary)) errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 缺少可测行为、边界或身份");
+            if(!new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(k.Type))errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 能力类型无效");
+            if (!c.Questions.Any(q => q.Mappings.Any(m => m.KCId == k.Id && m.Mode != "None" && m.Share>0 && m.Role is "Primary" or "Secondary"))) errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 没有经过审核的测量题");
         }
-        foreach (var q in c.Questions)
+        foreach (var (q,index) in c.Questions.Select((q,i)=>(q,i)))
         {
-            if (q.Id == Guid.Empty || q.RevisionId == Guid.Empty || string.IsNullOrWhiteSpace(q.Stem) || string.IsNullOrWhiteSpace(q.Answer)) errors.Add($"{q.Id}: 题面或答案缺失");
-            if (!new[] { "Numeric", "Fill", "Choice", "ShortAnswer", "MultiStep" }.Contains(q.Type)) errors.Add($"{q.Id}: 未支持题型");
-            if (!new[] { "Easy", "Medium", "Hard" }.Contains(q.Difficulty)) errors.Add($"{q.Id}: 难度无效");
-            if (!new[] { "NoEvidence", "SingleKC", "ObservedSteps" }.Contains(q.Policy)) errors.Add($"{q.Id}: 归因策略无效");
-            if (q.Type == "Numeric" && !decimal.TryParse(q.Answer, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _)) errors.Add($"{q.Id}: 数值答案无效");
-            if (q.Mappings.Any(m => !ids.Contains(m.KCId) || m.Share < 0 || m.Share > 1)) errors.Add($"{q.Id}: 映射引用或份额错误");
-            if (q.Mappings.Where(m => m.Mode != "None").Sum(m => m.Share) > 1) errors.Add($"{q.Id}: 测量份额超过 1");
-            if (q.Mappings.Any(m => (m.Role == "Prerequisite" || m.Role == "Context") && m.Mode != "None")) errors.Add($"{q.Id}: 前置/上下文不能测量");
-            if (q.Policy == "NoEvidence" && q.Mappings.Any(m => m.Mode != "None")) errors.Add($"{q.Id}: 不可测题含测量映射");
-            if (q.Policy == "SingleKC" && (q.Mappings.Count(m => m.Mode == "WholeItem") != 1 || q.Mappings.Any(m => m.Mode != "None" && m.Mode != "WholeItem"))) errors.Add($"{q.Id}: 整题只能测量一个 KC");
-            if (q.Policy == "ObservedSteps" && q.Mappings.Any(m => m.Mode != "None" && (m.Mode != "StepObserved" || string.IsNullOrWhiteSpace(m.Step)))) errors.Add($"{q.Id}: 步骤归因缺少观察点");
+            if (q.Id == Guid.Empty || q.RevisionId == Guid.Empty || string.IsNullOrWhiteSpace(q.Stem) || string.IsNullOrWhiteSpace(q.Answer) || string.IsNullOrWhiteSpace(q.Explanation)) errors.Add($"第 {index+1} 题: 题面或答案缺失");
+            if (!new[] { "Numeric", "Fill", "Choice", "ShortAnswer", "MultiStep" }.Contains(q.Type)) errors.Add($"第 {index+1} 题: 未支持题型");
+            if (!new[] { "Easy", "Medium", "Hard" }.Contains(q.Difficulty)) errors.Add($"第 {index+1} 题: 难度无效");
+            if (!new[] { "NoEvidence", "SingleKC", "ObservedSteps" }.Contains(q.Policy)) errors.Add($"第 {index+1} 题: 归因策略无效");
+            if (q.Type == "Numeric" && !decimal.TryParse(q.Answer, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out _)) errors.Add($"第 {index+1} 题: 数值答案无效");
+            if(q.Mappings.Any(m=>!new[]{"Primary","Secondary","Prerequisite","Context"}.Contains(m.Role) || !new[]{"WholeItem","StepObserved","None"}.Contains(m.Mode) || m.Mode!="None" && m.Share<=0))errors.Add($"第 {index+1} 题: 映射角色、测量方式或份额无效");
+            if(q.Policy=="ObservedSteps" && q.Type is not "ShortAnswer" and not "MultiStep")errors.Add($"第 {index+1} 题: 步骤测量需家长观察判分题型");
+            if(q.Mappings.GroupBy(m=>new {m.KCId,m.Mode,m.Step}).Any(g=>g.Count()>1))errors.Add($"第 {index+1} 题: 同一观察点不能重复映射同一能力");
+            if (q.Mappings.Any(m => !ids.Contains(m.KCId) || m.Share < 0 || m.Share > 1)) errors.Add($"第 {index+1} 题: 映射引用或份额错误");
+            if (q.Mappings.Where(m => m.Mode != "None").Sum(m => m.Share) > 1) errors.Add($"第 {index+1} 题: 测量份额超过 1");
+            if (q.Mappings.Any(m => (m.Role == "Prerequisite" || m.Role == "Context") && m.Mode != "None")) errors.Add($"第 {index+1} 题: 前置/上下文不能测量");
+            if (q.Policy == "NoEvidence" && q.Mappings.Any(m => m.Mode != "None")) errors.Add($"第 {index+1} 题: 不可测题含测量映射");
+            if (q.Policy == "SingleKC" && (q.Mappings.Count(m => m.Mode == "WholeItem") != 1 || q.Mappings.Any(m => m.Mode != "None" && m.Mode != "WholeItem"))) errors.Add($"第 {index+1} 题: 整题只能测量一个 KC");
+            if (q.Policy == "ObservedSteps" && q.Mappings.Any(m => m.Mode != "None" && (m.Mode != "StepObserved" || string.IsNullOrWhiteSpace(m.Step)))) errors.Add($"第 {index+1} 题: 步骤归因缺少观察点");
         }
-        foreach (var r in c.Resources)
+        foreach (var (r,index) in c.Resources.Select((r,i)=>(r,i)))
         {
-            if (r.Minutes <= 0 || r.KCIds.Any(id => !ids.Contains(id)) || (string.IsNullOrWhiteSpace(r.PaperReference) && r.Url == null)) errors.Add($"{r.Id}: 资源不可执行");
-            if (r.Url != null && (!Uri.TryCreate(r.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https")) errors.Add($"{r.Id}: 外链只允许 HTTPS");
+            if (string.IsNullOrWhiteSpace(r.Title) || r.Minutes is <1 or >180 || r.KCIds.Length==0 || r.KCIds.Any(id => !ids.Contains(id)) || (string.IsNullOrWhiteSpace(r.PaperReference) && r.Url == null)) errors.Add($"第 {index+1} 个资源: 资源不可执行");
+            if (r.Url != null && (!Uri.TryCreate(r.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https")) errors.Add($"第 {index+1} 个资源: 外链只允许 HTTPS");
         }
+        if(c.Resources.Select(r=>r.Id).Distinct().Count()!=c.Resources.Length || c.Lessons.Select(l=>l.Id).Distinct().Count()!=c.Lessons.Length)errors.Add("资源/课时身份必须唯一");
+        if(c.Lessons.Any(l=>string.IsNullOrWhiteSpace(l.Title) || l.Sequence<1 || l.KCIds.Length==0))errors.Add("课时需要名称、正整数顺序和至少一个能力");
         if (c.Lessons.Any(l => l.KCIds.Any(id => !ids.Contains(id)))) errors.Add("课时引用了清单外 KC");
         if (c.Relations.Any(r => !ids.Contains(r.From) || !ids.Contains(r.To) || r.From == r.To)) errors.Add("关系端点非法");
-        var visiting = new HashSet<Guid>(); var visited = new HashSet<Guid>();
+        var visiting = new HashSet<Guid>(); var visited = new HashSet<Guid>();var path=new List<Guid>();Guid[]? cycle=null;
         bool Visit(Guid id)
         {
-            if (visiting.Contains(id)) return true;
+            if (visiting.Contains(id)){cycle=path.Skip(path.IndexOf(id)).Append(id).ToArray();return true;}
             if (visited.Contains(id)) return false;
-            visiting.Add(id);
+            visiting.Add(id);path.Add(id);
             foreach (var r in c.Relations.Where(r => r.Type == "Prerequisite" && r.From == id)) if (Visit(r.To)) return true;
-            visiting.Remove(id); visited.Add(id); return false;
+            visiting.Remove(id);path.RemoveAt(path.Count-1); visited.Add(id); return false;
         }
-        if (ids.Any(Visit)) errors.Add("PREREQUISITE_CYCLE: 前置关系有环");
+        if (ids.Any(Visit)) errors.Add("PREREQUISITE_CYCLE: "+string.Join(" → ",(cycle??[]).Select(id=>c.Kcs.FirstOrDefault(k=>k.Id==id)?.Name??id.ToString())));
         return errors.ToArray();
     }
     public static Catalog MultiplicationFixture()
