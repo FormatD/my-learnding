@@ -58,13 +58,19 @@ public static class Endpoints
             value.Minutes=input.Minutes;value.Reserved=input.Reserved;return Results.Ok(value);
         });
         api.MapGet("/students/{id:guid}/availability/{date}",async(Guid id,DateOnly date,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var s=await ctx.Actor().Student(db,id);var value=await db.Availabilities.SingleOrDefaultAsync(a=>a.StudentId==id && a.Date==date);return new {minutes=value?.Minutes??s.DailyMinutes,reserved=value?.Reserved??0};});
-        api.MapGet("/students/{id:guid}/progress",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");await ctx.Actor().Student(db,id);return await db.Progresses.Where(p => p.StudentId==id).OrderByDescending(p => p.Date).Take(100).ToListAsync(); });
+        api.MapGet("/students/{id:guid}/progress",async (Guid id,bool? includeHistory,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");await ctx.Actor().Student(db,id);return await db.Progresses.Where(p => p.StudentId==id && (includeHistory==true || p.Status=="Confirmed")).OrderByDescending(p => p.Date).ThenByDescending(p=>p.CreatedAt).Take(100).ToListAsync(); });
         api.MapPut("/students/{id:guid}/school-progress/{date}/{lessonId:guid}",async (Guid id,DateOnly date,Guid lessonId,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id); var release=await db.Releases.SingleOrDefaultAsync(r => r.Id==s.ActiveReleaseId && !r.Withdrawn);
             if (release==null || !Json.Read<Catalog>(release.Payload).Lessons.Any(l => l.Id==lessonId)) throw new ApiError(422,"LESSON_UNPUBLISHED","课时不在当前内容版本中。");
             var progress=await db.Progresses.SingleOrDefaultAsync(p => p.StudentId==id && p.Date==date && p.LessonId==lessonId);
-            if (progress==null) { progress=new() { FamilyId=a.FamilyId,StudentId=id,Date=date,LessonId=lessonId }; db.Progresses.Add(progress); } return Results.Ok(progress);
+            if (progress==null) { progress=new() { FamilyId=a.FamilyId,StudentId=id,Date=date,LessonId=lessonId,ReleaseId=release.Id }; db.Progresses.Add(progress); }
+            else if(progress.Status!="Confirmed")
+            {
+                var before=Json.Write(progress);progress.Status="Confirmed";progress.ReleaseId=release.Id;progress.Source="ParentReconfirmed";
+                db.Add(new ProgressChange {FamilyId=a.FamilyId,StudentId=id,OldProgressId=progress.Id,NewProgressId=progress.Id,Before=before,After=Json.Write(progress),Reason="家长重新确认学校进度",ConfirmedBy=a.Id});
+            }
+            return Results.Ok(progress);
         });
         api.MapGet("/students/{id:guid}/goals",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");await ctx.Actor().Student(db,id);return await db.Goals.Where(g => g.StudentId==id).ToListAsync(); });
         api.MapPost("/students/{id:guid}/goals",async (Guid id,GoalInput input,Database db,HttpContext ctx) =>
@@ -227,6 +233,7 @@ public static class Endpoints
         api.MapGet("/audit",async (Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");return await db.Audits.Where(a => a.FamilyId==ctx.Actor().FamilyId).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(); });
         api.MapGet("/jobs",async (Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");return await db.Outbox.Where(j=>j.FamilyId==ctx.Actor().FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).Take(100).ToListAsync();});
         api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);job.Retries=0;job.NextAttemptAt=null;job.Error=null;return Results.Accepted("/api/v1/jobs",job);});
+        ProgressCorrections.Map(api);
         Builder.Map(api);
         Privacy.Map(api);
         Files.Map(api);

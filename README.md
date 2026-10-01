@@ -27,6 +27,10 @@ sh scripts/check.sh
 python3 tests/api_acceptance.py
 python3 tests/advanced_api_acceptance.py
 python3 tests/boundary_api_acceptance.py
+python3 tests/concurrency_api_acceptance.py
+python3 tests/progress_api_acceptance.py
+dotnet build tests/persistence
+python3 tests/worker_fault_acceptance.py
 python3 tests/restore_acceptance.py
 cd src/web && npm run test:e2e
 ```

@@ -3,6 +3,17 @@ using Microsoft.EntityFrameworkCore;
 namespace Learning;
 public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWorker> logger) : BackgroundService
 {
+    public static async Task<bool> Consume(Database db,Outbox pending,CancellationToken ct=default)
+    {
+        await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(pending.FamilyId,ct);
+        await db.Entry(pending).ReloadAsync(ct);
+        if(db.Entry(pending).State==EntityState.Detached || pending.ProcessedAt!=null || pending.Retries>=3)
+        {await tx.CommitAsync(ct);return false;}
+        await Assessment.Rebuild(db,await db.Students.SingleAsync(s=>s.Id==pending.StudentId,ct),ct);
+        var all=await db.Outbox.Where(o=>o.StudentId==pending.StudentId && o.ProcessedAt==null).ToListAsync(ct);
+        foreach(var item in all)item.ProcessedAt=DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return true;
+    }
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -15,16 +26,7 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                 {
                     try
                     {
-                        await using var tx=await db.Database.BeginTransactionAsync(ct); await db.Lock(pending.FamilyId,ct);
-                        await db.Entry(pending).ReloadAsync(ct);
-                        if (pending.ProcessedAt==null)
-                        {
-                            await Assessment.Rebuild(db,await db.Students.SingleAsync(s => s.Id==pending.StudentId,ct),ct);
-                            var all=await db.Outbox.Where(o => o.StudentId==pending.StudentId && o.ProcessedAt==null).ToListAsync(ct);
-                            foreach (var item in all) item.ProcessedAt=DateTimeOffset.UtcNow;
-                            await db.SaveChangesAsync(ct);
-                        }
-                        await tx.CommitAsync(ct);
+                        await Consume(db,pending,ct);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {

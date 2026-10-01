@@ -54,6 +54,8 @@ public class Availability : Row
 }
 public class Progress : Row
 {
+    public string Status { get; set; } = "Confirmed";
+    public Guid? ReleaseId { get; set; }
     public Guid StudentId { get; set; }
     public Guid LessonId { get; set; }
     public DateOnly Date { get; set; }

@@ -34,7 +34,7 @@ public static class Planning
         var availability=await db.Availabilities.SingleOrDefaultAsync(a => a.StudentId==s.Id && a.Date==date);
         var budget=availability?.Minutes??s.DailyMinutes; var reserved=availability?.Reserved??0;
         if (reserved>0 && fixedTasks.Any(t => t.Type=="Schoolwork")) throw new ApiError(422,"SCHOOLWORK_DOUBLE_COUNT","学校作业已是任务，请将预留作业时间设为 0。");
-        var progress=await db.Progresses.Where(p => p.StudentId==s.Id && p.Date<=date && p.Date>=date.AddDays(-7)).ToListAsync();
+        var progress=await db.Progresses.Where(p => p.StudentId==s.Id && p.Status=="Confirmed" && p.Date<=date && p.Date>=date.AddDays(-7)).ToListAsync();
         var goals=await db.Goals.Where(g => g.StudentId==s.Id && g.Active).ToListAsync();
         var mastery=await db.Masteries.Where(m => m.StudentId==s.Id && m.GenerationId==s.ActiveGenerationId).ToListAsync();
         var reviews=await db.Reviews.Where(r => r.StudentId==s.Id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=date).ToListAsync();

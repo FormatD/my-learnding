@@ -58,7 +58,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<CommandRecord>().HasIndex(x => new { x.FamilyId, x.ActorId, x.Scope, x.Key }).IsUnique();
         b.Entity<Source>().HasIndex(x => new { x.FamilyId, x.Hash }).IsUnique();
         Foreign<Student, Goal>(b, "StudentId"); Foreign<Student, Availability>(b, "StudentId");
-        Foreign<Student, Progress>(b, "StudentId"); Foreign<Student, Plan>(b, "StudentId");
+        Foreign<Student, Progress>(b, "StudentId"); Foreign<Release, Progress>(b,"ReleaseId"); Foreign<Student, ProgressChange>(b,"StudentId"); Foreign<Student, Plan>(b, "StudentId");
         Foreign<Student, StudyTask>(b, "StudentId"); Foreign<Student, LearningSession>(b, "StudentId");
         Foreign<Plan, PlanRevision>(b, "PlanId"); Foreign<PlanRevision, Placement>(b, "RevisionId");
         Foreign<StudyTask, Placement>(b, "TaskId"); Foreign<StudyTask, LearningSession>(b, "TaskId");

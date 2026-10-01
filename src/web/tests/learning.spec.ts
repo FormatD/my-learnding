@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { localDate } from '../src/api';
 test('家长发布 → 平板作答 → 证据复习', async ({page})=>{
   const name='browser-'+Date.now();
   await page.goto('/');
@@ -49,4 +50,41 @@ test('家长发布 → 平板作答 → 证据复习', async ({page})=>{
   await page.getByRole('combobox',{name:'切换学生'}).selectOption({label:'小步同学'});
   await expect(page.getByRole('button',{name:'确认今天学到这里'})).toBeEnabled();
   await expect(page.getByRole('combobox',{name:'课时',exact:true}).locator('option:checked')).toHaveText('小熊购物 · 乘加、乘减');
+  await page.getByLabel('要纠正的记录').selectOption({index:1});
+  await page.getByRole('combobox',{name:'课时',exact:true}).selectOption({label:'买文具 · 除加、除减'});
+  await page.getByLabel('更正说明').fill('核对作业后确认实际已学到买文具');
+  await page.getByRole('button',{name:'按上方所选课时更正'}).click();
+  await expect(page.getByRole('combobox',{name:'课时',exact:true}).locator('option:checked')).toHaveText('买文具 · 除加、除减');
+  await page.getByText(/进度更正记录 · 1/).click();
+  await expect(page.getByText('核对作业后确认实际已学到买文具',{exact:true})).toBeVisible();
+});
+
+test('AT37 题面中的脚本和标签以普通文字显示', async ({page,context})=>{
+  let etag='';
+  async function call(path:string,data?:unknown,method=data===undefined?'GET':'POST'){
+    const response=await context.request.fetch('/api/v1'+path,{method,headers:{'X-Learning-Request':'1','Idempotency-Key':crypto.randomUUID(),'If-Match':etag},...(data===undefined?{}:{data})});
+    expect(response.ok()).toBeTruthy();etag=response.headers()['etag']||etag;return response.json();
+  }
+  await call('/auth/register',{userName:'escaping-'+Date.now(),password:'browser-private-test-2026'});
+  const student=await call('/students',{name:'安全题面验收'});
+  const draft=await call('/content/fixture',{}),catalog=JSON.parse(draft.payload);
+  const payload='<script>window.__unsafe=1</script><img src="/__attack" onerror="window.__unsafe=1">';
+  catalog.questions.forEach((q:any)=>{q.stem=payload;});
+  await call('/content/drafts/'+draft.id,{title:'题面转义验收',catalog},'PUT');
+  await call('/content/drafts/'+draft.id+':review',{});
+  const preview=await call('/content/drafts/'+draft.id+'/preview');
+  const release=await call('/content/drafts/'+draft.id+':publish',{previewHash:preview.hash});
+  await call('/students/'+student.id+'/content/'+release.id+':bind',{});
+  const date=localDate(student.timeZone);
+  await call('/students/'+student.id+'/school-progress/'+date+'/'+catalog.lessons[0].id,{},'PUT');
+  const revision=await call('/students/'+student.id+'/plans/'+date+':generate',{});
+  await call('/plans/'+revision.id+':publish',{previewHash:revision.inputHash});
+  await call('/students/'+student.id+'/child-sessions',{});
+  await page.goto('/');await page.getByRole('button',{name:/开始学习/}).click();
+  await expect(page.getByText(payload,{exact:true})).toBeVisible();
+  await expect(page.locator('img[src="/__attack"]')).toHaveCount(0);
+  expect(await page.evaluate(()=>(window as any).__unsafe)).toBeUndefined();
+  await page.getByLabel('你的答案').fill('999');
+  await page.getByRole('button',{name:'提交答案',exact:true}).click();
+  await expect(page.getByText('已保存。先看看思路，再试一次。')).toBeVisible();
 });
