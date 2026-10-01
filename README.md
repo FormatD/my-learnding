@@ -18,6 +18,8 @@ sh scripts/dev.sh
 4. 今日学习 → 进入孩子模式 → 开始任务、提交答案、完成。
 5. 返回家长登录 → 查看证据、复习日程与每周回顾；开放题由家长判分。
 
+需要观察过程的题目，可在计划草稿追加“正式题目练习”，选择该计划固定版本的题目。作答后在“证据与复习”查看原题和参考答案，逐项记录正确、错误、未知以及提示程度；先预览影响再确认。未观察的步骤不会被推断为正负证据。
+
 也可从空白草稿添加能力、测量题、讲解资源和课时。未完成内容允许保存，审核发布前由服务端校验完整性；已有测量定义只读，改变测量含义须新增独立能力。
 
 生成草稿不会影响已经发布的计划。重生成保留已完成、进行中、锁定和必做任务。所有写入有幂等标识，家庭隔离由服务端与复合外键执行。未审核内容不能进入正式作答。
@@ -33,6 +35,7 @@ python3 tests/concurrency_api_acceptance.py
 python3 tests/progress_api_acceptance.py
 python3 tests/content_authoring_api_acceptance.py
 python3 tests/provenance_api_acceptance.py
+python3 tests/observed_steps_api_acceptance.py
 dotnet build tests/persistence
 python3 tests/worker_fault_acceptance.py
 python3 tests/restore_acceptance.py

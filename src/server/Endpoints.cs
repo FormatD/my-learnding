@@ -12,7 +12,7 @@ public record TransitionInput(string Status,string Reason="",int? ActualMinutes=
 public record AnswerInput(Guid ClientSubmissionId,string Answer);
 public record HintInput(int Level);
 public record GradeInput(string Result,string Reason,ObservedStep[]? Steps=null,string? PreviewHash=null);
-public record ManualTaskInput(string Title,int Minutes,string ResourceRef,string Type="Resource",bool Mandatory=true);
+public record ManualTaskInput(string Title,int Minutes,string ResourceRef,string Type="Resource",bool Mandatory=true,Guid? QuestionId=null);
 public record AdjustInput(Guid[] TaskIds,Guid[] LockedIds,string Reason);
 public record ReasonInput(string Reason);
 public static class Endpoints
@@ -20,6 +20,21 @@ public static class Endpoints
     static async Task<T> Owned<T>(Database db,Actor actor,Guid id) where T:Row => await db.Set<T>().SingleOrDefaultAsync(x => x.Id==id && x.FamilyId==actor.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","找不到该记录。");
     static DateOnly Today(Student s) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone)).DateTime);
     static async Task<Question> QuestionFor(Database db,LearningSession s) => Json.Read<Catalog>((await db.Releases.SingleAsync(r => r.Id==s.ReleaseId)).Payload).Questions.Single(q => q.Id==s.QuestionId);
+    static async Task<(Catalog Catalog,Question Question,Guid ReleaseId)> GradingContext(Database db,Attempt attempt)
+    {
+        var session=await db.Sessions.SingleAsync(x=>x.Id==attempt.SessionId && x.FamilyId==attempt.FamilyId);
+        var correction=await db.Set<CorrectionItem>().Where(x=>x.AttemptId==attempt.Id && x.FamilyId==attempt.FamilyId).OrderByDescending(x=>x.Sequence).FirstOrDefaultAsync();
+        var releaseId=correction?.MappingReleaseId??session.ReleaseId;
+        var catalog=Json.Read<Catalog>((await db.Releases.SingleAsync(x=>x.Id==releaseId && x.FamilyId==attempt.FamilyId)).Payload);
+        return(catalog,catalog.Questions.Single(q=>q.Id==session.QuestionId),releaseId);
+    }
+    static void ValidateGrade(GradeInput input,Question question)
+    {
+        if (!new[] { "Correct","Incorrect","Partial","Unscorable" }.Contains(input.Result) || string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"INVALID_GRADE","请选择判分并填写依据。");
+        var steps=input.Steps??[];
+        if (steps.Any(x => !question.Mappings.Any(m => m.Step==x.Step && m.Mode=="StepObserved") || !new[] { "Correct","Incorrect","Unknown" }.Contains(x.Result) || x.HintLevel is <0 or >3) || steps.Select(x => x.Step).Distinct().Count()!=steps.Length) throw new ApiError(422,"INVALID_STEPS","观察步骤与当前有效映射不一致。");
+        if (input.Result=="Partial" && steps.Length==0) throw new ApiError(422,"STEPS_REQUIRED","部分正确必须有观察步骤。");
+    }
     public static void MapLearningEndpoints(this WebApplication app)
     {
         var api=app.MapGroup("/api/v1");
@@ -106,13 +121,26 @@ public static class Endpoints
             foreach (var t in await db.Tasks.Where(t => ids.Contains(t.Id)).ToListAsync()) if (t.Status is "Planned" or "Deferred") t.Status="Ready";
             return Results.Ok(revision);
         });
+        api.MapGet("/plans/{id:guid}/questions",async(Guid id,Database db,HttpContext ctx)=>
+        {
+            var actor=ctx.Actor();actor.Require("Parent");var revision=await Owned<PlanRevision>(db,actor,id);var release=await Owned<Release>(db,actor,revision.ReleaseId);
+            return Json.Read<Catalog>(release.Payload).Questions.Select(q=>new {q.Id,q.Stem,q.Type,q.Policy});
+        });
         api.MapPost("/plans/{id:guid}/tasks",async (Guid id,ManualTaskInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var rev=await Owned<PlanRevision>(db,a,id);var plan=await Owned<Plan>(db,a,rev.PlanId);
             if (rev.Status!="Draft") throw new ApiError(409,"IMMUTABLE","请重新生成草稿再调整。");
             if (input.Minutes<1 || input.Minutes>180 || string.IsNullOrWhiteSpace(input.ResourceRef)) throw new ApiError(422,"INVALID_TASK","任务需要时长和可执行说明。");
             if (input.Type=="Schoolwork" && rev.Reserved>0) throw new ApiError(422,"SCHOOLWORK_DOUBLE_COUNT","请先取消预留作业时间。");
-            var task=new StudyTask { FamilyId=a.FamilyId,StudentId=plan.StudentId,ReleaseId=rev.ReleaseId,Title=input.Title,Type=input.Type,Minutes=input.Minutes,ResourceRef=input.ResourceRef,Mandatory=input.Mandatory,Locked=true,ReasonCode="PARENT_LOCKED",Reason="家长安排的必做任务" };db.Tasks.Add(task);
+            Question? question=null;
+            if(input.QuestionId.HasValue)
+            {
+                var release=await Owned<Release>(db,a,rev.ReleaseId);
+                if(release.Withdrawn)throw new ApiError(422,"CONTENT_WITHDRAWN","内容版本已撤回，不能新增题目任务。");
+                question=Json.Read<Catalog>(release.Payload).Questions.SingleOrDefault(q=>q.Id==input.QuestionId)??throw new ApiError(422,"QUESTION_NOT_IN_PLAN_RELEASE","请选择本计划内容版本中的题目。");
+            }
+            if(!new[] {"Schoolwork","Resource","Practice"}.Contains(input.Type) || input.Type=="Practice" && question==null || string.IsNullOrWhiteSpace(input.Title))throw new ApiError(422,"INVALID_TASK","请选择任务类型并填写标题；练习任务需要正式题目。");
+            var task=new StudyTask { FamilyId=a.FamilyId,StudentId=plan.StudentId,ReleaseId=rev.ReleaseId,QuestionId=question?.Id,KCId=question?.Mappings.FirstOrDefault(m=>m.Mode!="None")?.KCId,Title=input.Title,Type=question!=null?"Practice":input.Type,Minutes=input.Minutes,ResourceRef=input.ResourceRef,Mandatory=input.Mandatory,Locked=true,ReasonCode="PARENT_LOCKED",Reason="家长安排的必做任务" };db.Tasks.Add(task);
             db.Placements.Add(new() { FamilyId=a.FamilyId,RevisionId=id,TaskId=task.Id,Sequence=await db.Placements.CountAsync(p => p.RevisionId==id) });rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);return Results.Ok(task);
         });
         api.MapPost("/plans/{id:guid}:adjust",async (Guid id,AdjustInput input,Database db,HttpContext ctx) =>
@@ -194,26 +222,29 @@ public static class Endpoints
             return Results.Created($"/api/v1/attempts/{attempt.Id}",new { attempt,grading=grade,assessmentStatus="Pending",feedback=result=="Pending"?"已保存，等待家长确认":result=="Correct"?"这次做对了！":"已保存。先看看思路，再试一次。",explanation=q.Explanation });
         });
         api.MapGet("/students/{id:guid}/attempts",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);var attempts=await db.Attempts.Where(x => x.StudentId==id).OrderByDescending(x => x.Sequence).Take(100).ToListAsync();var ids=attempts.Select(x => x.Id).ToArray();return new { attempts,gradings=await db.Gradings.Where(g => ids.Contains(g.AttemptId)).OrderBy(g => g.Number).ToListAsync() }; });
+        api.MapGet("/attempts/{id:guid}/grading-context",async (Guid id,Database db,HttpContext ctx)=>
+        {
+            var actor=ctx.Actor();actor.Require("Parent");var attempt=await Owned<Attempt>(db,actor,id);var context=await GradingContext(db,attempt);
+            var grade=await db.Gradings.Where(g=>g.AttemptId==id).OrderByDescending(g=>g.Number).FirstAsync();
+            return Results.Ok(new {attempt,question=context.Question,mappingReleaseId=context.ReleaseId,grade,observations=context.Question.Mappings.Where(m=>m.Mode=="StepObserved").Select(m=>new {step=m.Step,kcId=m.KCId,kcName=context.Catalog.Kcs.Single(k=>k.Id==m.KCId).Name}),notice="未观察到的步骤保留为未知，不推断正确或错误。"});
+        });
         api.MapPost("/attempts/{id:guid}/grading-preview",async (Guid id,GradeInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var attempt=await Owned<Attempt>(db,a,id);
-            var grade=await db.Gradings.Where(g => g.AttemptId==id).OrderByDescending(g => g.Number).FirstAsync();var s=await a.Student(db,attempt.StudentId);var count=await db.Attempts.CountAsync(x => x.StudentId==s.Id);
-            return Results.Ok(new { before=grade.Result,after=input.Result,replayAttempts=count,previewHash=Content.Hash(Json.Write(new {attemptId=id,gradingId=grade.Id,generationId=s.ActiveGenerationId,count,input.Result,input.Reason,input.Steps})),notice="确认后追加判分修订，整学生证据与日程重放；旧世代保留审计。" });
+            var context=await GradingContext(db,attempt);ValidateGrade(input,context.Question);var grade=await db.Gradings.Where(g => g.AttemptId==id).OrderByDescending(g => g.Number).FirstAsync();var s=await a.Student(db,attempt.StudentId);var count=await db.Attempts.CountAsync(x => x.StudentId==s.Id);
+            return Results.Ok(new { before=grade.Result,after=input.Result,replayAttempts=count,previewHash=Content.Hash(Json.Write(new {attemptId=id,gradingId=grade.Id,generationId=s.ActiveGenerationId,count,mappingReleaseId=context.ReleaseId,input.Result,input.Reason,input.Steps})),notice="确认后追加判分修订，整学生证据与日程重放；旧世代保留审计。" });
         });
         api.MapPost("/attempts/{id:guid}/grading-revisions",async (Guid id,GradeInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var attempt=await Owned<Attempt>(db,a,id);
-            if (!new[] { "Correct","Incorrect","Partial","Unscorable" }.Contains(input.Result) || string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"INVALID_GRADE","请选择判分并填写依据。");
-            var steps=input.Steps??[]; var q=await QuestionFor(db,await Owned<LearningSession>(db,a,attempt.SessionId));
+            var context=await GradingContext(db,attempt);ValidateGrade(input,context.Question);var steps=input.Steps??[];
             var oldGrade=await db.Gradings.Where(g => g.AttemptId==id).OrderByDescending(g => g.Number).FirstAsync();
-            if (oldGrade.Result!="Pending")
+            if (oldGrade.Result!="Pending" || input.PreviewHash!=null)
             {
                 var student=await a.Student(db,attempt.StudentId);var count=await db.Attempts.CountAsync(x => x.StudentId==student.Id);
-                var expected=Content.Hash(Json.Write(new {attemptId=id,gradingId=oldGrade.Id,generationId=student.ActiveGenerationId,count,input.Result,input.Reason,input.Steps}));
+                var expected=Content.Hash(Json.Write(new {attemptId=id,gradingId=oldGrade.Id,generationId=student.ActiveGenerationId,count,mappingReleaseId=context.ReleaseId,input.Result,input.Reason,input.Steps}));
                 if (input.PreviewHash!=expected) throw new ApiError(412,"GRADING_PREVIEW_CHANGED","请先预览更正影响；若新作答到达，请重新预览。");
             }
-            if (steps.Any(x => !q.Mappings.Any(m => m.Step==x.Step && m.Mode=="StepObserved") || !new[] { "Correct","Incorrect","Unknown" }.Contains(x.Result) || x.HintLevel is <0 or >3) || steps.Select(x => x.Step).Distinct().Count()!=steps.Length) throw new ApiError(422,"INVALID_STEPS","观察步骤与发布的映射不一致。");
-            if (input.Result=="Partial" && steps.Length==0) throw new ApiError(422,"STEPS_REQUIRED","部分正确必须有观察步骤。");
             var grade=new Grading { FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=attempt.StudentId,AttemptId=id });return Results.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
         });
         api.MapGet("/students/{id:guid}/mastery",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return new { generation=s.ActiveGenerationId,masteries=await db.Masteries.Where(m => m.StudentId==id && m.GenerationId==s.ActiveGenerationId).ToListAsync(),pending=await db.Outbox.CountAsync(o => o.StudentId==id && o.ProcessedAt==null) }; });

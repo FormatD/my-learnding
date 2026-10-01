@@ -151,3 +151,26 @@ test('建库候选保留引用，审核草稿可继续编辑并发布',async({pa
   await page.getByRole('button',{name:'新增课时'}).click();await page.locator('[aria-label="课时 1"]').getByLabel('课时名称').fill('原创小括号练习');await page.getByRole('button',{name:'保存并退回待审核'}).click();await page.getByRole('button',{name:'审核答案与映射后发布'}).click();
   await page.getByText('能力定义与来源',{exact:true}).click();await page.getByRole('button',{name:'查看能力来源'}).click();await expect(trace.getByText(quote,{exact:true})).toBeVisible();
 });
+
+test('家长安排步骤题并保留未观察步骤',async({page})=>{
+  await page.goto('/');await page.getByRole('button',{name:'首次使用？创建家庭'}).click();
+  await page.getByLabel('家长用户名').fill('browser-steps-'+Date.now());await page.getByLabel('家长密码').fill('steps-browser-private-2026');await page.getByRole('button',{name:'创建私有家庭'}).click();
+  await page.getByLabel('孩子昵称').fill('步骤同学');await page.getByRole('button',{name:'创建学生',exact:true}).click();
+  await page.getByRole('button',{name:'创建混合运算样例'}).click();await expect(page.getByRole('button',{name:'审核答案与映射后发布'})).toBeVisible();
+  await page.evaluate(async()=>{
+    const response=await fetch('/api/v1/content');const content=await response.json();const draft=content.drafts[0];const catalog=JSON.parse(draft.payload);const q=catalog.questions[16];q.policy='ObservedSteps';q.type='MultiStep';q.mappings=[{kcId:catalog.kcs[8].id,role:'Primary',share:.5,mode:'StepObserved',step:'列式'},{kcId:catalog.kcs[0].id,role:'Secondary',share:.5,mode:'StepObserved',step:'运算顺序'}];
+    const saved=await fetch('/api/v1/content/drafts/'+draft.id,{method:'PUT',headers:{'Content-Type':'application/json','X-Learning-Request':'1','Idempotency-Key':crypto.randomUUID(),'If-Match':response.headers.get('etag')!},body:JSON.stringify({title:draft.title,catalog})});if(!saved.ok)throw new Error(await saved.text());
+  });
+  await page.getByRole('button',{name:/进度与计划/}).click();await page.getByRole('button',{name:/内容与发布/}).click();await page.getByRole('button',{name:'审核答案与映射后发布'}).click();await page.getByRole('button',{name:'绑定当前学生'}).click();
+  await page.getByRole('button',{name:/进度与计划/}).click();await page.getByRole('button',{name:'生成草稿',exact:true}).click();
+  await page.getByLabel('任务类型').selectOption('Practice');
+  const choice=await page.getByLabel('计划版本题目').locator('option').filter({hasText:'家长观察步骤'}).first().getAttribute('value');
+  await page.getByLabel('计划版本题目').selectOption(choice!);await page.getByLabel('追加必做任务').fill('观察列式过程');await page.getByLabel('分钟',{exact:true}).fill('5');await page.getByLabel('执行说明').fill('先在纸上列式，再写计算过程');await page.getByRole('button',{name:'加入草稿'}).click();
+  await page.getByRole('button',{name:'确认并发布'}).click();await page.getByRole('button',{name:/今日学习/}).click();
+  await page.getByRole('button',{name:/开始学习/}).click();await page.getByLabel('你的答案').fill('只完成了列式');await page.getByRole('button',{name:'提交答案',exact:true}).click();await page.getByRole('button',{name:'完成这个任务 ✓'}).click();
+  await page.getByRole('button',{name:/证据与复习/}).click();await page.getByRole('button',{name:'查看题目并判分'}).click();
+  await expect(page.getByRole('heading',{name:'核对题目与观察步骤'})).toBeVisible();await page.getByLabel('整题判分').selectOption('Partial');
+  await page.getByLabel(/^列式 ·/).selectOption('Correct');await expect(page.getByLabel(/^运算顺序 ·/)).toHaveValue('Unknown');
+  await page.getByLabel('判分依据').fill('纸上列式正确，计算没有观察到');await page.getByRole('button',{name:'预览判分影响'}).click();await expect(page.getByText('待确认 → 部分正确')).toBeVisible();await page.getByRole('button',{name:'确认更正并重算'}).click();
+  await expect(page.getByRole('heading',{name:'核对题目与观察步骤'})).toHaveCount(0);await expect(page.getByText('第 1 次 · 部分正确')).toBeVisible();
+});
