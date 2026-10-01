@@ -1,0 +1,13 @@
+.tools/
+.local/
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.env
+test-results/
+playwright-report/
+**/__pycache__/
+src/server/wwwroot/
+**/bin*/
+**/*.tsbuildinfo
