@@ -33,6 +33,7 @@ def main():
         assert sql('SELECT COUNT(*) FROM "Students" WHERE "ActiveGenerationId" IS NOT NULL')=='0'
         child.kill();child.wait(timeout=10)
         subprocess.run(command+['recover'],env=env,check=True)
+        subprocess.run(command+['builder'],env=env,check=True)
     finally:
         if child is not None and child.poll() is None:child.kill();child.wait(timeout=10)
         subprocess.run(['dropdb','--force',database],env=env,check=True)

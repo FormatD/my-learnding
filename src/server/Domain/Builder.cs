@@ -8,7 +8,8 @@ public static class Builder
 {
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
+        Provenance.Map(api);
+        api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
         api.MapPost("/content/sources",async (SourceInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");if (string.IsNullOrWhiteSpace(input.Title) || input.Text.Length<5 || input.Text.Length>100_000 || string.IsNullOrWhiteSpace(input.UsageScope)) throw new ApiError(422,"INVALID_SOURCE","来源需标题、许可范围与 5～100000 字文本。");
@@ -23,15 +24,17 @@ public static class Builder
             var a=ctx.Actor();a.Require("ContentEditor");var source=await db.Sources.SingleOrDefaultAsync(s => s.Id==input.SourceId && s.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","来源不存在。");
             if (input.Provider!="Mock") throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED",source.AllowExternalAI?"模型尚未配置，学习功能可继续使用。":"来源未允许发送外部模型。");
             if (string.IsNullOrWhiteSpace(source.Text)) throw new ApiError(422,"SOURCE_NOT_READY","来源尚未解析完成，或没有文本层。");
-            var libraryHash=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).Select(r=>r.Hash).FirstOrDefaultAsync();
-            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:"+libraryHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return Results.Ok(old);
-            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,InputHash=hash };db.BuilderRuns.Add(run);return Results.Accepted("/api/v1/builder",run);
+            var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
+            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/2:"+library?.Hash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return Results.Ok(old);
+            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputHash=hash };db.BuilderRuns.Add(run);return Results.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/candidates/{id:guid}:decide",async (Guid id,DecisionInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");var c=await db.Candidates.SingleOrDefaultAsync(c => c.Id==id && c.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","候选不存在。");
             if (c.Status!="Pending") throw new ApiError(409,"ALREADY_REVIEWED","此候选已经处理。");
             if (string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"REASON_REQUIRED","请填写审核依据。");
+            var chunk=await db.Chunks.SingleAsync(x=>x.Id==c.ChunkId && x.FamilyId==a.FamilyId);
+            if(input.Decision!="Reject" && (string.IsNullOrWhiteSpace(c.Quote) || !chunk.Text.Contains(c.Quote,StringComparison.Ordinal)))throw new ApiError(422,"SOURCE_QUOTE_INVALID","候选引用与原始片段不符，不能接受或发布。");
             if (input.Decision=="Reject") c.Status="Rejected";
             else if (input.Decision=="LinkExisting")
             {
@@ -44,19 +47,20 @@ public static class Builder
             else if (input.Decision=="CreateDraft")
             {
                 var name=input.Name??c.Name;var behavior=input.Behavior??c.Behavior;var boundary=input.Boundary??c.Boundary;
-                if (string.IsNullOrWhiteSpace(behavior) || string.IsNullOrWhiteSpace(boundary) || name.Length>100) throw new ApiError(422,"INVALID_DEFINITION","请补充可测行为和边界。");
+                if (string.IsNullOrWhiteSpace(behavior) || string.IsNullOrWhiteSpace(boundary) || string.IsNullOrWhiteSpace(name) || name.Length>100 || behavior.Contains("请审核者补充") || boundary.Contains("请审核者补充")) throw new ApiError(422,"INVALID_DEFINITION","请补充可测行为和边界。");
                 var k=new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.CUSTOM.{Guid.NewGuid():N}",name,behavior,boundary);
-                db.Drafts.Add(new() { FamilyId=a.FamilyId,Title=$"Builder 审核草稿 · {name}",Payload=Json.Write(new Catalog([k],[],[],[],[])) });c.Status="Accepted";
+                var draft=new ContentDraft { FamilyId=a.FamilyId,Title=$"Builder 审核草稿 · {name}",Payload=Json.Write(new Catalog([k],[],[],[],[])) };db.Drafts.Add(draft);c.CreatedDraftId=draft.Id;c.CreatedKCId=k.Id;c.Status="Accepted";
             }
             else throw new ApiError(422,"INVALID_DECISION","支持新建草稿、关联已有或拒绝。");
-            db.Audits.Add(new() { FamilyId=a.FamilyId,ActorId=a.Id,Action="CandidateReview",Details=Json.Write(new { candidateId=id,input.Decision,input.Reason,input.ExistingKCId }) });
+            c.Decision=input.Decision;c.ReviewReason=input.Reason;c.ReviewedBy=a.Id;c.ReviewedAt=DateTimeOffset.UtcNow;
+            db.Audits.Add(new() { FamilyId=a.FamilyId,ActorId=a.Id,Action="CandidateReview",Details=Json.Write(new { candidateId=id,input.Decision,input.Reason,input.ExistingKCId,input.Name,input.Behavior,input.Boundary,c.CreatedDraftId,c.CreatedKCId }) });
             return Results.Ok(c);
         });
     }
     public static async Task ProcessOne(Database db,CancellationToken ct)
     {
         var run=await db.BuilderRuns.Where(r => r.Status=="Queued").OrderBy(r => r.CreatedAt).FirstOrDefaultAsync(ct);if (run==null) return;
-        await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(run.FamilyId,ct);await db.Entry(run).ReloadAsync(ct);if (run.Status!="Queued") return;
+        await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(run.FamilyId,ct);await db.Entry(run).ReloadAsync(ct);if (db.Entry(run).State==EntityState.Detached || run.Status!="Queued") return;
         if (run.Type=="ParsePDF")
         {
             var source=await db.Sources.SingleAsync(s=>s.Id==run.SourceId,ct);
@@ -72,7 +76,9 @@ public static class Builder
             run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return;
         }
         var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).Take(100).ToListAsync(ct);
-        var release=await db.Releases.Where(r=>r.FamilyId==run.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync(ct);
+        if(run.InputVersion!="builder-input/2")
+        {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return;}
+        var release=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });

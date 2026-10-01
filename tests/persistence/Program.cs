@@ -18,6 +18,24 @@ if(args[0]=="crash")
 {
     await using var crashing=Open(true);var pending=await crashing.Outbox.SingleAsync();await ProjectionWorker.Consume(crashing,pending);throw new Exception("Should have been terminated before commit");
 }
+if(args[0]=="builder")
+{
+    var f=await db.Families.SingleAsync();var original=await db.Releases.SingleAsync();var catalog=Json.Read<Catalog>(original.Payload);
+    var next=catalog with {Kcs=catalog.Kcs.Select(k=>k with {RevisionId=Guid.NewGuid(),Name=k.Name+"（新版名称）"}).ToArray()};
+    var source=new Source {FamilyId=f.Id,Title="Frozen retrieval acceptance",Text="先乘除后加减，独立确定运算顺序。",Hash=Guid.NewGuid().ToString()};var chunk=new Chunk {FamilyId=f.Id,SourceId=source.Id,Locator="段落 1",Text=source.Text};
+    var run=new BuilderRun {FamilyId=f.Id,SourceId=source.Id,LibraryReleaseId=original.Id,InputHash="frozen-snapshot-test"};
+    db.AddRange(source,chunk,run,new Release {FamilyId=f.Id,Number=2,Payload=Json.Write(next),Hash=Content.Hash(Json.Write(next))});await db.SaveChangesAsync();
+    await Builder.ProcessOne(db,CancellationToken.None);
+    var candidate=await db.Candidates.SingleAsync(c=>c.RunId==run.Id);var matches=Json.Read<Match[]>(candidate.Matches);
+    Assert(matches.Length>0 && matches.All(m=>catalog.Kcs.Any(k=>k.Id==m.KCId && k.Name==m.Name)),"retrieval used newer library rather than frozen release");
+    Console.WriteLine("PASS 建库任务排队后库版本变化：匹配仍使用冻结的原内容快照");
+    var noLibrary=new BuilderRun {FamilyId=f.Id,SourceId=source.Id,InputHash="explicit-empty-library-test"};db.Add(noLibrary);await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);
+    var empty=await db.Candidates.SingleAsync(c=>c.RunId==noLibrary.Id);Assert(Json.Read<Match[]>(empty.Matches).Length==0,"empty library snapshot was replaced by current library");
+    Console.WriteLine("PASS 明确空库快照不会临时检索后来发布的内容");
+    var legacy=new BuilderRun {FamilyId=f.Id,SourceId=source.Id,InputVersion="builder-input/1",InputHash="legacy-unrecorded-input"};db.Add(legacy);await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);
+    Assert(legacy.Status=="Failed" && legacy.Error=="INPUT_SNAPSHOT_UNKNOWN" && !await db.Candidates.AnyAsync(c=>c.RunId==legacy.Id),"unknown legacy input was guessed");
+    Console.WriteLine("PASS 历史输入不明的排队任务明确失败，要求重新运行");return;
+}
 var student=await db.Students.SingleAsync();
 Assert(student.ActiveGenerationId==null && await db.Generations.CountAsync()==0 && await db.Evidence.CountAsync()==0 && (await db.Outbox.SingleAsync()).ProcessedAt==null,"crashed transaction leaked projection or receipt");
 Console.WriteLine("PASS AT12 证据写入后进程终止：活动绑定、证据和处理回执全部回滚");

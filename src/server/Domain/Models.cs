@@ -255,6 +255,8 @@ public class Chunk : Row
 }
 public class BuilderRun : Row
 {
+    public Guid? LibraryReleaseId { get; set; }
+    public string InputVersion { get; set; } = "builder-input/2";
     public string Type { get; set; } = "Candidates";
     public Guid SourceId { get; set; }
     public string Status { get; set; } = "Queued";
@@ -268,6 +270,12 @@ public class BuilderRun : Row
 }
 public class Candidate : Row
 {
+    public Guid? CreatedDraftId { get; set; }
+    public Guid? CreatedKCId { get; set; }
+    public Guid? ReviewedBy { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public string ReviewReason { get; set; } = "";
+    public string Decision { get; set; } = "";
     public Guid RunId { get; set; }
     public Guid ChunkId { get; set; }
     public string Name { get; set; } = "";

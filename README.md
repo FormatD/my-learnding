@@ -32,6 +32,7 @@ python3 tests/boundary_api_acceptance.py
 python3 tests/concurrency_api_acceptance.py
 python3 tests/progress_api_acceptance.py
 python3 tests/content_authoring_api_acceptance.py
+python3 tests/provenance_api_acceptance.py
 dotnet build tests/persistence
 python3 tests/worker_fault_acceptance.py
 python3 tests/restore_acceptance.py
@@ -46,7 +47,7 @@ cd src/web && npm run test:e2e
 
 后台每 500 毫秒读取同库 Outbox，在事务中整学生回放固定事件序列，创建新评估世代后原子切换活动绑定。历史世代保留用于审计，当前计算不双计。更正判分先预览影响，再明确确认。
 
-来源只在本地处理。PDF 限 10 MB、200 页，无文本层明确返回 `NEEDS_OCR`。Mock Builder 仅验证导入、来源和审核流程；不代表真实模型、Embedding 或映射质量。用户已指定模型稍后接入。
+来源只在本地处理。PDF 限 10 MB、200 页，无文本层明确返回 `NEEDS_OCR`。Mock Builder 仅验证导入、来源和审核流程；不代表真实模型、Embedding 或映射质量。用户已指定模型稍后接入。生成时记录正式内容库快照；审核接受的候选保留原文位置与决定，并关联到创建的能力和草稿，发布后仍可查看来源。旧记录缺失的输入或来源不会推测补齐。
 
 ## 项目文档
 

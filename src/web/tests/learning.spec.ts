@@ -132,3 +132,22 @@ test('空白草稿补齐能力、测量题和资源后发布进入孩子学习',
   await page.getByRole('button',{name:/内容与发布/}).click();await page.getByRole('button',{name:'创建新修订',exact:true}).click();await page.getByRole('button',{name:'编辑',exact:true}).click();
   await expect(page.locator('[aria-label="能力 1"]').getByLabel('独立可测行为')).toHaveAttribute('readonly','');
 });
+
+test('建库候选保留引用，审核草稿可继续编辑并发布',async({page})=>{
+  await page.goto('/');await page.getByRole('button',{name:'首次使用？创建家庭'}).click();
+  await page.getByLabel('家长用户名').fill('builder-trace-'+Date.now());await page.getByLabel('家长密码').fill('private-builder-2026');await page.getByRole('button',{name:'创建私有家庭'}).click();
+  await page.getByLabel('孩子昵称').fill('建库追溯验收');await page.getByRole('button',{name:'创建学生',exact:true}).click();
+  await page.getByRole('button',{name:/辅助建库/}).click();
+  const quote='有小括号时，先计算小括号里的加减，再计算除法。';
+  await page.getByLabel('来源标题').fill('家长原创运算说明');await page.getByLabel('文本内容').fill(quote);await page.getByRole('button',{name:'保存来源'}).click();await page.getByRole('button',{name:'验证候选流程'}).click();
+  await expect(async()=>{await page.getByRole('button',{name:'刷新',exact:true}).click();await expect(page.getByRole('button',{name:'接受为新草稿'})).toBeVisible();}).toPass();
+  await page.getByLabel('名称',{exact:true}).fill('先算小括号');await page.getByLabel('可测行为',{exact:true}).fill('独立计算一层小括号内的加减，再计算除法');await page.getByLabel('能力边界').fill('不含嵌套，不推断建模能力');
+  await page.getByRole('button',{name:'接受为新草稿'}).click();await page.getByRole('button',{name:'查看引用与审核'}).click();
+  const trace=page.getByRole('region',{name:'内容来源追溯'});
+  // The named section may have an implicit region only when its accessible name is present.
+  await expect(trace.getByText(quote,{exact:true})).toBeVisible();await expect(trace.getByText('家长原创运算说明',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'关闭记录'}).click();await page.getByRole('button',{name:'继续编辑审核草稿'}).click();await expect(page.getByRole('heading',{name:'编辑内容草稿'})).toBeVisible();
+  await page.getByRole('button',{name:'新增测量题'}).click();const q=page.locator('[aria-label="题目 1"]');await q.getByLabel('题干',{exact:true}).fill('(8 + 4) ÷ 3 = ?');await q.getByLabel('参考答案').fill('4');await q.getByLabel('讲解说明').fill('先算8+4=12，再算12÷3=4。');
+  await page.getByRole('button',{name:'新增课时'}).click();await page.locator('[aria-label="课时 1"]').getByLabel('课时名称').fill('原创小括号练习');await page.getByRole('button',{name:'保存并退回待审核'}).click();await page.getByRole('button',{name:'审核答案与映射后发布'}).click();
+  await page.getByText('能力定义与来源',{exact:true}).click();await page.getByRole('button',{name:'查看能力来源'}).click();await expect(trace.getByText(quote,{exact:true})).toBeVisible();
+});
