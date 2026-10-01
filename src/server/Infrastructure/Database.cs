@@ -78,7 +78,8 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         Foreign<Student, Attempt>(b,"StudentId"); Foreign<Student, Generation>(b,"StudentId");
         Foreign<Student, Outbox>(b,"StudentId"); Foreign<Student, Review>(b,"StudentId");
         Foreign<Student, Mastery>(b,"StudentId"); Foreign<Student, Evidence>(b,"StudentId");
-        Foreign<Student, PaperWrong>(b,"StudentId"); Foreign<PrivateFile, PaperWrong>(b,"FileId");
+        Foreign<Student, PaperWrong>(b,"StudentId"); Foreign<PrivateFile, PaperWrong>(b,"FileId"); Foreign<ContentDraft, PaperWrong>(b,"DraftId"); Foreign<Release, PaperWrong>(b,"ReleaseId"); Foreign<Attempt, PaperWrong>(b,"AttemptId");
+        b.Entity<PaperWrong>().HasIndex(x=>x.AttemptId).IsUnique();
         b.Entity<Embedding>().HasIndex(e=>new {e.FamilyId,e.EntityRevisionId,e.Space}).IsUnique();
         b.Entity<Alias>().HasIndex(a=>new {a.FamilyId,a.KCId,a.Normalized}).IsUnique();
         Foreign<ContentIdentity, Alias>(b,"KCId"); Foreign<Candidate, Alias>(b,"CandidateId");

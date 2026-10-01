@@ -28,7 +28,7 @@ public static class Endpoints
         var catalog=Json.Read<Catalog>((await db.Releases.SingleAsync(x=>x.Id==releaseId && x.FamilyId==attempt.FamilyId)).Payload);
         return(catalog,catalog.Questions.Single(q=>q.Id==session.QuestionId),releaseId);
     }
-    static void ValidateGrade(GradeInput input,Question question)
+    internal static void ValidateGrade(GradeInput input,Question question)
     {
         if (!new[] { "Correct","Incorrect","Partial","Unscorable" }.Contains(input.Result) || string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"INVALID_GRADE","请选择判分并填写依据。");
         var steps=input.Steps??[];

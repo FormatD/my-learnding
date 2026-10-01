@@ -20,7 +20,17 @@ def main():
     p=c.request('/content/drafts/'+d['id']+'/preview');r=c.request('/content/drafts/'+d['id']+':publish',{'previewHash':p['hash']})
     png='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aS1cAAAAASUVORK5CYII='
     f=c.request('/files',{'name':'delete-test.png','mimeType':'image/png','base64':png},expected=201)
-    c.request('/students/'+s['id']+'/paper-wrongs',{'stem':'私有删除验证','answer':'错误','fileId':f['id']},expected=201)
+    catalog=json.loads(d['payload']);question=catalog['questions'][0]
+    wrong=c.request('/students/'+s['id']+'/paper-wrongs',{'stem':question['stem'],'answer':'错误','fileId':f['id']},expected=201)
+    def confirm(sid,wrong):
+        value={'releaseId':r['id'],'questionId':question['id'],'result':'Incorrect','reason':'核对纸质原题与原始答案','sameQuestionConfirmed':True};p=c.request('/paper-wrongs/'+wrong['id']+'/preview',value);return c.request('/paper-wrongs/'+wrong['id']+'/confirm',{**value,'previewHash':p['previewHash']},expected=202)
+    deleted_paper=confirm(s['id'],wrong)
+    survivor=c.request('/students',{'name':'纸质链路恢复验收'},expected=201)
+    kept_wrong=c.request('/students/'+survivor['id']+'/paper-wrongs',{'stem':question['stem'],'answer':'999'},expected=201);kept_paper=confirm(survivor['id'],kept_wrong)
+    for _ in range(100):
+        if all(c.request('/students/'+sid+'/mastery')['pending']==0 for sid in [s['id'],survivor['id']]):break
+        time.sleep(.1)
+    else:raise AssertionError('projection did not settle before backup')
     env=os.environ.copy();env.update(PGHOST='127.0.0.1',PGPORT='55432',PGUSER=os.environ.get('USER','qianjundeng'),PGDATABASE='learning',BACKUP_PASSPHRASE=secrets.token_hex(32),GNUPGHOME='/private/tmp/learning-gpg-'+suffix,DELETION_LEDGER=str(root/'.local/deleted-students.txt'))
     Path(env['GNUPGHOME']).mkdir(mode=0o700,parents=True,exist_ok=True)
     env['PATH']='/opt/homebrew/opt/postgresql@16/bin:/opt/homebrew/bin:'+env['PATH']
@@ -39,7 +49,11 @@ def main():
         assert sql(f'''SELECT COUNT(*) FROM "PaperWrong" WHERE "StudentId"='{s['id']}' ''')=='0'
         assert sql(f'''SELECT COUNT(*) FROM "Commands" WHERE "FamilyId"='{s['familyId']}' ''')=='0'
         assert sql(f'''SELECT "Hash" FROM "Releases" WHERE "Id"='{r['id']}' ''')==r['hash']
-        report={'case':'AT40','status':'passed','checks':['删除学生不会复活','关联私有图片已删除','纸质错题已删除','旧响应缓存已清理','家庭发布内容保持完整'],'seconds':round(time.monotonic()-start,2),'method':'PostgreSQL custom-format + GPG AES256 + independent deletion ledger'}
+        assert sql(f'''SELECT COUNT(*) FROM "Attempts" WHERE "Id"='{deleted_paper['attemptId']}' ''')=='0'
+        assert sql(f'''SELECT "AttemptId" FROM "PaperWrong" WHERE "Id"='{kept_wrong['id']}' ''')==kept_paper['attemptId']
+        assert sql(f'''SELECT "AnswerSource" FROM "Attempts" WHERE "Id"='{kept_paper['attemptId']}' ''')=='ParentPaperConfirmed'
+        assert sql(f'''SELECT COUNT(*) FROM "Gradings" WHERE "AttemptId"='{kept_paper['attemptId']}' AND "Result"='Incorrect' ''')=='1'
+        report={'case':'AT40','status':'passed','checks':['删除学生不会复活','关联私有图片已删除','纸质错题已删除','旧响应缓存已清理','家庭发布内容保持完整','已删除学生的纸质代录作答不复活','保留学生的原题作答链路完整','保留学生的人工判分完整'],'seconds':round(time.monotonic()-start,2),'method':'PostgreSQL custom-format + GPG AES256 + independent deletion ledger'}
         (root/'.local/restore-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
         print(json.dumps(report,ensure_ascii=False))
     finally:

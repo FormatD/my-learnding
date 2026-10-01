@@ -12,6 +12,13 @@ public class PrivateFile : Row
 public class PaperWrong : Row
 {
     public Guid StudentId { get; set; }
+    public Guid? DraftId { get; set; }
+    public Guid? QuestionId { get; set; }
+    public Guid? ReleaseId { get; set; }
+    public Guid? AttemptId { get; set; }
+    public Guid? ConfirmedBy { get; set; }
+    public DateTimeOffset? ConfirmedAt { get; set; }
+    public string ConfirmationReason { get; set; } = "";
     public Guid? FileId { get; set; }
     public string Stem { get; set; } = "";
     public string Answer { get; set; } = "";
@@ -51,10 +58,10 @@ public static class Files
         api.MapPost("/students/{id:guid}/paper-wrongs",async (Guid id,PaperInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);
-            if (input.FileId==null && string.IsNullOrWhiteSpace(input.Stem)) throw new ApiError(422,"PAPER_CONTENT_REQUIRED","请上传图片或填写题干。");
-            if (input.FileId!=null && !await db.Set<PrivateFile>().AnyAsync(f => f.Id==input.FileId && f.FamilyId==a.FamilyId)) throw new ApiError(404,"NOT_FOUND","文件不存在。");
+            await PaperLearning.ValidateInput(db,a,input);
             var wrong=new PaperWrong { FamilyId=a.FamilyId,StudentId=id,FileId=input.FileId,Stem=input.Stem,Answer=input.Answer,ErrorType=input.ErrorType };db.Add(wrong);return Results.Created("/api/v1/students/"+id+"/paper-wrongs",wrong);
         });
+        PaperLearning.Map(api);
         api.MapGet("/students/{id:guid}/paper-wrongs",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);return await db.Set<PaperWrong>().Where(p => p.StudentId==id).OrderByDescending(p => p.CreatedAt).Take(100).ToListAsync(); });
     }
     public static List<(int Page,string Text)> ParsePDF(byte[] bytes)

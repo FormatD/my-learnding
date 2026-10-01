@@ -22,6 +22,8 @@ sh scripts/dev.sh
 
 也可从空白草稿添加能力、测量题、讲解资源和课时。未完成内容允许保存，审核发布前由服务端校验完整性；已有测量定义只读，改变测量含义须新增独立能力。
 
+纸质错题可先保存图片和待校正正文，在“证据与复习”补齐并审核归因。原题未入库时可创建原题草稿，人工审核发布并绑定新内容版本；核对同一道原题、原始答案和判分依据后预览确认，才代录首次作答。使用本次确认时间，不推测历史练习间隔。已确认记录保留，后续通过判分更正修订。
+
 生成草稿不会影响已经发布的计划。重生成保留已完成、进行中、锁定和必做任务。所有写入有幂等标识，家庭隔离由服务端与复合外键执行。未审核内容不能进入正式作答。
 
 ## 验证
@@ -36,6 +38,7 @@ python3 tests/progress_api_acceptance.py
 python3 tests/content_authoring_api_acceptance.py
 python3 tests/provenance_api_acceptance.py
 python3 tests/observed_steps_api_acceptance.py
+python3 tests/paper_learning_api_acceptance.py
 dotnet build tests/persistence
 python3 tests/worker_fault_acceptance.py
 python3 tests/restore_acceptance.py

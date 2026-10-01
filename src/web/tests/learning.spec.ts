@@ -174,3 +174,11 @@ test('家长安排步骤题并保留未观察步骤',async({page})=>{
   await page.getByLabel('判分依据').fill('纸上列式正确，计算没有观察到');await page.getByRole('button',{name:'预览判分影响'}).click();await expect(page.getByText('待确认 → 部分正确')).toBeVisible();await page.getByRole('button',{name:'确认更正并重算'}).click();
   await expect(page.getByRole('heading',{name:'核对题目与观察步骤'})).toHaveCount(0);await expect(page.getByText('第 1 次 · 部分正确')).toBeVisible();
 });
+
+test('纸质原题审核后代录，原始结果保留可更正',async({page})=>{
+  await page.goto('/');await page.getByRole('button',{name:'首次使用？创建家庭'}).click();await page.getByLabel('家长用户名').fill('browser-paper-'+Date.now());await page.getByLabel('家长密码').fill('private-paper-browser-2026');await page.getByRole('button',{name:'创建私有家庭'}).click();
+  await page.getByLabel('孩子昵称').fill('纸质同学');await page.getByRole('button',{name:'创建学生',exact:true}).click();await page.getByRole('button',{name:'创建混合运算样例'}).click();await page.getByRole('button',{name:'审核答案与映射后发布'}).click();await page.getByRole('button',{name:'绑定当前学生'}).click();await page.getByRole('button',{name:/证据与复习/}).click();
+  await page.getByLabel('题干（可稍后补充）').fill('3 + 4 × 2 = ?');await page.getByLabel('孩子答案').fill('999');await page.getByRole('button',{name:'保存为待校正错题'}).click();await page.getByRole('button',{name:'补齐并审核归因'}).click();
+  await expect(page.getByRole('heading',{name:'审核纸质结果'})).toBeVisible();await expect(page.getByLabel('纸质原始答案')).toHaveValue('999');await page.getByLabel('对应的正式原题').selectOption({label:'3 + 4 × 2 = ?'});await page.getByLabel('已核对这是同一道原题，题干与条件一致').check();await page.getByLabel('纸质判分与归因依据').fill('家长核对原题，先加后乘造成错误');await page.getByRole('button',{name:'预览纸质结果归因'}).click();await expect(page.getByText(/确认后以本次确认时间代录首次作答/)).toBeVisible();await page.getByRole('button',{name:'确认并代录纸质结果'}).click();
+  await expect(page.getByRole('heading',{name:'审核纸质结果'})).toHaveCount(0);await expect(page.getByText('原题与结果已确认 · 历史记录保留')).toBeVisible();await page.getByRole('button',{name:'查看代录判分'}).click();await expect(page.getByRole('heading',{name:'核对题目与观察步骤'})).toBeVisible();await expect(page.getByText('孩子答案：999')).toBeVisible();await expect(page.getByLabel('整题判分')).toHaveValue('Incorrect');
+});
