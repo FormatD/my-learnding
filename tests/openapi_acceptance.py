@@ -20,12 +20,14 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from openapi_contract import canonical, changes
 import api_acceptance
 from api_acceptance import Client
+from success_response_contract import verify
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--export", type=Path, help="Explicitly export contract instead of checking saved snapshot.")
     parser.add_argument("--baseline", type=Path, help="Also compare a previous revision's contract.")
+    parser.add_argument("--regression", action="store_true", help="Run core API, version/PDF, content authoring and observed-step suites in the same disposable service.")
     args = parser.parse_args()
     env = os.environ.copy()
     env["PATH"] = "/opt/homebrew/opt/postgresql@16/bin:" + env["PATH"]
@@ -72,12 +74,13 @@ def main():
                     raise AssertionError("Disposable API did not become ready.")
                 api_acceptance.BASE = origin + "/api/v1"
                 client = Client()
-                client.request("/auth/register", {"userName": "contract-" + uuid.uuid4().hex[:12],
+                registered=client.request("/auth/register", {"userName": "contract-" + uuid.uuid4().hex[:12],
                                "password": secrets.token_hex(24)}, expected=201)
                 document = canonical(client.request("/openapi.json"))
                 assert document["openapi"].startswith("3.") and document["paths"]
                 schemas = document["components"]["schemas"]
                 assert "WeeklySummary" in schemas and "ParentBurdenSummary" in schemas
+                verify(document,client,registered)
                 encoded = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
                 if args.export:
                     args.export.parent.mkdir(parents=True, exist_ok=True)
@@ -94,6 +97,12 @@ def main():
                 subprocess.run([sys.executable, str(ROOT / "scripts/schema_dictionary.py"), "--check"],
                                env=env, check=True, timeout=50)
                 print("PASS current migrations produce the documented schema in an empty database")
+                if args.regression:
+                    import advanced_api_acceptance, content_authoring_api_acceptance, observed_steps_api_acceptance
+                    api_acceptance.main()
+                    advanced_api_acceptance.main()
+                    content_authoring_api_acceptance.main()
+                    observed_steps_api_acceptance.main()
             finally:
                 if child is not None and child.poll() is None:
                     child.terminate()

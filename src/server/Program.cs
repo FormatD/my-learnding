@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.DataProtection;
 var builder=WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options=>options.Limits.MaxRequestBodySize=15_000_000);
 builder.Services.AddDbContext<Database>(o => o.UseNpgsql(builder.Configuration.GetConnectionString("Learning") ?? $"Host=127.0.0.1;Port=55432;Database=learning;Username={Environment.UserName}"));
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(OpenApiResponses.Configure);
 var privateRoot=Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath,"../../.local"));
 var keyRoot=Path.Combine(privateRoot,"keys");Directory.CreateDirectory(keyRoot);
 if(!OperatingSystem.IsWindows())

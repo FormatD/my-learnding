@@ -29,7 +29,7 @@ public static class Deferral
             if(!await db.Placements.AnyAsync(p=>p.RevisionId==target.Id && p.TaskId==id))db.Placements.Add(new(){FamilyId=a.FamilyId,RevisionId=target.Id,TaskId=id,Sequence=await db.Placements.CountAsync(p=>p.RevisionId==target.Id)});
             task.Locked=true;task.ReasonCode="DEFERRED";task.Reason=$"家长顺延：{input.Reason}";
             target.InputHash=Content.Hash(target.InputHash+id+Json.Write(input));await Planning.RefreshBudget(db,target);
-            return Results.Ok(new {task,revision=target,notice="旧日任务入口已停用，请发布目标日草稿。"});
+            return TypedResults.Ok(new {task,revision=target,notice="旧日任务入口已停用，请发布目标日草稿。"});
         });
     }
 }

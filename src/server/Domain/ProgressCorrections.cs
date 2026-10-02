@@ -37,7 +37,7 @@ public static class ProgressCorrections
                 replacement.Status="Confirmed";replacement.Source="ParentCorrected";replacement.ReleaseId=release!.Id;
             }
             var change=new ProgressChange {FamilyId=a.FamilyId,StudentId=id,OldProgressId=old.Id,NewProgressId=replacement?.Id,ConfirmedBy=a.Id,Reason=input.Reason,Before=before,After=Json.Write(new {previous=old,replacement})};db.Add(change);
-            return Results.Ok(new {previous=old,replacement,change,notice="后续草稿采用更正后的进度；已发布计划和历史作答保留。"});
+            return TypedResults.Ok(new {previous=old,replacement,change,notice="后续草稿采用更正后的进度；已发布计划和历史作答保留。"});
         });
     }
 }

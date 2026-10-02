@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Learning;
 public record Credentials(string UserName,string Password,string? FamilyName=null);
@@ -46,7 +47,7 @@ public static class Endpoints
             var family=new Family { Name=input.FamilyName??"我的家庭" }; var account=new Account { FamilyId=family.Id,UserName=input.UserName.Trim(),PasswordHash=Security.Password(input.Password) };
             db.Families.Add(family); db.Accounts.Add(account);db.Add(new FamilyMembership{FamilyId=family.Id,AccountId=account.Id,Roles=account.Roles}); await db.SaveChangesAsync();family.OwnerAccountId=account.Id;
             await Security.CreateSession(db,ctx,family.Id,account.Id,null,"Parent"); await tx.CommitAsync();
-            return Results.Created("/api/v1/me",new { familyId=family.Id,role="Parent" });
+            return TypedResults.Created("/api/v1/me",new { familyId=family.Id,role="Parent" });
         }).RequireRateLimiting("auth");
         api.MapPost("/auth/login",async (Credentials input,Database db,HttpContext ctx) =>
         {
@@ -55,25 +56,25 @@ public static class Endpoints
             await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(initial.FamilyId);
             var account=await db.Accounts.SingleOrDefaultAsync(a=>a.Id==initial.Id);
             if (account==null || !await db.Set<FamilyMembership>().AnyAsync(m=>m.FamilyId==account.FamilyId && m.AccountId==account.Id && m.Roles!="") || !Security.Check(input.Password,account.PasswordHash)) throw new ApiError(401,"INVALID_CREDENTIALS","用户名或密码不正确。");
-            await Security.CreateSession(db,ctx,account.FamilyId,account.Id,null,"Parent");await tx.CommitAsync(); return Results.Ok(new { role="Parent" });
+            await Security.CreateSession(db,ctx,account.FamilyId,account.Id,null,"Parent");await tx.CommitAsync(); return TypedResults.Ok(new { role="Parent" });
         }).RequireRateLimiting("auth");
         api.MapGet("/me",async (Database db,HttpContext ctx) => new { actor=ctx.Actor(),family=await db.Families.SingleAsync(f => f.Id==ctx.Actor().FamilyId) });
-        api.MapPost("/logout",async (Database db,HttpContext ctx) => { (await db.AuthSessions.SingleAsync(s => s.Id==ctx.Actor().SessionId)).Revoked=true; ctx.Response.Cookies.Delete(Security.Cookie); return Results.Ok(new { done=true }); });
+        api.MapPost("/logout",async (Database db,HttpContext ctx) => { (await db.AuthSessions.SingleAsync(s => s.Id==ctx.Actor().SessionId)).Revoked=true; ctx.Response.Cookies.Delete(Security.Cookie); return TypedResults.Ok(new { done=true }); });
         api.MapGet("/students",async (Database db,HttpContext ctx) => ctx.Actor().Role!="Child" && !ctx.Actor().Roles.Split(',').Contains("Parent") ? [] : await db.Students.Where(s => s.FamilyId==ctx.Actor().FamilyId && (ctx.Actor().Role!="Child" || s.Id==ctx.Actor().StudentId)).OrderBy(s => s.CreatedAt).ToListAsync());
         api.MapPost("/students",async (StudentInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor(); a.Require("Parent"); ValidateStudent(input);
-            var s=new Student { FamilyId=a.FamilyId,Name=input.Name,Grade=input.Grade,DailyMinutes=input.DailyMinutes,TimeZone=input.TimeZone }; db.Students.Add(s); return Results.Created($"/api/v1/students/{s.Id}",s);
+            var s=new Student { FamilyId=a.FamilyId,Name=input.Name,Grade=input.Grade,DailyMinutes=input.DailyMinutes,TimeZone=input.TimeZone }; db.Students.Add(s); return TypedResults.Created($"/api/v1/students/{s.Id}",s);
         });
-        api.MapPut("/students/{id:guid}",async (Guid id,StudentInput input,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent"); ValidateStudent(input); var s=await ctx.Actor().Student(db,id); s.Name=input.Name; s.Grade=input.Grade;s.DailyMinutes=input.DailyMinutes;s.TimeZone=input.TimeZone; return Results.Ok(s); });
-        api.MapPost("/students/{id:guid}/child-sessions",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor(); a.Require("Parent"); await a.Student(db,id); await Security.CreateSession(db,ctx,a.FamilyId,null,id,"Child"); return Results.Ok(new { role="Child",studentId=id }); });
+        api.MapPut("/students/{id:guid}",async (Guid id,StudentInput input,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent"); ValidateStudent(input); var s=await ctx.Actor().Student(db,id); s.Name=input.Name; s.Grade=input.Grade;s.DailyMinutes=input.DailyMinutes;s.TimeZone=input.TimeZone; return TypedResults.Ok(s); });
+        api.MapPost("/students/{id:guid}/child-sessions",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor(); a.Require("Parent"); await a.Student(db,id); await Security.CreateSession(db,ctx,a.FamilyId,null,id,"Child"); return TypedResults.Ok(new { role="Child",studentId=id }); });
         api.MapPut("/students/{id:guid}/availability/{date}",async (Guid id,DateOnly date,BudgetInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor(); a.Require("Parent"); await a.Student(db,id);
             if (input.Minutes<0 || input.Minutes>600 || input.Reserved<0 || input.Reserved>input.Minutes) throw new ApiError(422,"INVALID_BUDGET","可用时间为 0～600 分钟，预留不能超过总时间。");
             var value=await db.Availabilities.SingleOrDefaultAsync(v => v.StudentId==id && v.Date==date);
             if (value==null) { value=new() { FamilyId=a.FamilyId,StudentId=id,Date=date }; db.Availabilities.Add(value); }
-            value.Minutes=input.Minutes;value.Reserved=input.Reserved;return Results.Ok(value);
+            value.Minutes=input.Minutes;value.Reserved=input.Reserved;return TypedResults.Ok(value);
         });
         api.MapGet("/students/{id:guid}/availability/{date}",async(Guid id,DateOnly date,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var s=await ctx.Actor().Student(db,id);var value=await db.Availabilities.SingleOrDefaultAsync(a=>a.StudentId==id && a.Date==date);return new {minutes=value?.Minutes??s.DailyMinutes,reserved=value?.Reserved??0};});
         api.MapGet("/students/{id:guid}/progress",async (Guid id,bool? includeHistory,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");await ctx.Actor().Student(db,id);return await db.Progresses.Where(p => p.StudentId==id && (includeHistory==true || p.Status=="Confirmed")).OrderByDescending(p => p.Date).ThenByDescending(p=>p.CreatedAt).Take(100).ToListAsync(); });
@@ -88,18 +89,18 @@ public static class Endpoints
                 var before=Json.Write(progress);progress.Status="Confirmed";progress.ReleaseId=release.Id;progress.Source="ParentReconfirmed";
                 db.Add(new ProgressChange {FamilyId=a.FamilyId,StudentId=id,OldProgressId=progress.Id,NewProgressId=progress.Id,Before=before,After=Json.Write(progress),Reason="家长重新确认学校进度",ConfirmedBy=a.Id});
             }
-            return Results.Ok(progress);
+            return TypedResults.Ok(progress);
         });
         Goals.Map(api);
         KnowledgeChanges.Map(api);
         Operations.Map(api);
         api.MapGet("/content/directory-sources",async(Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");return await db.Sources.Where(s=>s.FamilyId==a.FamilyId).OrderBy(s=>s.Title).Select(s=>new{s.Id,s.Title}).ToArrayAsync();});
         api.MapGet("/content",async (Database db,HttpContext ctx) => { var actor=ctx.Actor();if(!actor.Can("Parent"))actor.Require("ContentEditor");return new { drafts=actor.Can("ContentEditor")?await db.Drafts.Where(d => d.FamilyId==actor.FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync():[],releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
-        api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return Results.Ok(draft); });
-        api.MapPost("/content/unit-pack",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft {FamilyId=a.FamilyId,Title="原创单元草稿 · 混合运算（160题 / 15资源，印次与人工审核待确认）",Payload=Json.Write(MixedOperationsPack.Create())};db.Drafts.Add(draft);return Results.Ok(draft); });
-        api.MapPost("/content/drafts",(DraftInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var d=new ContentDraft { FamilyId=a.FamilyId,Title=input.Title,Payload=Json.Write(input.Catalog) };db.Drafts.Add(d);return Results.Ok(d); });
-        api.MapPut("/content/drafts/{id:guid}",async (Guid id,DraftInput input,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","已发布版本不可修改，请创建新草稿。");d.Payload=Json.Write(input.Catalog);d.Title=input.Title;d.Status="Draft";d.ReviewedBy=null;d.Version++;return Results.Ok(d); });
-        api.MapPost("/content/drafts/{id:guid}:review",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);await CatalogDirectory.ValidateSources(db,ctx.Actor().FamilyId,Json.Read<Catalog>(d.Payload));var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","版本已发布。");d.Status="Approved";d.ReviewedBy=ctx.Actor().Id;return Results.Ok(d); });
+        api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return TypedResults.Ok(draft); });
+        api.MapPost("/content/unit-pack",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft {FamilyId=a.FamilyId,Title="原创单元草稿 · 混合运算（160题 / 15资源，印次与人工审核待确认）",Payload=Json.Write(MixedOperationsPack.Create())};db.Drafts.Add(draft);return TypedResults.Ok(draft); });
+        api.MapPost("/content/drafts",(DraftInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var d=new ContentDraft { FamilyId=a.FamilyId,Title=input.Title,Payload=Json.Write(input.Catalog) };db.Drafts.Add(d);return TypedResults.Ok(d); });
+        api.MapPut("/content/drafts/{id:guid}",async (Guid id,DraftInput input,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","已发布版本不可修改，请创建新草稿。");d.Payload=Json.Write(input.Catalog);d.Title=input.Title;d.Status="Draft";d.ReviewedBy=null;d.Version++;return TypedResults.Ok(d); });
+        api.MapPost("/content/drafts/{id:guid}:review",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);await CatalogDirectory.ValidateSources(db,ctx.Actor().FamilyId,Json.Read<Catalog>(d.Payload));var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","版本已发布。");d.Status="Approved";d.ReviewedBy=ctx.Actor().Id;return TypedResults.Ok(d); });
         api.MapGet("/content/drafts/{id:guid}/preview",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("Publisher");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);return new { hash=Content.Hash(d.Payload+":"+d.Version),errors=Content.Validate(Json.Read<Catalog>(d.Payload)),status=d.Status }; });
         api.MapPost("/content/drafts/{id:guid}:publish",async (Guid id,PublishInput input,Database db,HttpContext ctx) =>
         {
@@ -107,12 +108,12 @@ public static class Endpoints
             if (d.Status!="Approved" || d.ReviewedBy==null) throw new ApiError(422,"REVIEW_REQUIRED","内容必须先经过人工审核。");
             if (Content.Hash(d.Payload+":"+d.Version)!=input.PreviewHash) throw new ApiError(412,"PREVIEW_CHANGED","草稿已变化，请重新预览。");
             var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));
-            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release);d.Status="Published";return Results.Ok(release);
+            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release);d.Status="Published";return TypedResults.Ok(release);
         });
-        api.MapPost("/students/{id:guid}/content/{releaseId:guid}:bind",async (Guid id,Guid releaseId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var r=await Owned<Release>(db,a,releaseId);if (r.Withdrawn) throw new ApiError(422,"WITHDRAWN","该发布版本已撤回。");s.ActiveReleaseId=releaseId;return Results.Ok(s); });
-        api.MapPost("/content/releases/{id:guid}:withdraw",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Publisher");var release=await Owned<Release>(db,a,id);if(string.IsNullOrWhiteSpace(input.Reason))throw new ApiError(422,"REASON_REQUIRED","撤回需要原因。");release.Withdrawn=true;db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="ReleaseWithdrawal",Details=Json.Write(new {releaseId=id,input.Reason})});return Results.Ok(new {release.Id,release.Withdrawn,notice="阻止新会话；已领取会话与历史证据保留。"});});
-        api.MapGet("/students/{id:guid}/catalog",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return s.ActiveReleaseId==null ? Results.Text("null","application/json") : Results.Ok(Json.Read<Catalog>((await Owned<Release>(db,a,s.ActiveReleaseId.Value)).Payload)); });
-        api.MapPost("/students/{id:guid}/plans/{date}:generate",async (Guid id,DateOnly date,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");return Results.Ok(await Planning.Generate(db,await a.Student(db,id),date)); });
+        api.MapPost("/students/{id:guid}/content/{releaseId:guid}:bind",async (Guid id,Guid releaseId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var r=await Owned<Release>(db,a,releaseId);if (r.Withdrawn) throw new ApiError(422,"WITHDRAWN","该发布版本已撤回。");s.ActiveReleaseId=releaseId;return TypedResults.Ok(s); });
+        api.MapPost("/content/releases/{id:guid}:withdraw",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Publisher");var release=await Owned<Release>(db,a,id);if(string.IsNullOrWhiteSpace(input.Reason))throw new ApiError(422,"REASON_REQUIRED","撤回需要原因。");release.Withdrawn=true;db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="ReleaseWithdrawal",Details=Json.Write(new {releaseId=id,input.Reason})});return TypedResults.Ok(new {release.Id,release.Withdrawn,notice="阻止新会话；已领取会话与历史证据保留。"});});
+        api.MapGet("/students/{id:guid}/catalog",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return TypedResults.Json<Catalog?>(s.ActiveReleaseId==null ? null : Json.Read<Catalog>((await Owned<Release>(db,a,s.ActiveReleaseId.Value)).Payload)); }).Produces<Catalog>(200,"application/json").WithMetadata(new NullableResponseMetadata());
+        api.MapPost("/students/{id:guid}/plans/{date}:generate",async (Guid id,DateOnly date,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");return TypedResults.Ok(await Planning.Generate(db,await a.Student(db,id),date)); });
         api.MapGet("/students/{id:guid}/plans/{date}",async (Guid id,DateOnly date,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");await ctx.Actor().Student(db,id);return await PlanView(db,id,date,false); });
         api.MapPost("/plans/{id:guid}:publish",async (Guid id,PublishInput input,Database db,HttpContext ctx) =>
         {
@@ -123,7 +124,7 @@ public static class Endpoints
             plan.ActiveRevisionId=id;plan.Status="Published";revision.Status="Published";
             var ids=await db.Placements.Where(p => p.RevisionId==id).Select(p => p.TaskId).ToArrayAsync();
             foreach (var t in await db.Tasks.Where(t => ids.Contains(t.Id)).ToListAsync()) if (t.Status is "Planned" or "Deferred") t.Status="Ready";
-            return Results.Ok(revision);
+            return TypedResults.Ok(revision);
         });
         api.MapGet("/plans/{id:guid}/questions",async(Guid id,Database db,HttpContext ctx)=>
         {
@@ -145,7 +146,7 @@ public static class Endpoints
             }
             if(!new[] {"Schoolwork","Resource","Practice"}.Contains(input.Type) || input.Type=="Practice" && question==null || string.IsNullOrWhiteSpace(input.Title))throw new ApiError(422,"INVALID_TASK","请选择任务类型并填写标题；练习任务需要正式题目。");
             var task=new StudyTask { FamilyId=a.FamilyId,StudentId=plan.StudentId,ReleaseId=rev.ReleaseId,QuestionId=question?.Id,KCId=question?.Mappings.FirstOrDefault(m=>m.Mode!="None")?.KCId,Title=input.Title,Type=question!=null?"Practice":input.Type,Minutes=input.Minutes,ResourceRef=input.ResourceRef,Mandatory=input.Mandatory,Locked=true,ReasonCode="PARENT_LOCKED",Reason="家长安排的必做任务" };db.Tasks.Add(task);
-            db.Placements.Add(new() { FamilyId=a.FamilyId,RevisionId=id,TaskId=task.Id,Sequence=await db.Placements.CountAsync(p => p.RevisionId==id) });rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);return Results.Ok(task);
+            db.Placements.Add(new() { FamilyId=a.FamilyId,RevisionId=id,TaskId=task.Id,Sequence=await db.Placements.CountAsync(p => p.RevisionId==id) });rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);return TypedResults.Ok(task);
         });
         api.MapPost("/plans/{id:guid}:adjust",async (Guid id,AdjustInput input,Database db,HttpContext ctx) =>
         {
@@ -165,7 +166,7 @@ public static class Endpoints
             var adjustment=new PlanAdjustmentDetails(rev.PlanId,rev.Id,input.Reason,beforeIds,appliedIds,beforeIds.Except(appliedIds).ToArray(),input.LockedIds,input.TaskIds);
             var parentPlan=await Owned<Plan>(db,a,rev.PlanId);
             db.Audits.Add(new(){FamilyId=a.FamilyId,StudentId=parentPlan.StudentId,ActorId=a.Id,Action="PlanAdjusted",Details=Json.Write(adjustment)});
-            return Results.Ok(rev);
+            return TypedResults.Ok(rev);
         });
         api.MapGet("/students/{id:guid}/today",async (Guid id,Database db,HttpContext ctx) => { var s=await ctx.Actor().Student(db,id);return await PlanView(db,id,Today(s),true); });
         api.MapPost("/tasks/{id:guid}:transition",async (Guid id,TransitionInput input,Database db,HttpContext ctx) =>
@@ -201,7 +202,7 @@ public static class Endpoints
                 else if(statuses.Length>0 && statuses.All(x=>x is "Completed" or "Skipped" or "Abandoned"))plan.Status="Closed";
                 else if(statuses.Any(x=>x=="InProgress"))plan.Status="InProgress";
             }
-            return Results.Ok(t);
+            return TypedResults.Ok(t);
         });
         api.MapPost("/tasks/{id:guid}/sessions",async (Guid id,Database db,HttpContext ctx) =>
         {
@@ -217,36 +218,36 @@ public static class Endpoints
             var lastAttempt=await db.Attempts.Where(x=>x.SessionId==session.Id).OrderByDescending(x=>x.Number).FirstOrDefaultAsync();
             var lastGrade=lastAttempt==null?null:await db.Gradings.Where(g=>g.AttemptId==lastAttempt.Id).OrderByDescending(g=>g.Number).FirstOrDefaultAsync();
             var canComplete=await (from attempt in db.Attempts join grade in db.Gradings on attempt.Id equals grade.AttemptId where attempt.SessionId==session.Id && grade.Result!="Pending" select grade.Id).AnyAsync();
-            return Results.Ok(new { sessionId=session.Id,q.Stem,q.Type,hintLevel=session.HintLevel,answerShown=session.AnswerShown,releaseId=release.Id,canComplete,lastAttempt=lastAttempt==null?null:new { lastAttempt.Answer,result=lastGrade?.Result } });
+            return TypedResults.Ok(new { sessionId=session.Id,q.Stem,q.Type,hintLevel=session.HintLevel,answerShown=session.AnswerShown,releaseId=release.Id,canComplete,lastAttempt=lastAttempt==null?null:new { lastAttempt.Answer,result=lastGrade?.Result } });
         });
-        api.MapPost("/sessions/{id:guid}/hints",async (Guid id,HintInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();var s=await Owned<LearningSession>(db,a,id);await a.Student(db,s.StudentId);if (input.Level is <1 or >3) throw new ApiError(422,"INVALID_HINT","提示级别无效。");s.HintLevel=Math.Max(s.HintLevel,input.Level);s.AnswerShown|=input.Level==3;var q=await QuestionFor(db,s);return Results.Ok(new { text=input.Level==3 ? q.Answer+"。"+q.Explanation : q.Hint??"请先在纸上尝试。",level=s.HintLevel }); });
-        api.MapPost("/sessions/{id:guid}/attempts",async (Guid id,AnswerInput input,Database db,HttpContext ctx) =>
+        api.MapPost("/sessions/{id:guid}/hints",async (Guid id,HintInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();var s=await Owned<LearningSession>(db,a,id);await a.Student(db,s.StudentId);if (input.Level is <1 or >3) throw new ApiError(422,"INVALID_HINT","提示级别无效。");s.HintLevel=Math.Max(s.HintLevel,input.Level);s.AnswerShown|=input.Level==3;var q=await QuestionFor(db,s);return TypedResults.Ok(new { text=input.Level==3 ? q.Answer+"。"+q.Explanation : q.Hint??"请先在纸上尝试。",level=s.HintLevel }); });
+        api.MapPost("/sessions/{id:guid}/attempts",async Task<Results<Ok<ExistingAttemptResponse>,Created<NewAttemptResponse>>> (Guid id,AnswerInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();var s=await Owned<LearningSession>(db,a,id);await a.Student(db,s.StudentId);var task=await Owned<StudyTask>(db,a,s.TaskId);
             if (task.Status!="InProgress") throw new ApiError(422,"SESSION_CLOSED","该任务不再接受作答。");
             if (input.ClientSubmissionId==Guid.Empty || input.Answer.Length>5000 || string.IsNullOrWhiteSpace(input.Answer)) throw new ApiError(422,"INVALID_ANSWER","请填写答案。");
             var old=await db.Attempts.SingleOrDefaultAsync(x => x.StudentId==s.StudentId && x.ClientSubmissionId==input.ClientSubmissionId);
-            if (old!=null) { if (old.SessionId!=id || old.Answer!=input.Answer) throw new ApiError(409,"SUBMISSION_CONFLICT","提交标识对应了其他答案。");return Results.Ok(new { attempt=old,grading=await db.Gradings.Where(g => g.AttemptId==old.Id).OrderByDescending(g => g.Number).FirstAsync(),assessmentStatus="Pending" }); }
+            if (old!=null) { if (old.SessionId!=id || old.Answer!=input.Answer) throw new ApiError(409,"SUBMISSION_CONFLICT","提交标识对应了其他答案。");return TypedResults.Ok(new ExistingAttemptResponse(old,await db.Gradings.Where(g => g.AttemptId==old.Id).OrderByDescending(g => g.Number).FirstAsync(),"Pending")); }
             var q=await QuestionFor(db,s);var count=await db.Attempts.CountAsync(x => x.SessionId==id);
             var attempt=new Attempt { FamilyId=a.FamilyId,StudentId=s.StudentId,SessionId=id,ClientSubmissionId=input.ClientSubmissionId,Number=count+1,Answer=input.Answer,HintLevel=s.HintLevel,AnswerShown=s.AnswerShown,AnswerSource=a.Role=="Child"?"Child":"ParentEntered" };
             var result=q.Type is "ShortAnswer" or "MultiStep" ? "Pending" : q.Type=="Numeric" ? decimal.TryParse(input.Answer,NumberStyles.Number,CultureInfo.InvariantCulture,out var value) && value==decimal.Parse(q.Answer,CultureInfo.InvariantCulture) ? "Correct" : "Incorrect" : input.Answer.Trim().Normalize()==q.Answer.Trim().Normalize() ? "Correct" : "Incorrect";
             var grade=new Grading { FamilyId=a.FamilyId,AttemptId=attempt.Id,Number=1,Result=result,Method=result=="Pending"?"ManualRequired":"Rule" };
             db.Attempts.Add(attempt);db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=s.StudentId,AttemptId=attempt.Id });
             await db.SaveChangesAsync();
-            return Results.Created($"/api/v1/attempts/{attempt.Id}",new { attempt,grading=grade,assessmentStatus="Pending",feedback=result=="Pending"?"已保存，等待家长确认":result=="Correct"?"这次做对了！":"已保存。先看看思路，再试一次。",explanation=q.Explanation });
+            return TypedResults.Created($"/api/v1/attempts/{attempt.Id}",new NewAttemptResponse(attempt,grade,"Pending",result=="Pending"?"已保存，等待家长确认":result=="Correct"?"这次做对了！":"已保存。先看看思路，再试一次。",q.Explanation));
         });
         api.MapGet("/students/{id:guid}/attempts",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);var attempts=await db.Attempts.Where(x => x.StudentId==id).OrderByDescending(x => x.Sequence).Take(100).ToListAsync();var ids=attempts.Select(x => x.Id).ToArray();return new { attempts,gradings=await db.Gradings.Where(g => ids.Contains(g.AttemptId)).OrderBy(g => g.Number).ToListAsync() }; });
         api.MapGet("/attempts/{id:guid}/grading-context",async (Guid id,Database db,HttpContext ctx)=>
         {
             var actor=ctx.Actor();actor.Require("Parent");var attempt=await Owned<Attempt>(db,actor,id);var context=await GradingContext(db,attempt);
             var grade=await db.Gradings.Where(g=>g.AttemptId==id).OrderByDescending(g=>g.Number).FirstAsync();
-            return Results.Ok(new {attempt,question=context.Question,mappingReleaseId=context.ReleaseId,grade,observations=context.Question.Mappings.Where(m=>m.Mode=="StepObserved").Select(m=>new {step=m.Step,kcId=m.KCId,kcName=context.Catalog.Kcs.Single(k=>k.Id==m.KCId).Name}),notice="未观察到的步骤保留为未知，不推断正确或错误。"});
+            return TypedResults.Ok(new {attempt,question=context.Question,mappingReleaseId=context.ReleaseId,grade,observations=context.Question.Mappings.Where(m=>m.Mode=="StepObserved").Select(m=>new {step=m.Step,kcId=m.KCId,kcName=context.Catalog.Kcs.Single(k=>k.Id==m.KCId).Name}),notice="未观察到的步骤保留为未知，不推断正确或错误。"});
         });
         api.MapPost("/attempts/{id:guid}/grading-preview",async (Guid id,GradeInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var attempt=await Owned<Attempt>(db,a,id);
             var context=await GradingContext(db,attempt);ValidateGrade(input,context.Question);var grade=await db.Gradings.Where(g => g.AttemptId==id).OrderByDescending(g => g.Number).FirstAsync();var s=await a.Student(db,attempt.StudentId);var count=await db.Attempts.CountAsync(x => x.StudentId==s.Id);
-            return Results.Ok(new { before=grade.Result,after=input.Result,replayAttempts=count,previewHash=Content.Hash(Json.Write(new {attemptId=id,gradingId=grade.Id,generationId=s.ActiveGenerationId,count,mappingReleaseId=context.ReleaseId,input.Result,input.Reason,input.Steps})),notice="确认后追加判分修订，整学生证据与日程重放；旧世代保留审计。" });
+            return TypedResults.Ok(new { before=grade.Result,after=input.Result,replayAttempts=count,previewHash=Content.Hash(Json.Write(new {attemptId=id,gradingId=grade.Id,generationId=s.ActiveGenerationId,count,mappingReleaseId=context.ReleaseId,input.Result,input.Reason,input.Steps})),notice="确认后追加判分修订，整学生证据与日程重放；旧世代保留审计。" });
         });
         api.MapPost("/attempts/{id:guid}/grading-revisions",async (Guid id,GradeInput input,Database db,HttpContext ctx) =>
         {
@@ -259,16 +260,16 @@ public static class Endpoints
                 var expected=Content.Hash(Json.Write(new {attemptId=id,gradingId=oldGrade.Id,generationId=student.ActiveGenerationId,count,mappingReleaseId=context.ReleaseId,input.Result,input.Reason,input.Steps}));
                 if (input.PreviewHash!=expected) throw new ApiError(412,"GRADING_PREVIEW_CHANGED","请先预览更正影响；若新作答到达，请重新预览。");
             }
-            var grade=new Grading { FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=attempt.StudentId,AttemptId=id });return Results.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
+            var grade=new Grading { FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=attempt.StudentId,AttemptId=id });return TypedResults.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
         });
         api.MapGet("/students/{id:guid}/mastery",async (Guid id,Database db,HttpContext ctx) => await Assessment.ReadStatus(db,ctx.Actor(),id,ctx.RequestAborted));
         api.MapGet("/students/{id:guid}/mastery/{kcId:guid}",async (Guid id,Guid kcId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return new { mastery=await db.Masteries.SingleOrDefaultAsync(m => m.StudentId==id && m.GenerationId==s.ActiveGenerationId && m.KCId==kcId),evidence=await db.Evidence.Where(e => e.StudentId==id && e.GenerationId==s.ActiveGenerationId && e.KCId==kcId).OrderBy(e => e.OccurredAt).ToListAsync() }; });
         api.MapGet("/students/{id:guid}/reviews",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return await db.Reviews.Where(r => r.StudentId==id && r.GenerationId==s.ActiveGenerationId).OrderBy(r => r.DueDate).ToListAsync(); });
-        api.MapPost("/students/{id:guid}:rebuild",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);await Assessment.Rebuild(db,s);return Results.Ok(new { generation=s.ActiveGenerationId }); });
+        api.MapPost("/students/{id:guid}:rebuild",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);await Assessment.Rebuild(db,s);return TypedResults.Ok(new { generation=s.ActiveGenerationId }); });
         api.MapGet("/students/{id:guid}/weekly-summary",async(Guid id,DateOnly? end,Database db,HttpContext ctx)=>await WeeklyReporting.Read(db,ctx.Actor(),id,end,ctx.RequestAborted));
         api.MapGet("/audit",async (Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");return await db.Audits.Where(a => a.FamilyId==ctx.Actor().FamilyId).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(); });
         api.MapGet("/jobs",async (Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");return await db.Outbox.Where(j=>j.FamilyId==ctx.Actor().FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).Take(100).ToListAsync();});
-        api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);if(job.ProcessedAt!=null)throw new ApiError(409,"JOB_COMPLETED","结果已经处理，不需要再次重试。");job.Retries=0;job.NextAttemptAt=null;job.Error=null;return Results.Accepted("/api/v1/jobs",job);});
+        api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);if(job.ProcessedAt!=null)throw new ApiError(409,"JOB_COMPLETED","结果已经处理，不需要再次重试。");job.Retries=0;job.NextAttemptAt=null;job.Error=null;return TypedResults.Accepted("/api/v1/jobs",job);});
         ParentBurden.Map(api);
         ProgressCorrections.Map(api);
         Builder.Map(api);

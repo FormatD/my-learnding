@@ -59,11 +59,11 @@ public static class Goals
         api.MapGet("/students/{id:guid}/goal-changes",async(Guid id,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);return await db.Set<GoalChange>().Where(g=>g.StudentId==id).OrderByDescending(g=>g.CreatedAt).ToListAsync();});
         api.MapPost("/students/{id:guid}/goals",async(Guid id,GoalInput input,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);var goal=new Goal{FamilyId=a.FamilyId,StudentId=id};await Apply(db,a,goal,input);db.Goals.Add(goal);db.Add(new GoalChange{FamilyId=a.FamilyId,StudentId=id,GoalId=goal.Id,Version=goal.Version,Before="null",After=Json.Write(goal),Reason=input.Reason,ConfirmedBy=a.Id});return Results.Ok(goal);
+            var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);var goal=new Goal{FamilyId=a.FamilyId,StudentId=id};await Apply(db,a,goal,input);db.Goals.Add(goal);db.Add(new GoalChange{FamilyId=a.FamilyId,StudentId=id,GoalId=goal.Id,Version=goal.Version,Before="null",After=Json.Write(goal),Reason=input.Reason,ConfirmedBy=a.Id});return TypedResults.Ok(goal);
         });
         api.MapPut("/goals/{id:guid}",async(Guid id,GoalInput input,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("Parent");var goal=await db.Goals.SingleOrDefaultAsync(g=>g.Id==id && g.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","目标不存在。");var before=Json.Write(goal);await Apply(db,a,goal,input,true);goal.Version++;db.Add(new GoalChange{FamilyId=a.FamilyId,StudentId=goal.StudentId,GoalId=id,Version=goal.Version,Before=before,After=Json.Write(goal),Reason=input.Reason,ConfirmedBy=a.Id});return Results.Ok(goal);
+            var a=ctx.Actor();a.Require("Parent");var goal=await db.Goals.SingleOrDefaultAsync(g=>g.Id==id && g.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","目标不存在。");var before=Json.Write(goal);await Apply(db,a,goal,input,true);goal.Version++;db.Add(new GoalChange{FamilyId=a.FamilyId,StudentId=goal.StudentId,GoalId=id,Version=goal.Version,Before=before,After=Json.Write(goal),Reason=input.Reason,ConfirmedBy=a.Id});return TypedResults.Ok(goal);
         });
     }
 }

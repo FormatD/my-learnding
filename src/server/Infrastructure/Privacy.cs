@@ -16,7 +16,7 @@ public static class Privacy
             var fileIds=paperWrongs.Where(x=>x.FileId!=null).Select(x=>x.FileId!.Value).Distinct().ToArray();
             var corrections=await db.Set<CorrectionBatch>().Where(x=>x.StudentId==id).ToListAsync();var correctionIds=corrections.Select(x=>x.Id).ToArray();
             return Results.File(System.Text.Encoding.UTF8.GetBytes(Json.Write(new { format="learning-export/2",exportedAt=DateTimeOffset.UtcNow,student=s,studentAudit=await db.Audits.Where(x=>x.StudentId==id).ToListAsync(),parentBurden=await db.Set<ParentBurdenRecord>().Where(x=>x.StudentId==id).ToListAsync(),knowledgeChanges=await KnowledgeChanges.PublishedHistory(db,a.FamilyId),contentProvenance=await Provenance.Citations(db,a.FamilyId,publishedOnly:true),progressChanges=await db.Set<ProgressChange>().Where(x=>x.StudentId==id).ToListAsync(),paperWrongs,files=await db.Set<PrivateFile>().Where(x=>x.FamilyId==a.FamilyId && fileIds.Contains(x.Id)).ToListAsync(),corrections,correctionItems=await db.Set<CorrectionItem>().Where(x=>correctionIds.Contains(x.BatchId)).ToListAsync(),availability=await db.Availabilities.Where(x => x.StudentId==id).ToListAsync(),progress=await db.Progresses.Where(x => x.StudentId==id).ToListAsync(),goalChanges=await db.Set<GoalChange>().Where(x=>x.StudentId==id).ToListAsync(),goals=await db.Goals.Where(x => x.StudentId==id).ToListAsync(),plans,revisions,placements=await db.Placements.Where(x => rids.Contains(x.RevisionId)).ToListAsync(),tasks=await db.Tasks.Where(x => x.StudentId==id).ToListAsync(),sessions=await db.Sessions.Where(x => x.StudentId==id).ToListAsync(),attempts,gradings=await db.Gradings.Where(x => aids.Contains(x.AttemptId)).ToListAsync(),generations=await db.Generations.Where(x => x.StudentId==id).ToListAsync(),evidence=await db.Evidence.Where(x => x.StudentId==id).ToListAsync(),mastery=await db.Masteries.Where(x => x.StudentId==id).ToListAsync(),reviews=await db.Reviews.Where(x => x.StudentId==id).ToListAsync(),releases=await db.Releases.Where(x => x.FamilyId==a.FamilyId).ToListAsync() })),"application/json",$"learning-{id}.json");
-        });
+        }).WithMetadata(new DownloadResponseMetadata(["application/json"]));
         api.MapGet("/students/{id:guid}/delete-preview",async (Guid id,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var attempts=await db.Attempts.CountAsync(x => x.StudentId==id);var family=await db.Families.SingleAsync(f => f.Id==a.FamilyId);
@@ -38,7 +38,7 @@ public static class Privacy
             // Retain only opaque identifiers outside database backups to prevent restoration resurrection.
             var path=config["DeletionLedger"]??Path.Combine(appData(),"deleted-students.txt");Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
             await File.AppendAllTextAsync(path,$"{a.FamilyId},{id}\n");
-            db.Students.Remove(s);return Results.Ok(new { deleted=true,studentId=id,backupPolicy="恢复备份必须重新应用独立删除清单" });
+            db.Students.Remove(s);return TypedResults.Ok(new { deleted=true,studentId=id,backupPolicy="恢复备份必须重新应用独立删除清单" });
         });
     }
     static string appData()=>Path.Combine(Directory.GetCurrentDirectory(),"../../.local");

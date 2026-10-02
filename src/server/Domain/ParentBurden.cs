@@ -38,14 +38,14 @@ public static class ParentBurden
         api.MapGet("/students/{id:guid}/parent-burden",async(Guid id,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var today=DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone)).DateTime);return await Summary(db,id,today.AddDays(-27),today);});
         api.MapPost("/students/{id:guid}/parent-burden",async(Guid id,ParentBurdenInput input,Database db,HttpContext ctx)=>{
             var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);Validate(input,s);
-            var r=new ParentBurdenRecord {FamilyId=a.FamilyId,StudentId=id,RecordedBy=a.Id,Date=input.Date,Category=input.Category,Minutes=input.Minutes,Note=input.Note??""};db.Add(r);return Results.Created($"/api/v1/students/{id}/parent-burden",r);
+            var r=new ParentBurdenRecord {FamilyId=a.FamilyId,StudentId=id,RecordedBy=a.Id,Date=input.Date,Category=input.Category,Minutes=input.Minutes,Note=input.Note??""};db.Add(r);return TypedResults.Created($"/api/v1/students/{id}/parent-burden",r);
         });
         api.MapPost("/parent-burden/{id:guid}:correct",async(Guid id,ParentBurdenInput input,Database db,HttpContext ctx)=>{
             var a=ctx.Actor();a.Require("Parent");var old=await db.Set<ParentBurdenRecord>().SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","记录不存在。");
             var s=await a.Student(db,old.StudentId);Validate(input,s);
             if(string.IsNullOrWhiteSpace(input.Reason))throw new ApiError(422,"CORRECTION_REASON_REQUIRED","更正必须说明原因，原记录会保留。");
             if(await db.Set<ParentBurdenRecord>().AnyAsync(r=>r.SupersedesId==id))throw new ApiError(409,"BURDEN_RECORD_SUPERSEDED","该记录已更正，请刷新后修改最新记录。");
-            var r=new ParentBurdenRecord {FamilyId=a.FamilyId,StudentId=old.StudentId,RecordedBy=a.Id,Date=input.Date,Category=input.Category,Minutes=input.Minutes,Note=input.Note??"",SupersedesId=id,CorrectionReason=input.Reason};db.Add(r);return Results.Created($"/api/v1/students/{s.Id}/parent-burden",r);
+            var r=new ParentBurdenRecord {FamilyId=a.FamilyId,StudentId=old.StudentId,RecordedBy=a.Id,Date=input.Date,Category=input.Category,Minutes=input.Minutes,Note=input.Note??"",SupersedesId=id,CorrectionReason=input.Reason};db.Add(r);return TypedResults.Created($"/api/v1/students/{s.Id}/parent-burden",r);
         });
     }
 }

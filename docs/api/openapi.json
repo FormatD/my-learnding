@@ -73,769 +73,6 @@
         ],
         "type": "object"
       },
-      "AnonymousTypeOfActorAndFamily": {
-        "properties": {
-          "actor": {
-            "$ref": "#/components/schemas/Actor"
-          },
-          "family": {
-            "$ref": "#/components/schemas/Family"
-          }
-        },
-        "required": [
-          "actor",
-          "family"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfDateTimeOffsetAndListOfOperationSignalAndStorageStatusAndObjectAndAnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndbooleanAndAnonymousTypeOfintAndintAndintAndintAndintAndBackupStatusAndAnonymousTypeOfbooleanAndstring": {
-        "properties": {
-          "backup": {
-            "$ref": "#/components/schemas/BackupStatus"
-          },
-          "builder": {
-            "$ref": "#/components/schemas/AnonymousTypeOfintAndintAndintAndintAndint"
-          },
-          "model": {
-            "$ref": "#/components/schemas/AnonymousTypeOfbooleanAndstring"
-          },
-          "observedAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "projection": {
-            "$ref": "#/components/schemas/AnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean"
-          },
-          "requests": {},
-          "signals": {
-            "items": {
-              "$ref": "#/components/schemas/OperationSignal"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "storage": {
-            "$ref": "#/components/schemas/StorageStatus"
-          }
-        },
-        "required": [
-          "observedAt",
-          "signals",
-          "storage",
-          "requests",
-          "projection",
-          "builder",
-          "backup",
-          "model"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean": {
-        "properties": {
-          "canRetry": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "format": "date-time",
-            "type": "string"
-          },
-          "errorCode": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "nextAttemptAt": {
-            "format": "date-time",
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "retries": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "student": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "studentId": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "studentId",
-          "student",
-          "createdAt",
-          "retries",
-          "nextAttemptAt",
-          "errorCode",
-          "canRetry"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfGuidAndGuidAndstringAndstring": {
-        "properties": {
-          "accountId": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "roles": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "userName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "accountId",
-          "roles",
-          "userName"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfGuidAndintAndstringAndboolean": {
-        "properties": {
-          "hash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "number": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "withdrawn": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "number",
-          "hash",
-          "withdrawn"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfGuidAndstring": {
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "status"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfGuidAndstringAndstringAndstring": {
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "policy": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "stem": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "type": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "stem",
-          "type",
-          "policy"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndKCProposalEvent[]AndKnowledgeMigration[]Andstring": {
-        "properties": {
-          "events": {
-            "items": {
-              "$ref": "#/components/schemas/KCProposalEvent"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/KCChangeProposalItem"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "migrations": {
-            "items": {
-              "$ref": "#/components/schemas/KnowledgeMigration"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "notice": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "proposal": {
-            "$ref": "#/components/schemas/KCChangeProposal"
-          }
-        },
-        "required": [
-          "proposal",
-          "items",
-          "events",
-          "migrations",
-          "notice"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndstringAndstringAndstring": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/KCChangeProposalItem"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "notice": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "previewHash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "proposal": {
-            "$ref": "#/components/schemas/KCChangeProposal"
-          },
-          "requiredConfirm": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "proposal",
-          "items",
-          "previewHash",
-          "requiredConfirm",
-          "notice"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfKCChangeProposal[]AndKCChangeProposalItem[]AndKnowledgeMigration[]AndAnonymousTypeOfGuidAndstringAndstring": {
-        "properties": {
-          "identities": {
-            "items": {
-              "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstring"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/KCChangeProposalItem"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "migrations": {
-            "items": {
-              "$ref": "#/components/schemas/KnowledgeMigration"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "notice": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "proposals": {
-            "items": {
-              "$ref": "#/components/schemas/KCChangeProposal"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          }
-        },
-        "required": [
-          "proposals",
-          "items",
-          "migrations",
-          "identities",
-          "notice"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfListOfAttemptAndListOfGrading": {
-        "properties": {
-          "attempts": {
-            "items": {
-              "$ref": "#/components/schemas/Attempt"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "gradings": {
-            "items": {
-              "$ref": "#/components/schemas/Grading"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          }
-        },
-        "required": [
-          "attempts",
-          "gradings"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfListOfContentDraftAndListOfRelease": {
-        "properties": {
-          "drafts": {
-            "items": {
-              "$ref": "#/components/schemas/ContentDraft"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "releases": {
-            "items": {
-              "$ref": "#/components/schemas/Release"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          }
-        },
-        "required": [
-          "drafts",
-          "releases"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfListOfSourceAndListOfChunkAndListOfBuilderRunAndBuilderAttempt[]AndListOfCandidateAndListOfAnonymousTypeOfGuidAndintAndstringAndbooleanAndstring": {
-        "properties": {
-          "attempts": {
-            "items": {
-              "$ref": "#/components/schemas/BuilderAttempt"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "candidates": {
-            "items": {
-              "$ref": "#/components/schemas/Candidate"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "chunks": {
-            "items": {
-              "$ref": "#/components/schemas/Chunk"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "libraries": {
-            "items": {
-              "$ref": "#/components/schemas/AnonymousTypeOfGuidAndintAndstringAndboolean"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "provider": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "runs": {
-            "items": {
-              "$ref": "#/components/schemas/BuilderRun"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/Source"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          }
-        },
-        "required": [
-          "sources",
-          "chunks",
-          "runs",
-          "attempts",
-          "candidates",
-          "libraries",
-          "provider"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfMasteryAndListOfEvidence": {
-        "properties": {
-          "evidence": {
-            "items": {
-              "$ref": "#/components/schemas/Evidence"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "mastery": {
-            "$ref": "#/components/schemas/Mastery"
-          }
-        },
-        "required": [
-          "mastery",
-          "evidence"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfbooleanAndstring": {
-        "properties": {
-          "connected": {
-            "type": "boolean"
-          },
-          "notice": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "connected",
-          "notice"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfintAndint": {
-        "properties": {
-          "minutes": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "reserved": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "minutes",
-          "reserved"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean": {
-        "properties": {
-          "failed": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "jobs": {
-            "items": {
-              "$ref": "#/components/schemas/AnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "oldestSeconds": {
-            "format": "double",
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
-            "type": [
-              "null",
-              "number",
-              "string"
-            ]
-          },
-          "pending": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "pending",
-          "failed",
-          "oldestSeconds",
-          "jobs"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfintAndintAndintAndintAndint": {
-        "properties": {
-          "drafts": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "failed": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "needsOCR": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "queued": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "unreviewed": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "queued",
-          "failed",
-          "needsOCR",
-          "unreviewed",
-          "drafts"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfstringAndString[]Andstring": {
-        "properties": {
-          "errors": {
-            "items": {
-              "type": "string"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "hash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "hash",
-          "errors",
-          "status"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfstringAndintAndstringAndstring": {
-        "properties": {
-          "attempts": {
-            "format": "int32",
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ]
-          },
-          "previewHash": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "requiredConfirm": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "student": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "student",
-          "attempts",
-          "previewHash",
-          "requiredConfirm"
-        ],
-        "type": "object"
-      },
-      "AnonymousTypeOfstringAndstringAndString[]": {
-        "properties": {
-          "rules": {
-            "items": {
-              "type": "string"
-            },
-            "type": [
-              "null",
-              "array"
-            ]
-          },
-          "status": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "version": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        },
-        "required": [
-          "status",
-          "version",
-          "rules"
-        ],
-        "type": "object"
-      },
       "AnswerInput": {
         "properties": {
           "answer": {
@@ -975,6 +212,47 @@
               "null",
               "string"
             ]
+          }
+        },
+        "type": "object"
+      },
+      "Availability": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "reserved": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
           }
         },
         "type": "object"
@@ -1472,6 +750,44 @@
         },
         "type": "object"
       },
+      "CorrectionBatch": {
+        "properties": {
+          "confirmedBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "previewHash": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "Course": {
         "properties": {
           "id": {
@@ -1708,6 +1024,25 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "ExistingAttemptResponse": {
+        "properties": {
+          "assessmentStatus": {
+            "type": "string"
+          },
+          "attempt": {
+            "$ref": "#/components/schemas/Attempt"
+          },
+          "grading": {
+            "$ref": "#/components/schemas/Grading"
+          }
+        },
+        "required": [
+          "attempt",
+          "grading",
+          "assessmentStatus"
+        ],
         "type": "object"
       },
       "Family": {
@@ -2775,6 +2110,33 @@
         ],
         "type": "object"
       },
+      "NewAttemptResponse": {
+        "properties": {
+          "assessmentStatus": {
+            "type": "string"
+          },
+          "attempt": {
+            "$ref": "#/components/schemas/Attempt"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "grading": {
+            "$ref": "#/components/schemas/Grading"
+          }
+        },
+        "required": [
+          "attempt",
+          "grading",
+          "assessmentStatus",
+          "feedback",
+          "explanation"
+        ],
+        "type": "object"
+      },
       "ObservedStep": {
         "properties": {
           "hintLevel": {
@@ -2905,6 +2267,21 @@
         "required": [
           "fileId",
           "title"
+        ],
+        "type": "object"
+      },
+      "PDFSourceResponse": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/BuilderRun"
+          },
+          "source": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "source",
+          "job"
         ],
         "type": "object"
       },
@@ -3329,6 +2706,78 @@
           "lockedIds",
           "requestedTaskIds"
         ],
+        "type": "object"
+      },
+      "PlanRevision": {
+        "properties": {
+          "budget": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "candidates": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "inputHash": {
+            "type": "string"
+          },
+          "number": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "overflow": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "planId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reserved": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "ruleVersion": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "warnings": {
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "Progress": {
@@ -3903,6 +3352,124 @@
         ],
         "type": "object"
       },
+      "StudyTask": {
+        "properties": {
+          "actualMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "goalSnapshots": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "mandatory": {
+            "type": "boolean"
+          },
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "questionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "resourceRef": {
+            "type": "string"
+          },
+          "resourceUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewTargetId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "trackedSeconds": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "TaskTransitionDetails": {
         "properties": {
           "from": {
@@ -4309,7 +3876,35 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfstringAndstringAndString[]"
+                  "properties": {
+                    "rules": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "status": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "version": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "version",
+                    "rules"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4334,7 +3929,76 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "attempt": {
+                      "$ref": "#/components/schemas/Attempt"
+                    },
+                    "grade": {
+                      "$ref": "#/components/schemas/Grading"
+                    },
+                    "mappingReleaseId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "observations": {
+                      "items": {
+                        "properties": {
+                          "kcId": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "kcName": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "step": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "step",
+                          "kcId",
+                          "kcName"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "question": {
+                      "$ref": "#/components/schemas/Question"
+                    }
+                  },
+                  "required": [
+                    "attempt",
+                    "question",
+                    "mappingReleaseId",
+                    "grade",
+                    "observations",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4365,7 +4029,56 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "after": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "before": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "previewHash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "replayAttempts": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "before",
+                    "after",
+                    "replayAttempts",
+                    "previewHash",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4396,7 +4109,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Grading"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4437,7 +4158,26 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "role": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "role"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4457,7 +4197,31 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "familyId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "familyId",
+                    "role"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4471,7 +4235,107 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfListOfSourceAndListOfChunkAndListOfBuilderRunAndBuilderAttempt[]AndListOfCandidateAndListOfAnonymousTypeOfGuidAndintAndstringAndbooleanAndstring"
+                  "properties": {
+                    "attempts": {
+                      "items": {
+                        "$ref": "#/components/schemas/BuilderAttempt"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "candidates": {
+                      "items": {
+                        "$ref": "#/components/schemas/Candidate"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "chunks": {
+                      "items": {
+                        "$ref": "#/components/schemas/Chunk"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "libraries": {
+                      "items": {
+                        "properties": {
+                          "hash": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "number": {
+                            "format": "int32",
+                            "pattern": "^-?(?:0|[1-9]\\d*)$",
+                            "type": [
+                              "integer",
+                              "string"
+                            ]
+                          },
+                          "withdrawn": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "number",
+                          "hash",
+                          "withdrawn"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "provider": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "runs": {
+                      "items": {
+                        "$ref": "#/components/schemas/BuilderRun"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "sources": {
+                      "items": {
+                        "$ref": "#/components/schemas/Source"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "sources",
+                    "chunks",
+                    "runs",
+                    "attempts",
+                    "candidates",
+                    "libraries",
+                    "provider"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4506,7 +4370,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Candidate"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4526,7 +4398,24 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuilderRun"
+                }
+              }
+            }
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuilderRun"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4557,7 +4446,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuilderRun"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4571,7 +4468,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfListOfContentDraftAndListOfRelease"
+                  "properties": {
+                    "drafts": {
+                      "items": {
+                        "$ref": "#/components/schemas/ContentDraft"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "releases": {
+                      "items": {
+                        "$ref": "#/components/schemas/Release"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "drafts",
+                    "releases"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4590,7 +4511,23 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstring"
+                    "properties": {
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "title"
+                    ],
+                    "type": "object"
                   },
                   "type": "array"
                 }
@@ -4616,7 +4553,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentDraft"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4647,7 +4592,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentDraft"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4672,7 +4625,35 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfstringAndString[]Andstring"
+                  "properties": {
+                    "errors": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "hash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "status": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "hash",
+                    "errors",
+                    "status"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4707,7 +4688,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Release"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4728,7 +4717,15 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentDraft"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4738,7 +4735,15 @@
     "/api/v1/content/fixture": {
       "post": {
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentDraft"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4752,7 +4757,74 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfKCChangeProposal[]AndKCChangeProposalItem[]AndKnowledgeMigration[]AndAnonymousTypeOfGuidAndstringAndstring"
+                  "properties": {
+                    "identities": {
+                      "items": {
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status"
+                        ],
+                        "type": "object"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/KCChangeProposalItem"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "migrations": {
+                      "items": {
+                        "$ref": "#/components/schemas/KnowledgeMigration"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "proposals": {
+                      "items": {
+                        "$ref": "#/components/schemas/KCChangeProposal"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "proposals",
+                    "items",
+                    "migrations",
+                    "identities",
+                    "notice"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4774,7 +4846,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KCChangeProposal"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4799,7 +4879,52 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndKCProposalEvent[]AndKnowledgeMigration[]Andstring"
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "$ref": "#/components/schemas/KCProposalEvent"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/KCChangeProposalItem"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "migrations": {
+                      "items": {
+                        "$ref": "#/components/schemas/KnowledgeMigration"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "proposal": {
+                      "$ref": "#/components/schemas/KCChangeProposal"
+                    }
+                  },
+                  "required": [
+                    "proposal",
+                    "items",
+                    "events",
+                    "migrations",
+                    "notice"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4832,7 +4957,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KCChangeProposal"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4857,7 +4990,46 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndstringAndstringAndstring"
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "$ref": "#/components/schemas/KCChangeProposalItem"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "previewHash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "proposal": {
+                      "$ref": "#/components/schemas/KCChangeProposal"
+                    },
+                    "requiredConfirm": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "proposal",
+                    "items",
+                    "previewHash",
+                    "requiredConfirm",
+                    "notice"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -4892,7 +5064,30 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "proposal": {
+                      "$ref": "#/components/schemas/KCChangeProposal"
+                    }
+                  },
+                  "required": [
+                    "proposal",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4923,7 +5118,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KCChangeProposal"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4944,7 +5147,15 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KCChangeProposal"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4965,7 +5176,38 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "citations": {
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "kcId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "kcId",
+                    "citations",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -4985,7 +5227,24 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            }
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PDFSourceResponse"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5016,7 +5275,35 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "withdrawn": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "withdrawn",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5036,7 +5323,24 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            }
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5046,7 +5350,15 @@
     "/api/v1/content/unit-pack": {
       "post": {
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentDraft"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5056,7 +5368,62 @@
     "/api/v1/family/delete-preview": {
       "get": {
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "counts": {
+                      "additionalProperties": {
+                        "format": "int32",
+                        "pattern": "^-?(?:0|[1-9]\\d*)$",
+                        "type": [
+                          "integer",
+                          "string"
+                        ]
+                      },
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    },
+                    "family": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "previewHash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "requiredConfirm": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "family",
+                    "counts",
+                    "previewHash",
+                    "requiredConfirm",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5066,7 +5433,16 @@
     "/api/v1/family/export": {
       "get": {
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5081,7 +5457,35 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndGuidAndstringAndstring"
+                    "properties": {
+                      "accountId": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "roles": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "userName": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "accountId",
+                      "roles",
+                      "userName"
+                    ],
+                    "type": "object"
                   },
                   "type": "array"
                 }
@@ -5105,7 +5509,43 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "accountId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "roles": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "userName": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "accountId",
+                    "roles",
+                    "userName"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5136,7 +5576,38 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "roles": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "roles",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5156,7 +5627,47 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "backupPolicy": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "familyId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "receiptId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "scope": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "deleted",
+                    "familyId",
+                    "receiptId",
+                    "scope",
+                    "backupPolicy"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5176,7 +5687,54 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "hash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "name": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "size": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "mimeType",
+                    "hash",
+                    "size"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5197,7 +5755,28 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5228,7 +5807,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Goal"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5270,7 +5857,15 @@
           }
         ],
         "responses": {
-          "200": {}
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Outbox"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5280,7 +5875,23 @@
     "/api/v1/logout": {
       "post": {
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "done": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "done"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5294,7 +5905,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfActorAndFamily"
+                  "properties": {
+                    "actor": {
+                      "$ref": "#/components/schemas/Actor"
+                    },
+                    "family": {
+                      "$ref": "#/components/schemas/Family"
+                    }
+                  },
+                  "required": [
+                    "actor",
+                    "family"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -5312,7 +5935,217 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfDateTimeOffsetAndListOfOperationSignalAndStorageStatusAndObjectAndAnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndbooleanAndAnonymousTypeOfintAndintAndintAndintAndintAndBackupStatusAndAnonymousTypeOfbooleanAndstring"
+                  "properties": {
+                    "backup": {
+                      "$ref": "#/components/schemas/BackupStatus"
+                    },
+                    "builder": {
+                      "properties": {
+                        "drafts": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        },
+                        "failed": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        },
+                        "needsOCR": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        },
+                        "queued": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        },
+                        "unreviewed": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "queued",
+                        "failed",
+                        "needsOCR",
+                        "unreviewed",
+                        "drafts"
+                      ],
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    },
+                    "model": {
+                      "properties": {
+                        "connected": {
+                          "type": "boolean"
+                        },
+                        "notice": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "connected",
+                        "notice"
+                      ],
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    },
+                    "observedAt": {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    "projection": {
+                      "properties": {
+                        "failed": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        },
+                        "jobs": {
+                          "items": {
+                            "properties": {
+                              "canRetry": {
+                                "type": "boolean"
+                              },
+                              "createdAt": {
+                                "format": "date-time",
+                                "type": "string"
+                              },
+                              "errorCode": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "id": {
+                                "format": "uuid",
+                                "type": "string"
+                              },
+                              "nextAttemptAt": {
+                                "format": "date-time",
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "retries": {
+                                "format": "int32",
+                                "pattern": "^-?(?:0|[1-9]\\d*)$",
+                                "type": [
+                                  "integer",
+                                  "string"
+                                ]
+                              },
+                              "student": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "studentId": {
+                                "format": "uuid",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "studentId",
+                              "student",
+                              "createdAt",
+                              "retries",
+                              "nextAttemptAt",
+                              "errorCode",
+                              "canRetry"
+                            ],
+                            "type": "object"
+                          },
+                          "type": [
+                            "null",
+                            "array"
+                          ]
+                        },
+                        "oldestSeconds": {
+                          "format": "double",
+                          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+                          "type": [
+                            "null",
+                            "number",
+                            "string"
+                          ]
+                        },
+                        "pending": {
+                          "format": "int32",
+                          "pattern": "^-?(?:0|[1-9]\\d*)$",
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "pending",
+                        "failed",
+                        "oldestSeconds",
+                        "jobs"
+                      ],
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    },
+                    "requests": {},
+                    "signals": {
+                      "items": {
+                        "$ref": "#/components/schemas/OperationSignal"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "storage": {
+                      "$ref": "#/components/schemas/StorageStatus"
+                    }
+                  },
+                  "required": [
+                    "observedAt",
+                    "signals",
+                    "storage",
+                    "requests",
+                    "projection",
+                    "builder",
+                    "backup",
+                    "model"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -5347,7 +6180,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperWrong"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5378,7 +6219,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperWrong"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5409,7 +6258,35 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "draft": {
+                      "$ref": "#/components/schemas/ContentDraft"
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "questionId": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "draft",
+                    "questionId",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5440,7 +6317,61 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "answer": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "kcs": {
+                      "items": {
+                        "$ref": "#/components/schemas/KC"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "previewHash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "question": {
+                      "$ref": "#/components/schemas/Question"
+                    },
+                    "result": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "previewHash",
+                    "question",
+                    "kcs",
+                    "result",
+                    "answer",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5471,7 +6402,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParentBurdenRecord"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5497,7 +6436,37 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstringAndstringAndstring"
+                    "properties": {
+                      "id": {
+                        "format": "uuid",
+                        "type": "string"
+                      },
+                      "policy": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "stem": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      },
+                      "type": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "stem",
+                      "type",
+                      "policy"
+                    ],
+                    "type": "object"
                   },
                   "type": "array"
                 }
@@ -5534,7 +6503,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyTask"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5565,7 +6542,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanRevision"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5596,7 +6581,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanRevision"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5627,7 +6620,24 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExistingAttemptResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewAttemptResponse"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5658,7 +6668,35 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "level": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    },
+                    "text": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "level"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5697,7 +6735,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5728,7 +6774,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5753,7 +6807,31 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfListOfAttemptAndListOfGrading"
+                  "properties": {
+                    "attempts": {
+                      "items": {
+                        "$ref": "#/components/schemas/Attempt"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "gradings": {
+                      "items": {
+                        "$ref": "#/components/schemas/Grading"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "attempts",
+                    "gradings"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -5791,7 +6869,29 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfintAndint"
+                  "properties": {
+                    "minutes": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    },
+                    "reserved": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "minutes",
+                    "reserved"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -5833,7 +6933,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Availability"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5854,7 +6962,22 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Catalog"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5875,7 +6998,31 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "role": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "studentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "role",
+                    "studentId"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5905,7 +7052,15 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Student"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -5930,7 +7085,41 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfstringAndintAndstringAndstring"
+                  "properties": {
+                    "attempts": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    },
+                    "previewHash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "requiredConfirm": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "student": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "student",
+                    "attempts",
+                    "previewHash",
+                    "requiredConfirm"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -5955,7 +7144,16 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6048,7 +7246,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Goal"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6079,7 +7285,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionBatch"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6110,7 +7324,40 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "changes": {
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "previewHash": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "previewHash",
+                    "changes",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6173,7 +7420,25 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnonymousTypeOfMasteryAndListOfEvidence"
+                  "properties": {
+                    "evidence": {
+                      "items": {
+                        "$ref": "#/components/schemas/Evidence"
+                      },
+                      "type": [
+                        "null",
+                        "array"
+                      ]
+                    },
+                    "mastery": {
+                      "$ref": "#/components/schemas/Mastery"
+                    }
+                  },
+                  "required": [
+                    "mastery",
+                    "evidence"
+                  ],
+                  "type": "object"
                 }
               }
             }
@@ -6238,7 +7503,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperWrong"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6296,7 +7569,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParentBurdenRecord"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6362,7 +7643,15 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanRevision"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6473,7 +7762,38 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "change": {
+                      "$ref": "#/components/schemas/ProgressChange"
+                    },
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "previous": {
+                      "$ref": "#/components/schemas/Progress"
+                    },
+                    "replacement": {
+                      "$ref": "#/components/schemas/Progress"
+                    }
+                  },
+                  "required": [
+                    "previous",
+                    "replacement",
+                    "change",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6544,7 +7864,15 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6639,7 +7967,35 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "backupPolicy": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "studentId": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "deleted",
+                    "studentId",
+                    "backupPolicy"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6660,7 +8016,27 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "generation": {
+                      "format": "uuid",
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "generation"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6681,7 +8057,85 @@
           }
         ],
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "answerShown": {
+                      "type": "boolean"
+                    },
+                    "canComplete": {
+                      "type": "boolean"
+                    },
+                    "hintLevel": {
+                      "format": "int32",
+                      "pattern": "^-?(?:0|[1-9]\\d*)$",
+                      "type": [
+                        "integer",
+                        "string"
+                      ]
+                    },
+                    "lastAttempt": {
+                      "properties": {
+                        "answer": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "result": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "answer",
+                        "result"
+                      ],
+                      "type": [
+                        "null",
+                        "object"
+                      ]
+                    },
+                    "releaseId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "sessionId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "stem": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "type": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "sessionId",
+                    "stem",
+                    "type",
+                    "hintLevel",
+                    "answerShown",
+                    "releaseId",
+                    "canComplete",
+                    "lastAttempt"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6712,7 +8166,34 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "notice": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "revision": {
+                      "$ref": "#/components/schemas/PlanRevision"
+                    },
+                    "task": {
+                      "$ref": "#/components/schemas/StudyTask"
+                    }
+                  },
+                  "required": [
+                    "task",
+                    "revision",
+                    "notice"
+                  ],
+                  "type": "object"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"
@@ -6743,7 +8224,15 @@
           "required": true
         },
         "responses": {
-          "200": {}
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyTask"
+                }
+              }
+            }
+          }
         },
         "tags": [
           "Learning.Api"

@@ -42,7 +42,7 @@ public static class Corrections
     }
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapPost("/students/{id:guid}/mapping-corrections:preview",async (Guid id,MappingCorrectionInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");var p=await Preview(db,a,id,input);return Results.Ok(new {previewHash=p.Hash,changes=p.Changes,notice="使用审核发布的映射重放证据和日程，原始作答与领取内容不改。"});});
+        api.MapPost("/students/{id:guid}/mapping-corrections:preview",async (Guid id,MappingCorrectionInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");var p=await Preview(db,a,id,input);return TypedResults.Ok(new {previewHash=p.Hash,changes=p.Changes,notice="使用审核发布的映射重放证据和日程，原始作答与领取内容不改。"});});
         api.MapPost("/students/{id:guid}/mapping-corrections:confirm",async (Guid id,MappingCorrectionInput input,Database db,HttpContext ctx)=>
         {
             var a=ctx.Actor();a.Require("Parent");var p=await Preview(db,a,id,input);
@@ -53,7 +53,7 @@ public static class Corrections
                 db.Add(new CorrectionItem {FamilyId=a.FamilyId,BatchId=batch.Id,AttemptId=attemptId,MappingReleaseId=p.Release.Id});
                 db.Outbox.Add(new() {FamilyId=a.FamilyId,StudentId=id,AttemptId=attemptId});
             }
-            return Results.Accepted("/api/v1/students/"+id+"/mastery",batch);
+            return TypedResults.Accepted("/api/v1/students/"+id+"/mastery",batch);
         });
     }
 }

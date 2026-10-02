@@ -15,7 +15,7 @@ public static class Provenance
         {
             var a=ctx.Actor();a.Require("ContentEditor");
             if(!await db.Set<ContentIdentity>().AnyAsync(k=>k.Id==id && k.FamilyId==a.FamilyId && k.EntityType=="KC") && !await db.Candidates.AnyAsync(c=>c.CreatedKCId==id && c.FamilyId==a.FamilyId))throw new ApiError(404,"NOT_FOUND","能力不存在。");
-            var citations=await Citations(db,a.FamilyId,id);return Results.Ok(new {kcId=id,citations,notice=citations.Length==0?"没有建库引用记录，可能是人工内容或旧数据；不推定来源。":"引用保留原始片段、位置、建库输入版本与人工审核记录。"});
+            var citations=await Citations(db,a.FamilyId,id);return TypedResults.Ok(new {kcId=id,citations,notice=citations.Length==0?"没有建库引用记录，可能是人工内容或旧数据；不推定来源。":"引用保留原始片段、位置、建库输入版本与人工审核记录。"});
         });
     }
 }

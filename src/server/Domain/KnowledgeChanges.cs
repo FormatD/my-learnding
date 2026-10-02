@@ -99,19 +99,19 @@ public static class KnowledgeChanges
         });
         api.MapPost("/content/kc-changes",async(KCChangeInput input,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("ContentEditor");var p=new KCChangeProposal{FamilyId=a.FamilyId,ProposalType=input.ProposalType,Rationale=(input.Rationale??"").Trim(),FromReleaseId=input.FromReleaseId,EffectiveReleaseId=input.EffectiveReleaseId,CreatedBy=a.Id};var items=await Validate(db,a,input,p.Id);db.Add(p);db.AddRange(items);Event(db,p,items,a,"Created",p.Rationale);return Results.Created($"/api/v1/content/kc-changes/{p.Id}",p);
+            var a=ctx.Actor();a.Require("ContentEditor");var p=new KCChangeProposal{FamilyId=a.FamilyId,ProposalType=input.ProposalType,Rationale=(input.Rationale??"").Trim(),FromReleaseId=input.FromReleaseId,EffectiveReleaseId=input.EffectiveReleaseId,CreatedBy=a.Id};var items=await Validate(db,a,input,p.Id);db.Add(p);db.AddRange(items);Event(db,p,items,a,"Created",p.Rationale);return TypedResults.Created($"/api/v1/content/kc-changes/{p.Id}",p);
         });
         api.MapPut("/content/kc-changes/{id:guid}",async(Guid id,KCChangeInput input,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("ContentEditor");var p=await Owned(db,a,id);if(p.Status!="Draft")throw new ApiError(409,"KC_CHANGE_FROZEN","只有草稿可以编辑；提交审核后保持记录不变。");var items=await Validate(db,a,input,id);db.RemoveRange(await Items(db,id));db.AddRange(items);p.ProposalType=input.ProposalType;p.Rationale=input.Rationale.Trim();p.FromReleaseId=input.FromReleaseId;p.EffectiveReleaseId=input.EffectiveReleaseId;p.Version++;Event(db,p,items,a,"Edited",p.Rationale);return Results.Ok(p);
+            var a=ctx.Actor();a.Require("ContentEditor");var p=await Owned(db,a,id);if(p.Status!="Draft")throw new ApiError(409,"KC_CHANGE_FROZEN","只有草稿可以编辑；提交审核后保持记录不变。");var items=await Validate(db,a,input,id);db.RemoveRange(await Items(db,id));db.AddRange(items);p.ProposalType=input.ProposalType;p.Rationale=input.Rationale.Trim();p.FromReleaseId=input.FromReleaseId;p.EffectiveReleaseId=input.EffectiveReleaseId;p.Version++;Event(db,p,items,a,"Edited",p.Rationale);return TypedResults.Ok(p);
         });
         api.MapPost("/content/kc-changes/{id:guid}:submit",async(Guid id,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("ContentEditor");var p=await Owned(db,a,id);if(p.Status!="Draft")throw new ApiError(409,"KC_CHANGE_STATE","只可提交草稿。");var items=await Items(db,id);await Validate(db,a,Input(p,items),id);p.Status="InReview";p.Version++;Event(db,p,items,a,"Submitted",p.Rationale);return Results.Ok(p);
+            var a=ctx.Actor();a.Require("ContentEditor");var p=await Owned(db,a,id);if(p.Status!="Draft")throw new ApiError(409,"KC_CHANGE_STATE","只可提交草稿。");var items=await Items(db,id);await Validate(db,a,Input(p,items),id);p.Status="InReview";p.Version++;Event(db,p,items,a,"Submitted",p.Rationale);return TypedResults.Ok(p);
         });
         api.MapPost("/content/kc-changes/{id:guid}:decide",async(Guid id,KCChangeDecision input,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("Publisher");var p=await Owned(db,a,id);if(p.Status!="InReview")throw new ApiError(409,"KC_CHANGE_STATE","提案不在待审核状态。");if(input.Decision is not "Approved" and not "Rejected" || string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000)throw Invalid("请选择通过或拒绝，并填写审核依据，最多4000字。");var items=await Items(db,id);if(input.Decision=="Approved")await Validate(db,a,Input(p,items),id);p.Status=input.Decision;p.ReviewedBy=a.Id;p.ReviewedAt=DateTimeOffset.UtcNow;p.Version++;Event(db,p,items,a,input.Decision,input.Reason.Trim());return Results.Ok(p);
+            var a=ctx.Actor();a.Require("Publisher");var p=await Owned(db,a,id);if(p.Status!="InReview")throw new ApiError(409,"KC_CHANGE_STATE","提案不在待审核状态。");if(input.Decision is not "Approved" and not "Rejected" || string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000)throw Invalid("请选择通过或拒绝，并填写审核依据，最多4000字。");var items=await Items(db,id);if(input.Decision=="Approved")await Validate(db,a,Input(p,items),id);p.Status=input.Decision;p.ReviewedBy=a.Id;p.ReviewedAt=DateTimeOffset.UtcNow;p.Version++;Event(db,p,items,a,input.Decision,input.Reason.Trim());return TypedResults.Ok(p);
         });
         api.MapGet("/content/kc-changes/{id:guid}/preview",async(Guid id,Database db,HttpContext ctx)=>
         {
@@ -122,7 +122,7 @@ public static class KnowledgeChanges
             var a=ctx.Actor();a.Require("Publisher");var p=await Owned(db,a,id);if(p.Status!="Approved" || p.ReviewedBy==null)throw new ApiError(422,"KC_CHANGE_REVIEW_REQUIRED","提案须先通过人工审核。");var items=await Items(db,id);if(input.PreviewHash!=await Hash(db,p,items))throw new ApiError(412,"PREVIEW_CHANGED","范围已变化，请重新预览。");if(input.Confirm!="记录能力变更")throw Invalid("请明确确认记录能力变更。");await Validate(db,a,Input(p,items),id);
             var from=items.Where(i=>i.Side=="From").ToArray();var to=items.Where(i=>i.Side=="To").ToArray();var ids=from.Select(i=>i.KCId).ToArray();foreach(var identity in await db.Set<ContentIdentity>().Where(k=>k.FamilyId==a.FamilyId && ids.Contains(k.Id)).ToArrayAsync())identity.Status="Deprecated";
             foreach(var f in from)foreach(var t in to)db.Add(new KnowledgeMigration{FamilyId=a.FamilyId,ProposalId=id,FromKCId=f.KCId,ToKCId=t.KCId,FromRevisionId=f.ProposedRevisionId,ToRevisionId=t.ProposedRevisionId,MigrationType=p.ProposalType,Weight=t.Weight,EffectiveReleaseId=p.EffectiveReleaseId});
-            p.Status="Applied";p.AppliedBy=a.Id;p.AppliedAt=DateTimeOffset.UtcNow;p.Version++;Event(db,p,items,a,"Applied",Notice);return Results.Ok(new{proposal=p,notice=Notice});
+            p.Status="Applied";p.AppliedBy=a.Id;p.AppliedAt=DateTimeOffset.UtcNow;p.Version++;Event(db,p,items,a,"Applied",Notice);return TypedResults.Ok(new{proposal=p,notice=Notice});
         });
     }
 }

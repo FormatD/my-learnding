@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http.HttpResults;
 using UglyToad.PdfPig;
 
 namespace Learning;
@@ -39,7 +40,7 @@ public static class Files
             if (bytes.Length==0 || bytes.Length>10_000_000 || input.Name.Length>200) throw new ApiError(422,"FILE_SIZE","文件大小须在 10 MB 以内。");
             var valid=input.MimeType switch { "application/pdf" => bytes.AsSpan().StartsWith("%PDF-"u8),"image/png" => bytes.AsSpan().StartsWith(new byte[] {137,80,78,71,13,10,26,10}),"image/jpeg" => bytes.Length>3 && bytes[0]==255 && bytes[1]==216 && bytes[2]==255,_ => false };
             if (!valid) throw new ApiError(422,"FILE_TYPE","仅支持文件头正确的 PDF、PNG、JPEG。");
-            var file=new PrivateFile { FamilyId=a.FamilyId,Name=Path.GetFileName(input.Name),MimeType=input.MimeType,Bytes=bytes,Hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant() };db.Add(file);return Results.Created($"/api/v1/files/{file.Id}",new { file.Id,file.Name,file.MimeType,file.Hash,size=bytes.Length });
+            var file=new PrivateFile { FamilyId=a.FamilyId,Name=Path.GetFileName(input.Name),MimeType=input.MimeType,Bytes=bytes,Hash=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant() };db.Add(file);return TypedResults.Created($"/api/v1/files/{file.Id}",new { file.Id,file.Name,file.MimeType,file.Hash,size=bytes.Length });
         });
         api.MapGet("/files/{id:guid}",async (Guid id,Database db,HttpContext ctx) =>
         {
@@ -47,20 +48,20 @@ public static class Files
             var file=await db.Set<PrivateFile>().SingleOrDefaultAsync(f => f.Id==id && f.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","文件不存在。");
             if(!a.Can("Parent") && (!a.Can("ContentEditor") || !await db.Sources.AnyAsync(s=>s.FamilyId==a.FamilyId && s.FileId==file.Id)))throw new ApiError(404,"NOT_FOUND","文件不存在。");
             return Results.File(file.Bytes,file.MimeType,file.Name);
-        });
-        api.MapPost("/content/pdf-sources",async (PDFInput input,Database db,HttpContext ctx) =>
+        }).WithMetadata(new DownloadResponseMetadata(["application/pdf","image/png","image/jpeg"]));
+        api.MapPost("/content/pdf-sources",async Task<Results<Ok<Source>,Accepted<PDFSourceResponse>>> (PDFInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");var file=await db.Set<PrivateFile>().SingleOrDefaultAsync(f => f.Id==input.FileId && f.FamilyId==a.FamilyId && f.MimeType=="application/pdf") ?? throw new ApiError(404,"NOT_FOUND","PDF 不存在。");
-            var old=await db.Sources.SingleOrDefaultAsync(s => s.FamilyId==a.FamilyId && s.Hash==file.Hash);if (old!=null) return Results.Ok(old);
+            var old=await db.Sources.SingleOrDefaultAsync(s => s.FamilyId==a.FamilyId && s.Hash==file.Hash);if (old!=null) return TypedResults.Ok(old);
             var source=new Source { FamilyId=a.FamilyId,FileId=file.Id,Title=input.Title,Hash=file.Hash,UsageScope=input.UsageScope,AllowExternalAI=input.AllowExternalAI };db.Add(source);
             var job=new BuilderRun {FamilyId=a.FamilyId,SourceId=source.Id,Type="ParsePDF",Provider="LocalParser",Model="pdfpig/0.1.16",PromptVersion="parser/1",InputHash=Content.Hash(file.Hash+":pdfpig/0.1.16")};db.Add(job);
-            return Results.Accepted("/api/v1/builder",new {source,job});
+            return TypedResults.Accepted("/api/v1/builder",new PDFSourceResponse(source,job));
         });
         api.MapPost("/students/{id:guid}/paper-wrongs",async (Guid id,PaperInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);
             await PaperLearning.ValidateInput(db,a,input);
-            var wrong=new PaperWrong { FamilyId=a.FamilyId,StudentId=id,FileId=input.FileId,Stem=input.Stem,Answer=input.Answer,ErrorType=input.ErrorType };db.Add(wrong);return Results.Created("/api/v1/students/"+id+"/paper-wrongs",wrong);
+            var wrong=new PaperWrong { FamilyId=a.FamilyId,StudentId=id,FileId=input.FileId,Stem=input.Stem,Answer=input.Answer,ErrorType=input.ErrorType };db.Add(wrong);return TypedResults.Created("/api/v1/students/"+id+"/paper-wrongs",wrong);
         });
         PaperLearning.Map(api);
         api.MapGet("/students/{id:guid}/paper-wrongs",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);return await db.Set<PaperWrong>().Where(p => p.StudentId==id).OrderByDescending(p => p.CreatedAt).Take(100).ToListAsync(); });

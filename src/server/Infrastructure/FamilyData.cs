@@ -55,7 +55,7 @@ public static class FamilyData
             if(string.IsNullOrWhiteSpace(input.UserName) || input.UserName.Trim().Length<3 || input.Password==null || input.Password.Length is <12 or >128)throw new ApiError(422,"INVALID_CREDENTIALS","用户名至少 3 字，密码需 12～128 字。");
             if(await db.Accounts.AnyAsync(a=>a.UserName==input.UserName.Trim()))throw new ApiError(409,"USERNAME_UNAVAILABLE","用户名不可用。");
             var account=new Account {FamilyId=actor.FamilyId,UserName=input.UserName.Trim(),PasswordHash=Security.Password(input.Password),Roles=string.Join(',',roles)};
-            var membership=new FamilyMembership {FamilyId=actor.FamilyId,AccountId=account.Id,Roles=account.Roles};db.AddRange(account,membership);return Results.Created("/api/v1/family/members",new {membership.Id,membership.AccountId,membership.Roles,account.UserName});
+            var membership=new FamilyMembership {FamilyId=actor.FamilyId,AccountId=account.Id,Roles=account.Roles};db.AddRange(account,membership);return TypedResults.Created("/api/v1/family/members",new {membership.Id,membership.AccountId,membership.Roles,account.UserName});
         });
         api.MapPut("/family/members/{id:guid}/roles",async(Guid id,MemberRolesInput input,Database db,HttpContext ctx)=>
         {
@@ -66,7 +66,7 @@ public static class FamilyData
             foreach(var session in await db.AuthSessions.Where(s=>s.FamilyId==family.Id && (s.AccountId==account.Id || s.Role=="Child")).ToListAsync())session.Revoked=true;
             db.Commands.RemoveRange(await db.Commands.Where(c=>c.FamilyId==family.Id && c.ActorId==account.Id).ToListAsync());
             db.Audits.Add(new Audit {FamilyId=family.Id,ActorId=actor.Id,Action="MemberRolesChanged",Details=Json.Write(new {membership.Id,before,after=membership.Roles,input.Reason})});
-            return Results.Ok(new {membership.Id,membership.Roles,notice="相关成员与孩子会话已撤销，需重新登录；权限缓存已清理。"});
+            return TypedResults.Ok(new {membership.Id,membership.Roles,notice="相关成员与孩子会话已撤销，需重新登录；权限缓存已清理。"});
         });
         api.MapGet("/family/export",async(Database db,HttpContext ctx,IConfiguration config)=>
         {
@@ -94,12 +94,11 @@ public static class FamilyData
                 return Results.File(new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete,65536,true),"application/zip",$"learning-family-{family.Id}.zip");
             }
             catch{ExportCleanup.Remove(path);throw;}
-
-        });
+        }).WithMetadata(new DownloadResponseMetadata(["application/zip"]));
         api.MapGet("/family/delete-preview",async(Database db,HttpContext ctx)=>
         {
             await using var tx=await db.Database.BeginTransactionAsync();var actor=ctx.Actor();await db.Lock(actor.FamilyId);var family=await Owner(db,actor);var counts=await Counts(db,family.Id);await tx.CommitAsync();
-            return Results.Ok(new {family=family.Name,counts,previewHash=Hash(family,counts),requiredConfirm="永久删除家庭",notice="将删除所有学生、成员账户、内容、来源、附件、向量与业务历史，并撤销全部会话。"});
+            return TypedResults.Ok(new {family=family.Name,counts,previewHash=Hash(family,counts),requiredConfirm="永久删除家庭",notice="将删除所有学生、成员账户、内容、来源、附件、向量与业务历史，并撤销全部会话。"});
         });
         api.MapPost("/family:delete",async(DeleteInput input,Database db,HttpContext ctx,IConfiguration config)=>
         {
@@ -113,7 +112,7 @@ public static class FamilyData
             // Break the owner reference before cascading all private rows and accounts.
             ExportCleanup.RemoveFamily(config["ExportDirectory"]!,family.Id);
             family.OwnerAccountId=null;await db.SaveChangesAsync();db.Families.Remove(family);ctx.Items["familyDeleted"]=true;ctx.Response.Cookies.Delete(Security.Cookie);
-            return Results.Ok(new {deleted=true,familyId=family.Id,receiptId=receipt,scope="Family",backupPolicy="恢复旧备份必须应用独立家庭删除请求清单"});
+            return TypedResults.Ok(new {deleted=true,familyId=family.Id,receiptId=receipt,scope="Family",backupPolicy="恢复旧备份必须应用独立家庭删除请求清单"});
         });
     }
 }

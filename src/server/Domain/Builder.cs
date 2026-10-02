@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Learning;
 public record SourceInput(string Title,string Text,bool AllowExternalAI=false,string UsageScope="FamilyOnly");
@@ -10,23 +11,23 @@ public static class Builder
     {
         Provenance.Map(api);
         api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
-        api.MapPost("/content/sources",async (SourceInput input,Database db,HttpContext ctx) =>
+        api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");if (string.IsNullOrWhiteSpace(input.Title) || input.Text.Length<5 || input.Text.Length>100_000 || string.IsNullOrWhiteSpace(input.UsageScope)) throw new ApiError(422,"INVALID_SOURCE","来源需标题、许可范围与 5～100000 字文本。");
-            var hash=Content.Hash(input.Text);var old=await db.Sources.SingleOrDefaultAsync(s => s.FamilyId==a.FamilyId && s.Hash==hash);if (old!=null) return Results.Ok(old);
+            var hash=Content.Hash(input.Text);var old=await db.Sources.SingleOrDefaultAsync(s => s.FamilyId==a.FamilyId && s.Hash==hash);if (old!=null) return TypedResults.Ok(old);
             var source=new Source { FamilyId=a.FamilyId,Title=input.Title,Text=input.Text,Hash=hash,UsageScope=input.UsageScope,AllowExternalAI=input.AllowExternalAI };db.Sources.Add(source);
             var paragraphs=input.Text.Split('\n',StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).Where(t => t.Length>0).ToArray();
             for (var i=0;i<paragraphs.Length;i++) db.Chunks.Add(new() { FamilyId=a.FamilyId,SourceId=source.Id,Locator=$"段落 {i+1}",Text=paragraphs[i] });
-            return Results.Created($"/api/v1/content/sources/{source.Id}",source);
+            return TypedResults.Created($"/api/v1/content/sources/{source.Id}",source);
         });
-        api.MapPost("/builder/runs",async (RunInput input,Database db,HttpContext ctx) =>
+        api.MapPost("/builder/runs",async Task<Results<Ok<BuilderRun>,Accepted<BuilderRun>>> (RunInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");var source=await db.Sources.SingleOrDefaultAsync(s => s.Id==input.SourceId && s.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","来源不存在。");
             if (input.Provider!="Mock") throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED",source.AllowExternalAI?"模型尚未配置，学习功能可继续使用。":"来源未允许发送外部模型。");
             if (string.IsNullOrWhiteSpace(source.Text)) throw new ApiError(422,"SOURCE_NOT_READY","来源尚未解析完成，或没有文本层。");
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
-            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/2:"+library?.Hash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return Results.Ok(old);
-            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputHash=hash };db.BuilderRuns.Add(run);return Results.Accepted("/api/v1/builder",run);
+            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/2:"+library?.Hash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
+            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputHash=hash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/runs/{id:guid}:retry",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>
         {
@@ -37,7 +38,7 @@ public static class Builder
             await ValidateRun(db,run);
             if(await db.Candidates.AnyAsync(c=>c.RunId==id) || run.Type=="ParsePDF" && await db.Chunks.AnyAsync(c=>c.SourceId==run.SourceId))throw new ApiError(422,"RUN_OUTPUT_EXISTS","已有输出不能再次生成；请检查原运行记录。");
             var before=Json.Write(run);run.Status="Queued";run.Retries=0;run.RetryRound++;run.NextAttemptAt=null;run.CompletedAt=null;run.Error=null;
-            db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="BuilderManualRetry",Details=Json.Write(new{runId=id,before,reason=input.Reason.Trim(),run.RetryRound})});return Results.Accepted("/api/v1/builder",run);
+            db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="BuilderManualRetry",Details=Json.Write(new{runId=id,before,reason=input.Reason.Trim(),run.RetryRound})});return TypedResults.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/candidates/{id:guid}:decide",async (Guid id,DecisionInput input,Database db,HttpContext ctx) =>
         {
@@ -65,7 +66,7 @@ public static class Builder
             else throw new ApiError(422,"INVALID_DECISION","支持新建草稿、关联已有或拒绝。");
             c.Decision=input.Decision;c.ReviewReason=input.Reason;c.ReviewedBy=a.Id;c.ReviewedAt=DateTimeOffset.UtcNow;
             db.Audits.Add(new() { FamilyId=a.FamilyId,ActorId=a.Id,Action="CandidateReview",Details=Json.Write(new { candidateId=id,input.Decision,input.Reason,input.ExistingKCId,input.Name,input.Behavior,input.Boundary,c.CreatedDraftId,c.CreatedKCId }) });
-            return Results.Ok(c);
+            return TypedResults.Ok(c);
         });
     }
     public static async Task ValidateRun(Database db,BuilderRun run,CancellationToken ct=default)
