@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { localDate } from '../src/api';
+// Keep the real authentication limiter enabled; pace this suite's setup logins.
+let authTimes:number[]=[];
+test.beforeEach(async({page},info)=>{
+  authTimes=authTimes.filter(t=>Date.now()-t<61000);
+  while(authTimes.length>=8){const wait=Math.min(60000,Math.max(1,61000-(Date.now()-authTimes[0])));info.setTimeout(info.timeout+wait);await new Promise(resolve=>setTimeout(resolve,wait));authTimes=authTimes.filter(t=>Date.now()-t<61000);}
+  page.on('request',request=>{if(request.method()==='POST'&&/\/api\/v1\/auth\/(login|register)$/.test(request.url()))authTimes.push(Date.now());});
+});
 test('家长发布 → 平板作答 → 证据复习', async ({page})=>{
   const name='browser-'+Date.now();
   await page.goto('/');
@@ -67,7 +74,7 @@ test('AT37 题面中的脚本和标签以普通文字显示', async ({page,conte
     const response=await context.request.fetch('/api/v1'+path,{method,headers:{'X-Learning-Request':'1','Idempotency-Key':crypto.randomUUID(),'If-Match':etag},...(data===undefined?{}:{data})});
     expect(response.ok()).toBeTruthy();etag=response.headers()['etag']||etag;return response.json();
   }
-  await call('/auth/register',{userName:'escaping-'+Date.now(),password:'browser-private-test-2026'});
+  authTimes.push(Date.now());await call('/auth/register',{userName:'escaping-'+Date.now(),password:'browser-private-test-2026'});
   const student=await call('/students',{name:'安全题面验收'});
   const draft=await call('/content/fixture',{}),catalog=JSON.parse(draft.payload);
   const payload='<script>window.__unsafe=1</script><img src="/__attack" onerror="window.__unsafe=1">';
@@ -194,4 +201,11 @@ test('家庭负责人管理成员、导出全家包并取得删除回执',async(
   await expect(page.getByRole('heading',{name:'家庭数据与成员'})).toBeVisible();await page.getByLabel('成员用户名').fill('browser-member-'+Date.now());await page.getByLabel('初始密码').fill('family-member-private-2026');await page.getByRole('button',{name:'添加成员',exact:true}).click();await expect(page.getByText('成员已创建，可使用自己的账号登录。')).toBeVisible();await expect(page.getByLabel('初始密码')).toHaveValue('');
   const downloadPromise=page.waitForEvent('download');await page.getByRole('link',{name:'下载全家数据包'}).click();const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/^learning-family-.*\.zip$/);expect(await download.failure()).toBeNull();
   await page.getByRole('button',{name:'预览全家删除范围'}).click();await page.getByLabel('负责人密码').fill('family-browser-private-2026');await page.getByLabel('输入“永久删除家庭”').fill('永久删除家庭');await page.getByRole('button',{name:'确认永久删除全家数据'}).click();await expect(page.getByRole('heading',{name:'全家数据已删除'})).toBeVisible();await expect(page.getByRole('button',{name:'下载删除回执'})).toBeVisible();await expect(page.getByLabel('家长用户名')).toBeVisible();
+});
+
+test('教材目录编辑发布后选择单元练习与课程听力目标',async({page})=>{
+  await page.goto('/');await page.getByRole('button',{name:'首次使用？创建家庭'}).click();await page.getByLabel('家长用户名').fill('browser-directory-'+Date.now());await page.getByLabel('家长密码').fill('directory-browser-private-2026');await page.getByRole('button',{name:'创建私有家庭'}).click();await page.getByLabel('孩子昵称').fill('目录同学');await page.getByRole('button',{name:'创建学生',exact:true}).click();await page.getByRole('button',{name:'创建混合运算样例'}).click();await page.getByRole('button',{name:'编辑',exact:true}).click();await expect(page.getByLabel('教材印次与版本说明')).toHaveValue('具体印次待核对');await page.getByLabel('教材印次与版本说明').fill('家庭试用版本说明，正式印次待核对');await page.getByRole('button',{name:'新增课程',exact:true}).click();await page.getByLabel('课程名称').fill('自备英语听力');await page.getByLabel('课程提供方').fill('家庭自备音频');await page.getByRole('button',{name:'保存并退回待审核'}).click();await expect(page.getByRole('heading',{name:'编辑内容草稿'})).toHaveCount(0);await page.getByRole('button',{name:'审核答案与映射后发布'}).click();await page.getByRole('button',{name:'绑定当前学生'}).click();await page.getByRole('button',{name:/进度与计划/}).click();
+  await expect(page.getByLabel('课时').locator('optgroup').filter({has:page.locator('option',{hasText:'小熊购物'})})).toHaveAttribute('label','第 1 单元 · 混合运算');
+  await page.getByRole('button',{name:'能力练习模板'}).click();await page.getByLabel('目标教材单元').selectOption({label:'第 1 单元 · 混合运算'});await expect(page.getByLabel('目标能力范围')).toHaveValue('整个选定范围');await page.getByRole('button',{name:'添加目标',exact:true}).click();await expect(page.getByRole('heading',{name:'能力小练习'})).toBeVisible();await expect(page.getByText('单元：混合运算',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'听力模板'}).click();await page.getByLabel('目标课程范围').selectOption({label:'自备英语听力 · 家庭自备音频'});await page.getByRole('button',{name:'添加目标',exact:true}).click();await expect(page.getByText('课程：自备英语听力',{exact:true})).toBeVisible();await page.getByRole('button',{name:'生成草稿',exact:true}).click();await expect(page.locator('.task-row').filter({hasText:'能力小练习'})).toHaveCount(1);await expect(page.locator('.task-row').filter({hasText:'英语听力'})).toHaveCount(1);
 });

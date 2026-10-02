@@ -57,11 +57,12 @@ public static class Planning
             Question? q=null;
             if(goal.GoalType=="Practice")
             {
-                q=content.Questions.Where(q=>q.Policy=="SingleKC" && q.Mappings.Any(m=>m.KCId==goal.KCId && m.Mode=="WholeItem")).OrderBy(q=>history.Count(h=>h.QuestionId==q.Id)).ThenBy(q=>q.Id).FirstOrDefault();
+                var scopedKCIds=Goals.ScopeKCs(goal,content);
+                q=content.Questions.Where(q=>q.Policy=="SingleKC" && q.Mappings.Any(m=>scopedKCIds.Contains(m.KCId) && m.Mode=="WholeItem")).OrderBy(q=>history.Count(h=>h.QuestionId==q.Id)).ThenBy(q=>q.Id).FirstOrDefault();
                 if(q==null){warnings.Add($"MISSING_CONTENT: 目标 {goal.Title} 缺少可测正式题目");continue;}
             }
             var key=q==null?$"goal:{goal.Id}":$"question:{q.Id}";goalOptions.Add((goal,key));
-            options.Add(new(key,goal.Title,q==null?"Resource":"Practice",goal.Minutes,false,15+goal.Priority-3,"LONG_TERM_GOAL",$"按目标周期安排（{(goal.Period=="Weekly"?"每周":"每天")} {goal.TargetValue} 次）",goal.KCId,q?.Id,ResourceRef:goal.PaperReference));
+            options.Add(new(key,goal.Title,q==null?"Resource":"Practice",goal.Minutes,false,15+goal.Priority-3,"LONG_TERM_GOAL",$"按目标周期安排（{(goal.Period=="Weekly"?"每周":"每天")} {goal.TargetValue} 次）",q?.Mappings.FirstOrDefault(m=>m.Mode=="WholeItem")?.KCId??goal.KCId,q?.Id,ResourceRef:goal.PaperReference));
         }
         foreach (var r in reviews)
         {

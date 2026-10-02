@@ -69,6 +69,8 @@ public class Progress : Row
 }
 public class Goal : Row
 {
+    public Guid? CourseId { get; set; }
+    public Guid? UnitId { get; set; }
     public string Subject { get; set; } = "Unspecified";
     public string GoalType { get; set; } = "Activity";
     public Guid? KCId { get; set; }
@@ -105,9 +107,12 @@ public record KC(Guid Id, Guid RevisionId, string Code, string Name, string Beha
 public record Mapping(Guid KCId, string Role = "Primary", decimal Share = 1, string Mode = "WholeItem", string? Step = null);
 public record Question(Guid Id, Guid RevisionId, string Stem, string Answer, string Explanation, string Type, string Difficulty, string Policy, Mapping[] Mappings, Guid? VariantGroupId = null, string Coverage = "Basic", string? Hint = null);
 public record Resource(Guid Id, string Title, string PaperReference, int Minutes, Guid[] KCIds, string? Url = null);
-public record Lesson(Guid Id, string Title, int Sequence, Guid[] KCIds);
+public record Textbook(Guid Id,Guid RevisionId,string Publisher,string Edition,string Subject,int Grade,string Semester,Guid? SourceId=null);
+public record TextbookUnit(Guid Id,Guid RevisionId,Guid TextbookId,string Title,int Sequence);
+public record Course(Guid Id,Guid RevisionId,string Provider,string Subject,string Title,Guid[]? SourceRefs=null);
+public record Lesson(Guid Id, string Title, int Sequence, Guid[] KCIds,Guid? UnitId=null,Guid? CourseId=null,Guid? RevisionId=null,int EstimatedMinutes=5,Guid[]? SourceRefs=null);
 public record Relation(Guid From, Guid To, string Type = "Prerequisite");
-public record Catalog(KC[] Kcs, Question[] Questions, Resource[] Resources, Lesson[] Lessons, Relation[] Relations);
+public record Catalog(KC[] Kcs, Question[] Questions, Resource[] Resources, Lesson[] Lessons, Relation[] Relations,Textbook[]? Textbooks=null,TextbookUnit[]? Units=null,Course[]? Courses=null);
 public class Plan : Row
 {
     public Guid StudentId { get; set; }

@@ -8,7 +8,7 @@ public static class Content
     public static string MeasurementSignature(KC k)=>Hash(Json.Write(new {behavior=k.Behavior.Trim().Normalize(),boundary=k.Boundary.Trim().Normalize(),k.Type,coverage=(k.RequiredCoverage??["Basic"]).Distinct().OrderBy(x=>x,StringComparer.Ordinal).ToArray()}));
     public static string[] Validate(Catalog c)
     {
-        var errors = new List<string>();
+        var errors = new List<string>();errors.AddRange(CatalogDirectory.Validate(c));
         if(c.Kcs.Length==0 || c.Questions.Length==0)errors.Add("正式内容至少需要一个能力和一道人工作答审核过的测量题");
         var ids = c.Kcs.Select(k => k.Id).ToHashSet();
         if (ids.Count != c.Kcs.Length || c.Kcs.Select(k => k.Code).Distinct().Count() != c.Kcs.Length) errors.Add("KC 身份和编码必须唯一");
@@ -82,6 +82,9 @@ public static class Content
         var qs=stems.Select((text,i) => new Question(Guid.NewGuid(),Guid.NewGuid(),text,answers[i],i>=16&&i<=17?$"参考列式：{answers[i]}。家长根据数量关系判分。":$"先确定运算顺序，再分步计算。结果为 {answers[i]}。",i>=16&&i<=17?"ShortAnswer":"Numeric","Medium","SingleKC",[new(kcs[targets[i]].Id)],Hint:i==6||i==7||i==19?"先算小括号里面。":"乘除优先；同级运算从左到右。")).ToArray();
         var resources=kcs.Select(k => new Resource(Guid.NewGuid(),$"{k.Name} · 纸笔讲解","使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",5,[k.Id])).ToArray();
         var lessons=new[] { new Lesson(Guid.NewGuid(),"小熊购物 · 乘加、乘减",1,[kcs[0].Id,kcs[4].Id,kcs[5].Id]),new Lesson(Guid.NewGuid(),"买文具 · 除加、除减",2,[kcs[0].Id,kcs[6].Id,kcs[7].Id]),new Lesson(Guid.NewGuid(),"过河 · 小括号与两步问题",3,[kcs[3].Id,kcs[8].Id]),new Lesson(Guid.NewGuid(),"单元整理 · 同级运算顺序",4,[kcs[1].Id,kcs[2].Id]) };
-        return new(kcs,qs,resources,lessons,[new(kcs[0].Id,kcs[3].Id),new(kcs[3].Id,kcs[8].Id)]);
+        var textbook=new Textbook(Guid.NewGuid(),Guid.NewGuid(),"北师大版","具体印次待核对","Math",3,"上册");
+        var unit=new TextbookUnit(Guid.NewGuid(),Guid.NewGuid(),textbook.Id,"混合运算",1);
+        lessons=lessons.Select(l=>l with {UnitId=unit.Id,RevisionId=Guid.NewGuid()}).ToArray();
+        return new(kcs,qs,resources,lessons,[new(kcs[0].Id,kcs[3].Id),new(kcs[3].Id,kcs[8].Id)],[textbook],[unit],[]);
     }
 }

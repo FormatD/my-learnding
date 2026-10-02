@@ -25,7 +25,7 @@ public static class Publishing
 {
     public static async Task Register(Database db,Release release)
     {
-        var c=Json.Read<Catalog>(release.Payload);
+        var c=Json.Read<Catalog>(release.Payload);await CatalogDirectory.ValidateSources(db,release.FamilyId,c);
         async Task Add(Guid identity,Guid revision,string type,string code,object definition)
         {
             var stable=await db.Set<ContentIdentity>().SingleOrDefaultAsync(i => i.Id==identity);
@@ -42,6 +42,10 @@ public static class Publishing
             if (old==null) db.Add(new ContentRevision { Id=revision,FamilyId=release.FamilyId,IdentityId=identity,EntityType=type,Hash=hash,Definition=text });
             db.Add(new ReleaseItem { FamilyId=release.FamilyId,ReleaseId=release.Id,IdentityId=identity,RevisionId=revision,EntityType=type });
         }
+        foreach(var b in c.Textbooks??[])await Add(b.Id,b.RevisionId,"Textbook",b.Id.ToString(),b);
+        foreach(var u in c.Units??[])await Add(u.Id,u.RevisionId,"TextbookUnit",u.Id.ToString(),u);
+        foreach(var course in c.Courses??[])await Add(course.Id,course.RevisionId,"Course",course.Id.ToString(),course);
+        foreach(var lesson in c.Lessons.Where(l=>l.RevisionId!=null))await Add(lesson.Id,lesson.RevisionId!.Value,"Lesson",lesson.Id.ToString(),lesson);
         foreach (var k in c.Kcs) await Add(k.Id,k.RevisionId,"KC",k.Code,k);
         foreach (var q in c.Questions) await Add(q.Id,q.RevisionId,"Question",q.Id.ToString(),q);
     }

@@ -17,7 +17,8 @@ if(args[0]=="goal-legacy")
     var goal=new Goal {FamilyId=family.Id,StudentId=legacyStudent.Id,Title="历史阅读目标",Minutes=9,PaperReference="原始纸质引用",Subject="",GoalType="",Period="",ScheduleRule="",TargetValue=0,Priority=0,Version=0};
     var task=new StudyTask {FamilyId=family.Id,StudentId=legacyStudent.Id,ReleaseId=release.Id,GoalSnapshots="",Status="Completed",CompletedAt=DateTimeOffset.UtcNow};
     await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"Families\" (\"Id\",\"Name\",\"Version\") VALUES ({family.Id},{family.Name},{family.Version})");
-    db.AddRange(release,legacyStudent,goal,task);await db.SaveChangesAsync();
+    db.AddRange(release,legacyStudent,task);await db.SaveChangesAsync();
+    await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"Goals\" (\"Id\",\"FamilyId\",\"CreatedAt\",\"StudentId\",\"Title\",\"Minutes\",\"PaperReference\",\"Active\",\"Subject\",\"GoalType\",\"KCId\",\"Period\",\"TargetValue\",\"ScheduleRule\",\"Priority\",\"StartDate\",\"EndDate\",\"Version\") VALUES ({goal.Id},{goal.FamilyId},{goal.CreatedAt},{goal.StudentId},{goal.Title},{goal.Minutes},{goal.PaperReference},{goal.Active},{goal.Subject},{goal.GoalType},NULL,{goal.Period},{goal.TargetValue},{goal.ScheduleRule},{goal.Priority},NULL,NULL,{goal.Version})");
     await db.GetService<IMigrator>().MigrateAsync();db.ChangeTracker.Clear();goal=await db.Goals.SingleAsync();task=await db.Tasks.SingleAsync();legacyStudent=await db.Students.SingleAsync();
     Assert(goal.Subject=="Unspecified" && goal.GoalType=="Activity" && goal.Period=="Daily" && goal.TargetValue==1 && goal.Priority==3 && goal.Version==1 && Json.Read<int[]>(goal.ScheduleRule).Length==7 && goal.Title=="历史阅读目标" && goal.Minutes==9 && goal.PaperReference=="原始纸质引用","legacy defaults invalid or original goal overwritten");
     Assert(task.GoalSnapshots=="[]" && task.Status=="Completed","unknown old goal relationship was inferred");Console.WriteLine("PASS 旧目标补齐结构默认值，原名称/资源/时长不改；旧任务关联保持未知");
@@ -37,6 +38,20 @@ if(args[0]=="family-legacy")
     Console.WriteLine("PASS 旧账号角色准确迁移；单家长账号补齐负责人，多账号和纯编辑不推断");
     try{await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Families\" SET \"OwnerAccountId\"={accounts[0].Id} WHERE \"Id\"={multiple.Id}");throw new Exception("cross-family owner allowed");}catch(DbException){}
     Console.WriteLine("PASS 数据库外键拒绝跨家庭负责人关联");return;
+}
+if(args[0]=="catalog-goal-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002022950_FamilyMemberships");var f=new Family();var c=Content.MultiplicationFixture();var r=new Release{FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c))};var s=new Student{FamilyId=f.Id,ActiveReleaseId=r.Id};
+    var g=new Goal{FamilyId=f.Id,StudentId=s.Id,Subject="Reading",GoalType="Reading",Period="Weekly",TargetValue=1};
+    var oldScope=Content.Hash(Json.Write(new{g.Subject,g.GoalType,g.KCId}));var snapshot=Json.Write(new[]{new{g.Id,g.Version,scope=oldScope,g.Title,g.Subject,g.GoalType,g.KCId,g.Minutes,g.Period,g.TargetValue,g.ScheduleRule,g.Priority,g.StartDate,g.EndDate}});
+    var t=new StudyTask{FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,Status="Completed",CompletedAt=DateTimeOffset.UtcNow,GoalSnapshots=snapshot};
+    db.AddRange(f,r,s,t);await db.SaveChangesAsync();
+    await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"Goals\" (\"Id\",\"FamilyId\",\"CreatedAt\",\"StudentId\",\"Title\",\"Minutes\",\"PaperReference\",\"Active\",\"Subject\",\"GoalType\",\"KCId\",\"Period\",\"TargetValue\",\"ScheduleRule\",\"Priority\",\"StartDate\",\"EndDate\",\"Version\") VALUES ({g.Id},{g.FamilyId},{g.CreatedAt},{g.StudentId},{g.Title},{g.Minutes},{g.PaperReference},{g.Active},{g.Subject},{g.GoalType},NULL,{g.Period},{g.TargetValue},{g.ScheduleRule},{g.Priority},NULL,NULL,{g.Version})");
+    await db.Database.MigrateAsync();db.ChangeTracker.Clear();g=await db.Goals.SingleAsync();t=await db.Tasks.SingleAsync();r=await db.Releases.SingleAsync();s=await db.Students.SingleAsync();
+    Assert(g.CourseId==null && g.UnitId==null && t.GoalSnapshots==snapshot && (Json.Read<Catalog>(r.Payload).Textbooks??[]).Length==0,"old scopes or missing textbook metadata inferred");
+    var day=DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone)).DateTime);Assert(Goals.Completed(g,day,s.TimeZone,[t],[])==1,"old scope hash completion broken by new nullable scope columns");
+    await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(f.Id);var plan=await Planning.Generate(db,s,day);await db.SaveChangesAsync();await tx.CommitAsync();Assert(!await db.Placements.AnyAsync(p=>p.RevisionId==plan.Id),"already fulfilled old goal repeated after migration");
+    Console.WriteLine("PASS 旧目录保持未记录，旧任务快照原文不改；新增空范围不破坏已完成配额和计划");return;
 }
 if(args[0]=="seed")
 {

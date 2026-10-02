@@ -54,6 +54,13 @@ Test("私有导出清理仅删除过期成品，并按家庭隔离",()=>{
         ExportCleanup.RemoveFamily(dir,a);Eq(File.Exists(building),false);Eq(File.Exists(fresh),true);Eq(File.Exists(unrelated),true);
     }finally{Directory.Delete(dir,true);}
 });
+Test("目录和目标范围不改变能力身份，旧目标范围摘要兼容",()=>{
+    var c=Content.Fixture();var unit=c.Units!.Single();Eq(c.Lessons.All(l=>l.UnitId==unit.Id && l.RevisionId!=null),true);Eq(c.Textbooks!.Single().Edition,"具体印次待核对");
+    var duplicate=c with {Units=[unit with {RevisionId=c.Kcs[0].RevisionId}]};Eq(Content.Validate(duplicate).Any(e=>e.Contains("修订身份必须")),true);
+    var goal=new Goal{KCId=c.Kcs[0].Id,Subject="Math",GoalType="Practice"};Eq(Goals.Snapshot(goal).Scope,Content.Hash(Json.Write(new{goal.Subject,goal.GoalType,goal.KCId})));
+    var before=Goals.Snapshot(goal).Scope;goal.UnitId=unit.Id;Eq(before==Goals.Snapshot(goal).Scope,false);Eq(Goals.ScopeKCs(goal,c).Single(),goal.KCId!.Value);
+    goal.KCId=null;Eq(Goals.ScopeKCs(goal,c).Length,c.Kcs.Length);goal.UnitId=Guid.NewGuid();Eq(Goals.ScopeKCs(goal,c).Length,0);
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;
