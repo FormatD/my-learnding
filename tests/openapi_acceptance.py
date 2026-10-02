@@ -24,6 +24,7 @@ from success_response_contract import verify
 from failure_response_contract import verify as verify_failures, verify_rate
 from budget_reporting_acceptance import verify as verify_budget
 from resource_revision_acceptance import verify as verify_resources
+from mapping_suggestion_acceptance import verify as verify_mappings
 
 
 def main():
@@ -31,6 +32,7 @@ def main():
     parser.add_argument("--export", type=Path, help="Explicitly export contract instead of checking saved snapshot.")
     parser.add_argument("--baseline", type=Path, help="Also compare a previous revision's contract.")
     parser.add_argument("--regression", action="store_true", help="Run core API, version/PDF, content authoring and observed-step suites in the same disposable service.")
+    parser.add_argument("--export-schema", action="store_true", help="Explicitly regenerate the schema dictionary from this migrated disposable database.")
     args = parser.parse_args()
     env = os.environ.copy()
     env["PATH"] = "/opt/homebrew/opt/postgresql@16/bin:" + env["PATH"]
@@ -86,6 +88,7 @@ def main():
                 verify(document,client,registered)
                 verify_budget(document,client)
                 verify_resources(document,client)
+                verify_mappings(document,client)
                 encoded = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
                 if args.export:
                     args.export.parent.mkdir(parents=True, exist_ok=True)
@@ -99,7 +102,7 @@ def main():
                     findings = changes(json.loads(args.baseline.read_text()), document)
                     assert not findings, "Potentially incompatible API changes:\n" + "\n".join(findings)
                     print("PASS previous revision compatibility gate")
-                subprocess.run([sys.executable, str(ROOT / "scripts/schema_dictionary.py"), "--check"],
+                subprocess.run([sys.executable, str(ROOT / "scripts/schema_dictionary.py"), *([] if args.export_schema else ["--check"])],
                                env=env, check=True, timeout=50)
                 print("PASS current migrations produce the documented schema in an empty database")
                 if args.regression:

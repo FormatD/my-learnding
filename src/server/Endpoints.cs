@@ -273,6 +273,7 @@ public static class Endpoints
         ParentBurden.Map(api);
         ProgressCorrections.Map(api);
         Builder.Map(api);
+        MappingBuilder.Map(api);
         Privacy.Map(api);
         Files.Map(api);
         Corrections.Map(api);

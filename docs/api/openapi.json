@@ -2148,6 +2148,64 @@
         ],
         "type": "object"
       },
+      "MappingBatchInput": {
+        "properties": {
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/MappingDecisionInput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "decisions"
+        ],
+        "type": "object"
+      },
+      "MappingBatchResult": {
+        "properties": {
+          "decisionIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "draftId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "draftValidationWarnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "pending": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "runId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "runId",
+          "draftId",
+          "decisionIds",
+          "pending",
+          "draftValidationWarnings"
+        ],
+        "type": "object"
+      },
       "MappingCorrectionInput": {
         "properties": {
           "attemptIds": {
@@ -2176,6 +2234,581 @@
           "attemptIds",
           "reason"
         ],
+        "type": "object"
+      },
+      "MappingDecisionInput": {
+        "properties": {
+          "correctedProposal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MappingProposal"
+              }
+            ]
+          },
+          "decision": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "suggestionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "suggestionId",
+          "decision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "MappingOwnerSelection": {
+        "properties": {
+          "ownerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ownerType",
+          "ownerId",
+          "ownerRevisionId"
+        ],
+        "type": "object"
+      },
+      "MappingProposal": {
+        "properties": {
+          "evidencePolicy": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestedMappingItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "evidencePolicy",
+          "items"
+        ],
+        "type": "object"
+      },
+      "MappingQuality": {
+        "properties": {
+          "accepted": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "corrected": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "evaluationStatus": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "pending": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "rejected": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "suggested": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "unchanged": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "suggested",
+          "pending",
+          "accepted",
+          "rejected",
+          "corrected",
+          "unchanged",
+          "evaluationStatus",
+          "note"
+        ],
+        "type": "object"
+      },
+      "MappingReviewDecision": {
+        "properties": {
+          "correctedPayload": {
+            "type": "string"
+          },
+          "correctedPayloadHash": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdDraftId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decision": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "originalPayloadHash": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reviewedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reviewerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "suggestionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MappingRun": {
+        "properties": {
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "inputHash": {
+            "type": "string"
+          },
+          "libraryHash": {
+            "type": "string"
+          },
+          "libraryReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "promptVersion": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "sourceDraftId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourceDraftVersion": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sourceHash": {
+            "type": "string"
+          },
+          "sourcePayload": {
+            "type": "string"
+          },
+          "sourceTitle": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MappingRunDetail": {
+        "properties": {
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/MappingReviewDecision"
+            },
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MappingSetItem"
+            },
+            "type": "array"
+          },
+          "library": {
+            "items": {
+              "$ref": "#/components/schemas/KC"
+            },
+            "type": "array"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/MappingQuality"
+          },
+          "run": {
+            "$ref": "#/components/schemas/MappingRun"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/MappingSetRevision"
+            },
+            "type": "array"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/MappingSuggestion"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "run",
+          "suggestions",
+          "decisions",
+          "sets",
+          "items",
+          "library",
+          "quality"
+        ],
+        "type": "object"
+      },
+      "MappingRunInput": {
+        "properties": {
+          "draftId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "libraryReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "owners": {
+            "items": {
+              "$ref": "#/components/schemas/MappingOwnerSelection"
+            },
+            "type": "array"
+          },
+          "provider": {
+            "default": "Mock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "draftId",
+          "libraryReleaseId",
+          "owners"
+        ],
+        "type": "object"
+      },
+      "MappingRunSummary": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "libraryReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "sourceDraftId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourceDraftVersion": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sourceTitle": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sourceDraftId",
+          "sourceDraftVersion",
+          "sourceTitle",
+          "libraryReleaseId",
+          "provider",
+          "model",
+          "status",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "MappingSetItem": {
+        "properties": {
+          "coverageWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "evidenceMode": {
+            "type": "string"
+          },
+          "evidenceShare": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "modelScore": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "sequence": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "setRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourceRefs": {
+            "type": "string"
+          },
+          "step": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "MappingSetRevision": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "draftId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "evidencePolicy": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "originalOwnerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerDefinitionHash": {
+            "type": "string"
+          },
+          "ownerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerType": {
+            "type": "string"
+          },
+          "reviewDecisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reviewStatus": {
+            "type": "string"
+          },
+          "revisionNo": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "MappingSuggestion": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "evidencePolicy": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "matches": {
+            "type": "string"
+          },
+          "ownerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerTitle": {
+            "type": "string"
+          },
+          "ownerType": {
+            "type": "string"
+          },
+          "runId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "suggestedItems": {
+            "type": "string"
+          },
+          "validationFlags": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
         "type": "object"
       },
       "Mastery": {
@@ -4157,6 +4790,82 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "SuggestedMappingItem": {
+        "properties": {
+          "coverageWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "evidenceMode": {
+            "type": "string"
+          },
+          "evidenceShare": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "modelScore": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "role": {
+            "type": "string"
+          },
+          "sequence": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sourceRefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "step": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "kcId",
+          "kcRevisionId",
+          "role",
+          "coverageWeight",
+          "evidenceShare",
+          "evidenceMode",
+          "step",
+          "sequence",
+          "modelScore",
+          "sourceRefs"
+        ],
         "type": "object"
       },
       "TaskTransitionDetails": {
@@ -6231,6 +6940,631 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Candidate"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/mapping-runs": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MappingRunSummary"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Learning-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Origin",
+            "schema": {
+              "format": "uri",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 8,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingRunInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingRun"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingRun"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "412": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/mapping-runs/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingRunDetail"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/mapping-runs/{id}/suggestions:decide": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Learning-Request",
+            "required": true,
+            "schema": {
+              "enum": [
+                "1"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Origin",
+            "schema": {
+              "format": "uri",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 8,
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingBatchInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingBatchResult"
                 }
               }
             },

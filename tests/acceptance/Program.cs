@@ -163,6 +163,9 @@ Test("资源旧快照未记录修订保持合法，新样例具有独立修订",
     Eq(Content.Validate(c with {Resources=[c.Resources[0] with {RevisionId=c.Questions[0].RevisionId}]}).Any(e=>e.Contains("其他内容修订冲突")),true);
     Eq(Content.Validate(c with {Resources=[c.Resources[0] with {Id=c.Kcs[0].Id}]}).Any(e=>e.Contains("其他内容身份冲突")),true);
 });
+Test("映射建议校验分开教学覆盖与证据预算，限制原版本与来源",MappingSuggestionCases.Policy);
+Test("模拟分步建议保留独立观察点，不推断额外能力或虚构题型",MappingSuggestionCases.ObservedSteps);
+Test("接受映射创建新对象修订并固定能力库，不覆盖输入快照",MappingSuggestionCases.FrozenApply);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

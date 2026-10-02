@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 46 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 51 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -40,6 +40,7 @@
 | 20261002050245_BuilderRetryAttempts | 10.0.4 |
 | 20261002095324_ParentBurdenRecords | 10.0.4 |
 | 20261002105257_StudentScopedAudit | 10.0.4 |
+| 20261002171057_MappingSuggestionReview | 10.0.4 |
 
 ## Accounts
 
@@ -919,6 +920,195 @@
 - `CREATE INDEX "IX_KnowledgeMigration_FamilyId_ToRevisionId" ON public."KnowledgeMigration" USING btree ("FamilyId", "ToRevisionId")`
 - `CREATE UNIQUE INDEX "IX_KnowledgeMigration_ProposalId_FromKCId_ToKCId" ON public."KnowledgeMigration" USING btree ("ProposalId", "FromKCId", "ToKCId")`
 - `CREATE UNIQUE INDEX "PK_KnowledgeMigration" ON public."KnowledgeMigration" USING btree ("Id")`
+
+## MappingReviewDecision
+
+不可覆盖的映射审核依据、原始/校正摘要、审核人及所建草稿。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| SuggestionId | uuid | 否 | 无 |
+| Decision | text | 否 | 无 |
+| ReviewerId | uuid | 否 | 无 |
+| ReviewedAt | timestamp with time zone | 否 | 无 |
+| Reason | text | 否 | 无 |
+| OriginalPayloadHash | text | 否 | 无 |
+| CorrectedPayload | text | 否 | 无 |
+| CorrectedPayloadHash | text | 否 | 无 |
+| CreatedDraftId | uuid | 是 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_MappingReviewDecision_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `FK_MappingReviewDecision_Accounts_FamilyId_ReviewerId`：`FOREIGN KEY ("FamilyId", "ReviewerId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingReviewDecision_Drafts_FamilyId_CreatedDraftId`：`FOREIGN KEY ("FamilyId", "CreatedDraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingReviewDecision_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingReviewDecision_MappingSuggestion_FamilyId_Suggestion~`：`FOREIGN KEY ("FamilyId", "SuggestionId") REFERENCES "MappingSuggestion"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingReviewDecision`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_MappingReviewDecision_FamilyId_Id" ON public."MappingReviewDecision" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_MappingReviewDecision_FamilyId" ON public."MappingReviewDecision" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_MappingReviewDecision_FamilyId_CreatedDraftId" ON public."MappingReviewDecision" USING btree ("FamilyId", "CreatedDraftId")`
+- `CREATE INDEX "IX_MappingReviewDecision_FamilyId_ReviewerId" ON public."MappingReviewDecision" USING btree ("FamilyId", "ReviewerId")`
+- `CREATE INDEX "IX_MappingReviewDecision_FamilyId_SuggestionId" ON public."MappingReviewDecision" USING btree ("FamilyId", "SuggestionId")`
+- `CREATE UNIQUE INDEX "IX_MappingReviewDecision_SuggestionId" ON public."MappingReviewDecision" USING btree ("SuggestionId")`
+- `CREATE UNIQUE INDEX "PK_MappingReviewDecision" ON public."MappingReviewDecision" USING btree ("Id")`
+
+## MappingRun
+
+映射建议运行；冻结原草稿、对象版本和正式能力库输入。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| SourceDraftId | uuid | 否 | 无 |
+| SourceDraftVersion | bigint | 否 | 无 |
+| SourceTitle | text | 否 | 无 |
+| SourcePayload | text | 否 | 无 |
+| SourceHash | text | 否 | 无 |
+| LibraryReleaseId | uuid | 否 | 无 |
+| LibraryHash | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| Provider | text | 否 | 无 |
+| Model | text | 否 | 无 |
+| PromptVersion | text | 否 | 无 |
+| Status | text | 否 | 无 |
+| CompletedAt | timestamp with time zone | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_MappingRun_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `FK_MappingRun_Drafts_FamilyId_SourceDraftId`：`FOREIGN KEY ("FamilyId", "SourceDraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingRun_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingRun_Releases_FamilyId_LibraryReleaseId`：`FOREIGN KEY ("FamilyId", "LibraryReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingRun`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_MappingRun_FamilyId_Id" ON public."MappingRun" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_MappingRun_FamilyId" ON public."MappingRun" USING btree ("FamilyId")`
+- `CREATE UNIQUE INDEX "IX_MappingRun_FamilyId_InputHash" ON public."MappingRun" USING btree ("FamilyId", "InputHash")`
+- `CREATE INDEX "IX_MappingRun_FamilyId_LibraryReleaseId" ON public."MappingRun" USING btree ("FamilyId", "LibraryReleaseId")`
+- `CREATE INDEX "IX_MappingRun_FamilyId_SourceDraftId" ON public."MappingRun" USING btree ("FamilyId", "SourceDraftId")`
+- `CREATE UNIQUE INDEX "PK_MappingRun" ON public."MappingRun" USING btree ("Id")`
+
+## MappingSetItem
+
+映射修订的固定能力版本、教学覆盖和独立证据份额。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| SetRevisionId | uuid | 否 | 无 |
+| KCId | uuid | 否 | 无 |
+| KCRevisionId | uuid | 否 | 无 |
+| Role | text | 否 | 无 |
+| CoverageWeight | numeric(16,6) | 否 | 无 |
+| EvidenceShare | numeric(16,6) | 否 | 无 |
+| EvidenceMode | text | 否 | 无 |
+| Step | text | 是 | 无 |
+| Sequence | integer | 否 | 无 |
+| ModelScore | numeric | 是 | 无 |
+| SourceRefs | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_MappingSetItem_ContentIdentity_FamilyId_KCId`：`FOREIGN KEY ("FamilyId", "KCId") REFERENCES "ContentIdentity"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingSetItem_ContentRevision_FamilyId_KCRevisionId`：`FOREIGN KEY ("FamilyId", "KCRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingSetItem_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingSetItem_MappingSetRevision_FamilyId_SetRevisionId`：`FOREIGN KEY ("FamilyId", "SetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingSetItem`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_MappingSetItem_FamilyId" ON public."MappingSetItem" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_MappingSetItem_FamilyId_KCId" ON public."MappingSetItem" USING btree ("FamilyId", "KCId")`
+- `CREATE INDEX "IX_MappingSetItem_FamilyId_KCRevisionId" ON public."MappingSetItem" USING btree ("FamilyId", "KCRevisionId")`
+- `CREATE INDEX "IX_MappingSetItem_FamilyId_SetRevisionId" ON public."MappingSetItem" USING btree ("FamilyId", "SetRevisionId")`
+- `CREATE UNIQUE INDEX "IX_MappingSetItem_SetRevisionId_Sequence" ON public."MappingSetItem" USING btree ("SetRevisionId", "Sequence")`
+- `CREATE UNIQUE INDEX "PK_MappingSetItem" ON public."MappingSetItem" USING btree ("Id")`
+
+## MappingSetRevision
+
+人工接受后生成的新对象映射修订；不代替整份内容审核发布。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| DraftId | uuid | 否 | 无 |
+| ReviewDecisionId | uuid | 否 | 无 |
+| OwnerType | text | 否 | 无 |
+| OwnerId | uuid | 否 | 无 |
+| OwnerRevisionId | uuid | 否 | 无 |
+| OriginalOwnerRevisionId | uuid | 否 | 无 |
+| OwnerDefinitionHash | text | 否 | 无 |
+| RevisionNo | integer | 否 | 无 |
+| EvidencePolicy | text | 否 | 无 |
+| ReviewStatus | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_MappingSetRevision_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `FK_MappingSetRevision_Drafts_FamilyId_DraftId`：`FOREIGN KEY ("FamilyId", "DraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingSetRevision_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingSetRevision_MappingReviewDecision_FamilyId_ReviewDec~`：`FOREIGN KEY ("FamilyId", "ReviewDecisionId") REFERENCES "MappingReviewDecision"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingSetRevision`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_MappingSetRevision_FamilyId_Id" ON public."MappingSetRevision" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_MappingSetRevision_FamilyId" ON public."MappingSetRevision" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_MappingSetRevision_FamilyId_DraftId" ON public."MappingSetRevision" USING btree ("FamilyId", "DraftId")`
+- `CREATE UNIQUE INDEX "IX_MappingSetRevision_FamilyId_OwnerType_OwnerRevisionId" ON public."MappingSetRevision" USING btree ("FamilyId", "OwnerType", "OwnerRevisionId")`
+- `CREATE INDEX "IX_MappingSetRevision_FamilyId_ReviewDecisionId" ON public."MappingSetRevision" USING btree ("FamilyId", "ReviewDecisionId")`
+- `CREATE UNIQUE INDEX "PK_MappingSetRevision" ON public."MappingSetRevision" USING btree ("Id")`
+
+## MappingSuggestion
+
+题目/课时/资源原始建议与排序，仅经人工审核生成草稿。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| RunId | uuid | 否 | 无 |
+| OwnerType | text | 否 | 无 |
+| OwnerId | uuid | 否 | 无 |
+| OwnerRevisionId | uuid | 否 | 无 |
+| OwnerTitle | text | 否 | 无 |
+| EvidencePolicy | text | 否 | 无 |
+| SuggestedItems | text | 否 | 无 |
+| Matches | text | 否 | 无 |
+| ValidationFlags | text | 否 | 无 |
+| Status | text | 否 | 无 |
+| Version | bigint | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_MappingSuggestion_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `FK_MappingSuggestion_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingSuggestion_MappingRun_FamilyId_RunId`：`FOREIGN KEY ("FamilyId", "RunId") REFERENCES "MappingRun"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingSuggestion`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_MappingSuggestion_FamilyId_Id" ON public."MappingSuggestion" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_MappingSuggestion_FamilyId" ON public."MappingSuggestion" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_MappingSuggestion_FamilyId_RunId" ON public."MappingSuggestion" USING btree ("FamilyId", "RunId")`
+- `CREATE UNIQUE INDEX "IX_MappingSuggestion_RunId_OwnerType_OwnerId" ON public."MappingSuggestion" USING btree ("RunId", "OwnerType", "OwnerId")`
+- `CREATE UNIQUE INDEX "PK_MappingSuggestion" ON public."MappingSuggestion" USING btree ("Id")`
 
 ## Masteries
 

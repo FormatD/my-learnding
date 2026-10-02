@@ -86,6 +86,16 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         Foreign<Generation, Mastery>(b, "GenerationId"); Foreign<Generation, Review>(b, "GenerationId");
         Foreign<Attempt, Evidence>(b, "AttemptId"); Foreign<Grading, Evidence>(b, "GradingId");
         Foreign<Source, Chunk>(b, "SourceId"); Foreign<Source, BuilderRun>(b, "SourceId");
+        Foreign<ContentDraft, MappingRun>(b,"SourceDraftId"); Foreign<Release, MappingRun>(b,"LibraryReleaseId");
+        b.Entity<MappingRun>().HasIndex(r=>new{r.FamilyId,r.InputHash}).IsUnique();
+        Foreign<MappingRun, MappingSuggestion>(b,"RunId");
+        b.Entity<MappingSuggestion>().HasIndex(s=>new{s.RunId,s.OwnerType,s.OwnerId}).IsUnique();
+        Foreign<MappingSuggestion, MappingReviewDecision>(b,"SuggestionId"); Foreign<Account, MappingReviewDecision>(b,"ReviewerId"); Foreign<ContentDraft, MappingReviewDecision>(b,"CreatedDraftId");
+        b.Entity<MappingReviewDecision>().HasIndex(d=>d.SuggestionId).IsUnique();
+        Foreign<ContentDraft, MappingSetRevision>(b,"DraftId"); Foreign<MappingReviewDecision, MappingSetRevision>(b,"ReviewDecisionId");
+        b.Entity<MappingSetRevision>().HasIndex(s=>new{s.FamilyId,s.OwnerType,s.OwnerRevisionId}).IsUnique();
+        Foreign<MappingSetRevision, MappingSetItem>(b,"SetRevisionId"); Foreign<ContentIdentity, MappingSetItem>(b,"KCId"); Foreign<ContentRevision, MappingSetItem>(b,"KCRevisionId");
+        b.Entity<MappingSetItem>().HasIndex(i=>new{i.SetRevisionId,i.Sequence}).IsUnique();
         Foreign<BuilderRun, BuilderAttempt>(b,"RunId");b.Entity<BuilderAttempt>().HasIndex(a=>new{a.RunId,a.RetryRound,a.Number}).IsUnique();
         Foreign<Release, BuilderRun>(b,"LibraryReleaseId"); Foreign<ContentDraft, Candidate>(b,"CreatedDraftId"); Foreign<BuilderRun, Candidate>(b, "RunId"); Foreign<Chunk, Candidate>(b, "ChunkId");
         b.Entity<ContentIdentity>().HasIndex(x => new {x.FamilyId,x.EntityType,x.Code}).IsUnique();

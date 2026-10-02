@@ -92,6 +92,10 @@
     {
       "id": "20261002105257_StudentScopedAudit",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002171057_MappingSuggestionReview",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -4212,6 +4216,983 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_KnowledgeMigration\" ON public.\"KnowledgeMigration\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "MappingReviewDecision",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SuggestionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Decision",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReviewerId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReviewedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OriginalPayloadHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CorrectedPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CorrectedPayloadHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedDraftId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_MappingReviewDecision_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingReviewDecision_Accounts_FamilyId_ReviewerId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ReviewerId\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingReviewDecision_Drafts_FamilyId_CreatedDraftId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CreatedDraftId\") REFERENCES \"Drafts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingReviewDecision_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingReviewDecision_MappingSuggestion_FamilyId_Suggestion~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SuggestionId\") REFERENCES \"MappingSuggestion\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_MappingReviewDecision",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_MappingReviewDecision_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_MappingReviewDecision_FamilyId_Id\" ON public.\"MappingReviewDecision\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_MappingReviewDecision_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingReviewDecision_FamilyId\" ON public.\"MappingReviewDecision\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_MappingReviewDecision_FamilyId_CreatedDraftId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingReviewDecision_FamilyId_CreatedDraftId\" ON public.\"MappingReviewDecision\" USING btree (\"FamilyId\", \"CreatedDraftId\")"
+        },
+        {
+          "name": "IX_MappingReviewDecision_FamilyId_ReviewerId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingReviewDecision_FamilyId_ReviewerId\" ON public.\"MappingReviewDecision\" USING btree (\"FamilyId\", \"ReviewerId\")"
+        },
+        {
+          "name": "IX_MappingReviewDecision_FamilyId_SuggestionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingReviewDecision_FamilyId_SuggestionId\" ON public.\"MappingReviewDecision\" USING btree (\"FamilyId\", \"SuggestionId\")"
+        },
+        {
+          "name": "IX_MappingReviewDecision_SuggestionId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingReviewDecision_SuggestionId\" ON public.\"MappingReviewDecision\" USING btree (\"SuggestionId\")"
+        },
+        {
+          "name": "PK_MappingReviewDecision",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_MappingReviewDecision\" ON public.\"MappingReviewDecision\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "MappingRun",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceDraftId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceDraftVersion",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceTitle",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourcePayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Provider",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Model",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PromptVersion",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Status",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CompletedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_MappingRun_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingRun_Drafts_FamilyId_SourceDraftId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SourceDraftId\") REFERENCES \"Drafts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingRun_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingRun_Releases_FamilyId_LibraryReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LibraryReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_MappingRun",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_MappingRun_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_MappingRun_FamilyId_Id\" ON public.\"MappingRun\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_MappingRun_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingRun_FamilyId\" ON public.\"MappingRun\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_MappingRun_FamilyId_InputHash",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingRun_FamilyId_InputHash\" ON public.\"MappingRun\" USING btree (\"FamilyId\", \"InputHash\")"
+        },
+        {
+          "name": "IX_MappingRun_FamilyId_LibraryReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingRun_FamilyId_LibraryReleaseId\" ON public.\"MappingRun\" USING btree (\"FamilyId\", \"LibraryReleaseId\")"
+        },
+        {
+          "name": "IX_MappingRun_FamilyId_SourceDraftId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingRun_FamilyId_SourceDraftId\" ON public.\"MappingRun\" USING btree (\"FamilyId\", \"SourceDraftId\")"
+        },
+        {
+          "name": "PK_MappingRun",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_MappingRun\" ON public.\"MappingRun\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "MappingSetItem",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SetRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "KCId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "KCRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Role",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CoverageWeight",
+          "type": "numeric(16,6)",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidenceShare",
+          "type": "numeric(16,6)",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidenceMode",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Step",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Sequence",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ModelScore",
+          "type": "numeric",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceRefs",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_MappingSetItem_ContentIdentity_FamilyId_KCId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"KCId\") REFERENCES \"ContentIdentity\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetItem_ContentRevision_FamilyId_KCRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"KCRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetItem_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetItem_MappingSetRevision_FamilyId_SetRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_MappingSetItem",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_MappingSetItem_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetItem_FamilyId\" ON public.\"MappingSetItem\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_MappingSetItem_FamilyId_KCId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetItem_FamilyId_KCId\" ON public.\"MappingSetItem\" USING btree (\"FamilyId\", \"KCId\")"
+        },
+        {
+          "name": "IX_MappingSetItem_FamilyId_KCRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetItem_FamilyId_KCRevisionId\" ON public.\"MappingSetItem\" USING btree (\"FamilyId\", \"KCRevisionId\")"
+        },
+        {
+          "name": "IX_MappingSetItem_FamilyId_SetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetItem_FamilyId_SetRevisionId\" ON public.\"MappingSetItem\" USING btree (\"FamilyId\", \"SetRevisionId\")"
+        },
+        {
+          "name": "IX_MappingSetItem_SetRevisionId_Sequence",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingSetItem_SetRevisionId_Sequence\" ON public.\"MappingSetItem\" USING btree (\"SetRevisionId\", \"Sequence\")"
+        },
+        {
+          "name": "PK_MappingSetItem",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_MappingSetItem\" ON public.\"MappingSetItem\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "MappingSetRevision",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DraftId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReviewDecisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerType",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OriginalOwnerRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerDefinitionHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RevisionNo",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidencePolicy",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReviewStatus",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_MappingSetRevision_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetRevision_Drafts_FamilyId_DraftId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"DraftId\") REFERENCES \"Drafts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetRevision_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetRevision_MappingReviewDecision_FamilyId_ReviewDec~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ReviewDecisionId\") REFERENCES \"MappingReviewDecision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_MappingSetRevision",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_MappingSetRevision_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_MappingSetRevision_FamilyId_Id\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_MappingSetRevision_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetRevision_FamilyId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_MappingSetRevision_FamilyId_DraftId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetRevision_FamilyId_DraftId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"DraftId\")"
+        },
+        {
+          "name": "IX_MappingSetRevision_FamilyId_OwnerType_OwnerRevisionId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingSetRevision_FamilyId_OwnerType_OwnerRevisionId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"OwnerType\", \"OwnerRevisionId\")"
+        },
+        {
+          "name": "IX_MappingSetRevision_FamilyId_ReviewDecisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetRevision_FamilyId_ReviewDecisionId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"ReviewDecisionId\")"
+        },
+        {
+          "name": "PK_MappingSetRevision",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_MappingSetRevision\" ON public.\"MappingSetRevision\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "MappingSuggestion",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RunId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerType",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerTitle",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidencePolicy",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SuggestedItems",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Matches",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ValidationFlags",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Status",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Version",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_MappingSuggestion_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSuggestion_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSuggestion_MappingRun_FamilyId_RunId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"RunId\") REFERENCES \"MappingRun\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_MappingSuggestion",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_MappingSuggestion_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_MappingSuggestion_FamilyId_Id\" ON public.\"MappingSuggestion\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_MappingSuggestion_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSuggestion_FamilyId\" ON public.\"MappingSuggestion\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_MappingSuggestion_FamilyId_RunId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSuggestion_FamilyId_RunId\" ON public.\"MappingSuggestion\" USING btree (\"FamilyId\", \"RunId\")"
+        },
+        {
+          "name": "IX_MappingSuggestion_RunId_OwnerType_OwnerId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingSuggestion_RunId_OwnerType_OwnerId\" ON public.\"MappingSuggestion\" USING btree (\"RunId\", \"OwnerType\", \"OwnerId\")"
+        },
+        {
+          "name": "PK_MappingSuggestion",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_MappingSuggestion\" ON public.\"MappingSuggestion\" USING btree (\"Id\")"
         }
       ]
     },
