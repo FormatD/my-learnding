@@ -1,6 +1,6 @@
 # 小步 · 家庭学习系统
 
-本地私有的家庭学习应用，基于项目《家庭学习系统开发设计 v1.1》开发。首期适配北师大版三年级第一单元“混合运算”，含 9 个可测能力与 20 道原创样题。样题不是教材原题，使用前由家长审核。
+本地私有的家庭学习应用，基于项目《家庭学习系统开发设计 v1.1》开发。首期按北师大版三年级第一单元“混合运算”准备，具体印次待核对。提供20道原创流程样题，以及160题、9个可测能力、15份资源的原创单元草稿；均不是教材原题，正式使用前须人工审核。
 
 ## 启动
 
@@ -13,7 +13,7 @@ sh scripts/dev.sh
 浏览器打开 `http://127.0.0.1:5080`。首次使用创建私有家庭，没有预设管理密码。
 
 1. 创建学生。
-2. 内容与发布 → 创建混合运算样例 → 检查题干、答案、判分与测量能力 → 审核发布 → 绑定学生。
+2. 内容与发布 → 准备单元原创题包（或20题样例） → 按审核清单检查题干、答案、判分与测量能力 → 审核发布 → 绑定学生。
 3. 进度与计划 → 确认课时 → 保存预算 → 生成草稿 → 确认发布。
 4. 今日学习 → 进入孩子模式 → 开始任务、提交答案、完成。
 5. 返回家长登录 → 查看证据、复习日程与每周回顾；开放题由家长判分。
@@ -41,6 +41,7 @@ python3 tests/concurrency_api_acceptance.py
 python3 tests/progress_api_acceptance.py
 python3 tests/content_authoring_api_acceptance.py
 python3 tests/provenance_api_acceptance.py
+python3 tests/schema_dictionary_acceptance.py
 python3 tests/observed_steps_api_acceptance.py
 python3 tests/paper_learning_api_acceptance.py
 python3 tests/goals_api_acceptance.py
@@ -82,6 +83,8 @@ PDF 限 10 MB、200 页，无文本层明确返回 `NEEDS_OCR`。Mock Builder �
 - `docs/design/baseline-v1.1.md`：从设计会话取得的基线副本。
 - `docs/STATUS.md`：实际进度和未通过项。
 - `docs/runbooks/local.md`：备份、恢复、删除清单、运行与故障处理。
+- [内容维护手册](docs/runbooks/content-maintenance.md)：来源使用范围、人工审核、发布、撤回和更正。
+- [数据字典](docs/data-dictionary.md)与[结构维护手册](docs/runbooks/schema-maintenance.md)：实际字段、约束、索引和只读核对方式。
 - `docs/adr`：实现决策。
 
 V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实平板试用及连续四周家庭观察未被开发测试替代。
