@@ -289,6 +289,8 @@ public class BuilderRun : Row
     public string InputHash { get; set; } = "";
     public string? Error { get; set; }
     public int Retries { get; set; }
+    public int RetryRound { get; set; }
+    public DateTimeOffset? NextAttemptAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
 }
 public class Candidate : Row

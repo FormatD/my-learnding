@@ -39,7 +39,7 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                         db.ChangeTracker.Clear();
                     }
                 }
-                await Builder.ProcessOne(db,ct);
+                await Builder.ProcessOne(db,ct,logger);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex) { logger.LogError(ex,"Projection worker failed"); }

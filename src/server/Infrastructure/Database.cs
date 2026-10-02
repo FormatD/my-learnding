@@ -81,6 +81,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         Foreign<Generation, Mastery>(b, "GenerationId"); Foreign<Generation, Review>(b, "GenerationId");
         Foreign<Attempt, Evidence>(b, "AttemptId"); Foreign<Grading, Evidence>(b, "GradingId");
         Foreign<Source, Chunk>(b, "SourceId"); Foreign<Source, BuilderRun>(b, "SourceId");
+        Foreign<BuilderRun, BuilderAttempt>(b,"RunId");b.Entity<BuilderAttempt>().HasIndex(a=>new{a.RunId,a.RetryRound,a.Number}).IsUnique();
         Foreign<Release, BuilderRun>(b,"LibraryReleaseId"); Foreign<ContentDraft, Candidate>(b,"CreatedDraftId"); Foreign<BuilderRun, Candidate>(b, "RunId"); Foreign<Chunk, Candidate>(b, "ChunkId");
         b.Entity<ContentIdentity>().HasIndex(x => new {x.FamilyId,x.EntityType,x.Code}).IsUnique();
         b.Entity<ReleaseItem>().HasIndex(x => new {x.ReleaseId,x.EntityType,x.IdentityId}).IsUnique();

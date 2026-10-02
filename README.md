@@ -55,12 +55,15 @@ python3 tests/plan_boundaries_api_acceptance.py
 python3 tests/plan_rule_migration_acceptance.py
 python3 tests/knowledge_changes_api_acceptance.py
 python3 tests/operations_api_acceptance.py
+python3 tests/builder_retry_persistence_acceptance.py
+python3 tests/builder_retry_migration_acceptance.py
+python3 tests/builder_retry_api_acceptance.py
 python3 tests/restore_acceptance.py
 python3 tests/family_restore_acceptance.py
 cd src/web && npm run test:e2e
 ```
 
-常规接口验收需要服务已经启动，只创建验收家庭。计划边界、运行监控和能力变更验收自行启动隔离服务；能力变更验收另需 GPG 做隔离加密恢复。计划边界、运行监控、能力变更与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
+常规接口验收需要服务已经启动，只创建验收家庭。计划边界、运行监控、建库重试和能力变更验收自行启动隔离服务；能力变更验收另需 GPG 做隔离加密恢复。计划边界、运行监控、建库重试、能力变更与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
 
 ## 运行配置
 
@@ -70,7 +73,9 @@ cd src/web && npm run test:e2e
 
 后台每 500 毫秒读取同库 Outbox，在事务中整学生回放固定事件序列，创建新评估世代后原子切换活动绑定。历史世代保留用于审计，当前计算不双计。更正判分先预览影响，再明确确认。
 
-来源只在本地处理。PDF 限 10 MB、200 页，无文本层明确返回 `NEEDS_OCR`。Mock Builder 仅验证导入、来源和审核流程；不代表真实模型、Embedding 或映射质量。用户已指定模型稍后接入。生成时记录正式内容库快照；审核接受的候选保留原文位置与决定，并关联到创建的能力和草稿，发布后仍可查看来源。旧记录缺失的输入或来源不会推测补齐。
+来源只在本地处理。辅助建库新增运行记录与尝试历史；可重试异常最多重试三次，按2/4/8秒等待。持续失败后由内容编辑者填写依据重新处理原任务，原输入不变，成功不会重复生成。
+
+PDF 限 10 MB、200 页，无文本层明确返回 `NEEDS_OCR`。Mock Builder 仅验证导入、来源和审核流程；不代表真实模型、Embedding 或映射质量。用户已指定模型稍后接入。生成时记录正式内容库快照；审核接受的候选保留原文位置与决定，并关联到创建的能力和草稿，发布后仍可查看来源。旧记录缺失的输入或来源不会推测补齐。
 
 ## 项目文档
 
@@ -84,3 +89,5 @@ V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实�
 家庭设置支持负责人管理成员、全家 ZIP 导出及全家删除回执。编辑/发布角色与学生访问权限分开。恢复加密备份必须同时应用独立学生和家庭删除清单，详见本地运行手册。
 
 内容编辑支持教材版本、单元、课程与课时目录，发布保留独立修订。目标可限定教材单元、课程或能力；听力课程只记录行为。旧内容中未知的教材版本与归属不会自动推断。
+
+隔离建库恢复浏览器由 `RUN_BUILDER_BROWSER=1 python3 tests/builder_retry_api_acceptance.py` 调起；需要同前面的 `CHROMIUM_PATH` 配置。普通浏览器套件可用 `npm run test:e2e --prefix src/web -- --grep-invert 隔离建库失败恢复`，隔离用例只有在提供专门故障数据时执行。

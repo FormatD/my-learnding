@@ -80,6 +80,38 @@ if(args[0]=="crash")
 {
     await using var crashing=Open(true);var pending=await crashing.Outbox.SingleAsync();await ProjectionWorker.Consume(crashing,pending);throw new Exception("Should have been terminated before commit");
 }
+if(args[0]=="builder-retry-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002041538_KnowledgeChangeProposals");var family=new Family();var source=new Source{FamilyId=family.Id,Title="旧建库来源",Text="旧运行记录输入",Hash="legacy-builder-source"};db.AddRange(family,source);await db.SaveChangesAsync();var id=Guid.NewGuid();var at=DateTimeOffset.UtcNow.AddDays(-1);
+    await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"BuilderRuns\" (\"Id\",\"FamilyId\",\"CreatedAt\",\"LibraryReleaseId\",\"InputVersion\",\"Type\",\"SourceId\",\"Status\",\"Provider\",\"Model\",\"PromptVersion\",\"InputHash\",\"Error\",\"Retries\",\"CompletedAt\") VALUES ({id},{family.Id},{at},NULL,'builder-input/1','Candidates',{source.Id},'Failed','Mock','fixture/1','kc-candidate/1','legacy-input-hash','INPUT_SNAPSHOT_UNKNOWN',2,{at})");
+    await db.Database.MigrateAsync();db.ChangeTracker.Clear();var old=await db.BuilderRuns.SingleAsync();Assert(old.Status=="Failed" && old.Retries==2 && old.InputHash=="legacy-input-hash" && old.InputVersion=="builder-input/1" && old.NextAttemptAt==null && old.RetryRound==0 && !await db.Set<BuilderAttempt>().AnyAsync(),"legacy attempts fabricated or source state changed");Console.WriteLine("PASS 旧建库状态、次数与未知输入原样保留，不生成虚构尝试历史或自动重试");return;
+}
+if(args[0]=="builder-retry")
+{
+    await db.Database.MigrateAsync();var f=new Family();var catalog=Content.Fixture();var text=Json.Write(catalog);var release=new Release{FamilyId=f.Id,Number=1,Payload=text,Hash=Content.Hash(text)};var source=new Source{FamilyId=f.Id,Title="Retry rollback fixture",Text="先乘除后加减，独立判断运算顺序。",Hash="retry-fixture"};var run=new BuilderRun{FamilyId=f.Id,SourceId=source.Id,LibraryReleaseId=release.Id,InputHash="fixed-retry-input"};var healthySource=new Source{FamilyId=f.Id,Title="Other queued work",Text="确认独立步骤和边界。",Hash="healthy-fixture"};var healthy=new BuilderRun{FamilyId=f.Id,SourceId=healthySource.Id,InputHash="healthy-input",CreatedAt=DateTimeOffset.UtcNow.AddSeconds(1)};
+    db.AddRange(f,release,source,run,healthySource,healthy,new Chunk{FamilyId=f.Id,SourceId=source.Id,Text=source.Text,Locator="段落1"},new Chunk{FamilyId=f.Id,SourceId=healthySource.Id,Text=healthySource.Text,Locator="段落1"});await Publishing.Register(db,release);await db.SaveChangesAsync();
+    var failOptions=new DbContextOptionsBuilder<Database>().UseNpgsql(connection).AddInterceptors(new BuilderFailure(run.Id)).Options;
+    for(var failure=1;failure<=4;failure++)
+    {
+        await using(var worker=new Database(failOptions))await Builder.ProcessOne(worker,CancellationToken.None);
+        db.ChangeTracker.Clear();run=await db.BuilderRuns.SingleAsync(r=>r.Id==run.Id);var attempts=await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id).OrderBy(a=>a.Number).ToArrayAsync();
+        Assert(run.Retries==Math.Min(failure,3) && run.Status==(failure<4?"Queued":"Failed") && attempts.Length==failure,"builder retry bound or attempts invalid");Assert(!await db.Candidates.AnyAsync(c=>c.RunId==run.Id),"partial candidates persisted after save failure");
+        if(failure==1)
+        {
+            Assert(!await db.Set<Embedding>().AnyAsync(),"partial embeddings persisted after save failure");await Builder.ProcessOne(db,CancellationToken.None);Assert((await db.BuilderRuns.SingleAsync(r=>r.Id==healthy.Id)).Status=="Completed","backoff job blocked unrelated queued work");
+        }
+        if(failure<4)
+        {
+            Assert(run.NextAttemptAt!=null && attempts.Last().Status=="RetryScheduled" && (run.NextAttemptAt.Value-attempts.Last().FinishedAt).TotalSeconds>=Math.Pow(2,failure)-.1,"retry backoff not persisted");
+            await Builder.ProcessOne(db,CancellationToken.None);Assert(await db.Set<BuilderAttempt>().CountAsync(a=>a.RunId==run.Id)==failure,"retry ran before its scheduled time");await db.BuilderRuns.Where(r=>r.Id==run.Id).ExecuteUpdateAsync(update=>update.SetProperty(r=>r.NextAttemptAt,DateTimeOffset.UtcNow.AddSeconds(-1)));
+        }
+        else Assert(run.NextAttemptAt==null && run.CompletedAt!=null && attempts.Last().Status=="Failed","exhausted job not stopped");
+    }
+    Console.WriteLine("PASS 初次失败加3次退避重试，候选与索引事务回滚，等待不阻塞其他任务，最后进入人工失败队列");
+    var history=await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id).ToArrayAsync();Assert(history.Select(a=>a.InputSnapshot).Distinct().Count()==1 && history.All(a=>a.ErrorCode=="BUILDER_PROCESSING_FAILED"),"retry input drift or unsafe error code");
+    var next=catalog with{Kcs=catalog.Kcs.Select(k=>k with{Name=k.Name+"新版本",RevisionId=Guid.NewGuid()}).ToArray()};var nextText=Json.Write(next);var r2=new Release{FamilyId=f.Id,Number=2,Payload=nextText,Hash=Content.Hash(nextText)};db.Add(r2);await Publishing.Register(db,r2);await db.SaveChangesAsync();await db.BuilderRuns.Where(r=>r.Id==run.Id).ExecuteUpdateAsync(u=>u.SetProperty(r=>r.Status,"Queued").SetProperty(r=>r.Retries,0).SetProperty(r=>r.RetryRound,1).SetProperty(r=>r.NextAttemptAt,(DateTimeOffset?)null));
+    await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();var output=await db.Candidates.SingleAsync(c=>c.RunId==run.Id);Assert(Json.Read<Match[]>(output.Matches).All(m=>catalog.Kcs.Any(k=>k.Id==m.KCId && k.Name==m.Name)),"manual retry used latest library instead of frozen input");Assert(await db.Set<BuilderAttempt>().CountAsync(a=>a.RunId==run.Id)==5 && (await db.BuilderRuns.SingleAsync(r=>r.Id==run.Id)).Error==null,"retry round lost history or retained stale success error");await Builder.ProcessOne(db,CancellationToken.None);Assert(await db.Candidates.CountAsync(c=>c.RunId==run.Id)==1,"completed job regenerated output");Console.WriteLine("PASS 原输入跨内容版本和重试轮次固定，旧失败历史保留，成功后不重复生成");return;
+}
 if(args[0]=="builder")
 {
     var f=await db.Families.SingleAsync();var original=await db.Releases.SingleAsync();var catalog=Json.Read<Catalog>(original.Payload);
@@ -94,7 +126,7 @@ if(args[0]=="builder")
     var noLibrary=new BuilderRun {FamilyId=f.Id,SourceId=source.Id,InputHash="explicit-empty-library-test"};db.Add(noLibrary);await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);
     var empty=await db.Candidates.SingleAsync(c=>c.RunId==noLibrary.Id);Assert(Json.Read<Match[]>(empty.Matches).Length==0,"empty library snapshot was replaced by current library");
     Console.WriteLine("PASS 明确空库快照不会临时检索后来发布的内容");
-    var legacy=new BuilderRun {FamilyId=f.Id,SourceId=source.Id,InputVersion="builder-input/1",InputHash="legacy-unrecorded-input"};db.Add(legacy);await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);
+    var legacy=new BuilderRun {FamilyId=f.Id,SourceId=source.Id,InputVersion="builder-input/1",InputHash="legacy-unrecorded-input"};db.Add(legacy);await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);legacy=await db.BuilderRuns.SingleAsync(r=>r.Id==legacy.Id);
     Assert(legacy.Status=="Failed" && legacy.Error=="INPUT_SNAPSHOT_UNKNOWN" && !await db.Candidates.AnyAsync(c=>c.RunId==legacy.Id),"unknown legacy input was guessed");
     Console.WriteLine("PASS 历史输入不明的排队任务明确失败，要求重新运行");return;
 }
@@ -117,5 +149,13 @@ class CrashBeforeCommit : DbTransactionInterceptor
     public override async ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction,TransactionEventData eventData,InterceptionResult result,CancellationToken cancellationToken=default)
     {
         Console.WriteLine("BEFORE_COMMIT");Console.Out.Flush();await Task.Delay(Timeout.Infinite,cancellationToken);return result;
+    }
+}
+
+sealed class BuilderFailure(Guid runId):SaveChangesInterceptor
+{
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data,InterceptionResult<int> result,CancellationToken cancellationToken=default)
+    {
+        if(data.Context!.ChangeTracker.Entries<Candidate>().Any(e=>e.State==EntityState.Added && e.Entity.RunId==runId))throw new IOException("Injected save failure in disposable database");return ValueTask.FromResult(result);
     }
 }

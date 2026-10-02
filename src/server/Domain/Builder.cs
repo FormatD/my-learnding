@@ -9,7 +9,7 @@ public static class Builder
     public static void Map(RouteGroupBuilder api)
     {
         Provenance.Map(api);
-        api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
+        api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
         api.MapPost("/content/sources",async (SourceInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");if (string.IsNullOrWhiteSpace(input.Title) || input.Text.Length<5 || input.Text.Length>100_000 || string.IsNullOrWhiteSpace(input.UsageScope)) throw new ApiError(422,"INVALID_SOURCE","来源需标题、许可范围与 5～100000 字文本。");
@@ -27,6 +27,17 @@ public static class Builder
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
             var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/2:"+library?.Hash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return Results.Ok(old);
             var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputHash=hash };db.BuilderRuns.Add(run);return Results.Accepted("/api/v1/builder",run);
+        });
+        api.MapPost("/builder/runs/{id:guid}:retry",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>
+        {
+            var a=ctx.Actor();a.Require("ContentEditor");var run=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","找不到建库任务。");
+            if(string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000)throw new ApiError(422,"REASON_REQUIRED","请填写重新处理的依据，最多4000字。");
+            if(run.Status!="Failed")throw new ApiError(409,"RUN_NOT_FAILED","只可重新处理已停止的失败任务。");
+            if(run.Error!="BUILDER_PROCESSING_FAILED")throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
+            await ValidateRun(db,run);
+            if(await db.Candidates.AnyAsync(c=>c.RunId==id) || run.Type=="ParsePDF" && await db.Chunks.AnyAsync(c=>c.SourceId==run.SourceId))throw new ApiError(422,"RUN_OUTPUT_EXISTS","已有输出不能再次生成；请检查原运行记录。");
+            var before=Json.Write(run);run.Status="Queued";run.Retries=0;run.RetryRound++;run.NextAttemptAt=null;run.CompletedAt=null;run.Error=null;
+            db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="BuilderManualRetry",Details=Json.Write(new{runId=id,before,reason=input.Reason.Trim(),run.RetryRound})});return Results.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/candidates/{id:guid}:decide",async (Guid id,DecisionInput input,Database db,HttpContext ctx) =>
         {
@@ -57,10 +68,48 @@ public static class Builder
             return Results.Ok(c);
         });
     }
-    public static async Task ProcessOne(Database db,CancellationToken ct)
+    public static async Task ValidateRun(Database db,BuilderRun run,CancellationToken ct=default)
     {
-        var run=await db.BuilderRuns.Where(r => r.Status=="Queued").OrderBy(r => r.CreatedAt).FirstOrDefaultAsync(ct);if (run==null) return;
-        await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(run.FamilyId,ct);await db.Entry(run).ReloadAsync(ct);if (db.Entry(run).State==EntityState.Detached || run.Status!="Queued") return;
+        var source=await db.Sources.SingleOrDefaultAsync(s=>s.Id==run.SourceId && s.FamilyId==run.FamilyId,ct)??throw new ApiError(422,"SOURCE_UNAVAILABLE","来源已不可用。");
+        if(run.Type=="ParsePDF")
+        {
+            if(run.Provider!="LocalParser" || run.Model!="pdfpig/0.1.16" || run.PromptVersion!="parser/1")throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原解析配置无法恢复，请重新准备任务。");
+            if(!await db.Set<PrivateFile>().AnyAsync(f=>f.Id==source.FileId && f.FamilyId==run.FamilyId && f.MimeType=="application/pdf",ct))throw new ApiError(422,"SOURCE_UNAVAILABLE","原始PDF已不可用。");
+        }
+        else
+        {
+            if(run.Type!="Candidates" || run.InputVersion!="builder-input/2")throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
+            if(run.Provider!="Mock")throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
+            if(run.Model!="fixture/1" || run.PromptVersion!="kc-candidate/1")throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
+            if(run.LibraryReleaseId!=null && !await db.Releases.AnyAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原正式库输入已不可用。");
+            if(string.IsNullOrWhiteSpace(source.Text))throw new ApiError(422,"SOURCE_NOT_READY","来源尚未准备完成。");
+        }
+    }
+    public static async Task ProcessOne(Database db,CancellationToken ct,ILogger? logger=null)
+    {
+        var now=DateTimeOffset.UtcNow;var run=await db.BuilderRuns.Where(r=>r.Status=="Queued" && (r.NextAttemptAt==null || r.NextAttemptAt<=now)).OrderBy(r=>r.CreatedAt).FirstOrDefaultAsync(ct);if(run==null)return;
+        await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(run.FamilyId,ct);await db.Entry(run).ReloadAsync(ct);
+        if(db.Entry(run).State==EntityState.Detached || run.Status!="Queued" || run.NextAttemptAt>DateTimeOffset.UtcNow)return;
+        var started=DateTimeOffset.UtcNow;var number=(await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id && a.RetryRound==run.RetryRound).MaxAsync(a=>(int?)a.Number,ct)??0)+1;
+        var id=run.Id;await tx.CreateSavepointAsync("builder_work",ct);
+        try
+        {
+            await ValidateRun(db,run,ct);await Execute(db,run,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+            db.Add(Attempt(run,number,started,run.Status));await db.SaveChangesAsync(ct);
+        }
+        catch(Exception ex)when(ex is not OperationCanceledException)
+        {
+            await tx.RollbackToSavepointAsync("builder_work",ct);db.ChangeTracker.Clear();run=await db.BuilderRuns.SingleAsync(r=>r.Id==id,ct);
+            var retry=ex is not ApiError && run.Retries<3;run.Error=ex is ApiError apiError?apiError.Code:"BUILDER_PROCESSING_FAILED";
+            if(retry){run.Retries++;run.NextAttemptAt=DateTimeOffset.UtcNow.AddSeconds(Math.Pow(2,run.Retries));run.Status="Queued";run.CompletedAt=null;}
+            else{run.Status="Failed";run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;}
+            db.Add(Attempt(run,number,started,retry?"RetryScheduled":"Failed"));await db.SaveChangesAsync(ct);logger?.LogError(ex,"Builder processing failed {RunId}; retry scheduled {RetryScheduled}",id,retry);
+        }
+        await tx.CommitAsync(ct);
+    }
+    static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=Json.Write(new{run.SourceId,run.Type,run.LibraryReleaseId,run.InputVersion,run.InputHash,run.Provider,run.Model,run.PromptVersion})};
+    static async Task Execute(Database db,BuilderRun run,CancellationToken ct)
+    {
         if (run.Type=="ParsePDF")
         {
             var source=await db.Sources.SingleAsync(s=>s.Id==run.SourceId,ct);
@@ -73,11 +122,11 @@ public static class Builder
                 run.Status="Completed";
             }
             catch(ApiError e){run.Status=e.Code=="NEEDS_OCR"?"NeedsOCR":"Failed";run.Error=e.Code;}
-            run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return;
+            run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return;
         }
         var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).Take(100).ToListAsync(ct);
         if(run.InputVersion!="builder-input/2")
-        {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return;}
+        {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return;}
         var release=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
@@ -88,6 +137,6 @@ public static class Builder
             var quote=chunk.Text[..Math.Min(80,chunk.Text.Length)];
             db.Candidates.Add(new() { FamilyId=run.FamilyId,RunId=run.Id,ChunkId=chunk.Id,Name=quote[..Math.Min(24,quote.Length)],Quote=quote,Behavior="请审核者补充独立可测行为",Boundary="请审核者补充排除范围",SuggestedAction="NeedsReview",Matches=Json.Write(Retrieval.TopK(chunk.Text,kcs)) });
         }
-        run.Status="Completed";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);
+        run.Status="Completed";run.Error=null;run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);
     }
 }
