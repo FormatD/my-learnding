@@ -93,3 +93,5 @@ V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实�
 隔离建库恢复浏览器由 `RUN_BUILDER_BROWSER=1 python3 tests/builder_retry_api_acceptance.py` 调起；需要同前面的 `CHROMIUM_PATH` 配置。普通浏览器套件可用 `npm run test:e2e --prefix src/web -- --grep-invert 隔离建库失败恢复`，隔离用例只有在提供专门故障数据时执行。
 
 本地性能复测：`RUN_PERFORMANCE_BROWSER=1 python3 tests/performance_acceptance.py`（需同上 `CHROMIUM_PATH`）。测量工具自行创建并删除隔离数据库和服务，记录真实作答与后台更新；模拟网络不等于实际平板/Wi-Fi。结果与方法见 `docs/verification/local-performance.json`、`docs/verification/local-performance.md`。读取一致性精确验收：`python3 tests/mastery_snapshot_acceptance.py`，运行前同样先构建 `tests/persistence`。普通浏览器不会执行缺少隔离性能夹具的用例。
+
+到期备份工具：`python3 scripts/daily_backup.py --config <私有配置路径> --watch`。独立进程每分钟检查23小时到期条件，成功后执行30天受管保留；失败保留上次成功归档，口令不写入日志。使用 `python3 tests/daily_backup_acceptance.py` 验证真实加密、保留与新空库恢复（先构建 `tests/persistence`）。本机同盘开发备份已运行，独立磁盘、重启启动和家长状态仍待完成。配置与恢复说明见 `docs/runbooks/local.md`。

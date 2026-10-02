@@ -12,6 +12,20 @@
 
 RPO 24 小时与 RTO 4 小时仍需正式运行和定时备份演练确认；开发期间手工备份不等于已经满足持续服务指标。
 
+### 到期执行、保留与失败恢复
+
+`scripts/daily_backup.py --config <私有配置绝对路径>` 执行一次到期检查；加 `--watch` 后独立进程每分钟检查，距上次快照开始23小时执行新备份，给24小时目标留缓冲。当前开发机配置在 `.local/daily-backup-config.json`，私有口令在 `.local/daily-backup-key`，归档在 `.local/daily-backups`；调度日志在 `.local/daily-backup.log`。所有这些本机私有文件不入版本库。
+
+配置包含绝对路径 `backupDir`、`stateFile`、`passphraseFile`、`dataDir`、`deletionLedger`、`familyDeletionLedger`，以及 `postgres` 的 `host`、`port`、`user`、`database`。仅支持本机数据库；文件与归档目录须由当前用户持有且不开放组/其他人权限，不接受符号链接口令。默认23小时间隔、30天保留、整次工具执行总计最多900秒。需将 `pg_dump`、`pg_restore`、`psql`、`gpg`、`gpgconf` 加入PATH。口令不能丢失或直接覆盖；旧口令需保留至对应备份过期。
+
+调度的运行锁为进程持有的文件锁，进程终止会自动释放。成功归档先AES256加密，再解密逐字节核对、检查归档可列出全部数据库表，最后原子公布归档、摘要清单及状态。检查可解密并不是实际恢复演练；状态 `archiveVerified` 和 `restoreVerified` 分开记录，当前本机快照后者仍为false。临时明文在私有临时目录，正常完成及可处理异常会清除；系统强制终止可能遗留临时目录，应确认对应进程已停止再处理，不能把此情况描述为没有遗留。
+
+超过30天的清理只针对本工具命名、带有效清单、时间对应且摘要一致的自有归档；近期、未知、缺少清单、摘要不一致或符号链接均不自动删除。仅在新备份检查成功后清理。失败保留上次成功记录和旧备份，默认等待五分钟再试；已修复故障后可用 `--force` 请求立即重新执行，不能与 `--watch` 同时使用。归档缺失或配置更换会重新执行，不把旧位置的成功状态当作新位置已经备份。
+
+当前调度只是本机正在运行的独立进程，重启自动启动尚未安装，电脑关机/睡眠期间无法执行。状态和心跳文件本身不证明进程活跃，需结合实际进程检查。家长状态页尚未接入这组新状态，仍不显示完整备份已验收。当前归档与数据同机同盘；即使两个目录属于不同APFS文件系统也不能推断物理磁盘独立。`requireIndependentDisk=true` 在物理独立性未验证时拒绝运行，不以目录名放行。
+
+正式运行须确定独立磁盘、独立保留最新删除清单和恢复口令、补齐重启启动/状态告警，并在该环境验证持续RPO与恢复RTO。隔离验证命令为 `python3 tests/daily_backup_acceptance.py`，先按README构建 `tests/persistence`。它包含真实新空库恢复与逐行核对、私有附件及最新删除清单保护，但不代表本机全量数据已完成恢复演练。
+
 ## 恢复
 
 停止应用。创建新的空数据库，设置 PGDATABASE 指向新库，配置 BACKUP_PASSPHRASE、DELETION_LEDGER 和 FAMILY_DELETION_LEDGER，执行 `sh scripts/restore.sh <加密备份文件>`。脚本不清空既有数据库；遇到已有 schema 报错停止，避免误覆盖。
