@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
 public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null);
-public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews);
+public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
 public static class Assessment
@@ -32,11 +32,12 @@ public static class Assessment
         public bool Delay2, Delay7, Delay30;
         public HashSet<Guid> DiagnosticPasses = [];
     }
-    public static AssessmentOutput Replay(Guid family, Guid student, Guid generation, string zone, IEnumerable<AssessmentInput> inputs,IEnumerable<TeachingAnchor>? teaching=null)
+    public static AssessmentOutput Replay(Guid family, Guid student, Guid generation, string zone, IEnumerable<AssessmentInput> inputs,IEnumerable<TeachingAnchor>? teaching=null,bool collectReviewHistory=false)
     {
         var evidence = new List<Evidence>();
         var stats = new Dictionary<Guid, Stats>();
         var reviews = new Dictionary<(string, Guid), Review>();
+        var timeline=collectReviewHistory?new ReviewTimeline():null;
         var encounters = new Dictionary<Guid, DateTimeOffset>();
         var lastKC = new Dictionary<Guid, DateTimeOffset>();
         var variants = new HashSet<Guid>();
@@ -54,6 +55,8 @@ public static class Assessment
             var a=input.Attempt; var q=input.Question; var g=input.Grade; var s=input.Session;
             if (a.Number != 1) continue; // Never substitute a later retry for an ungraded first answer.
             var time=a.CreatedAt; var day=Local(time);
+            // Execution is a submitted first answer, even if pending or assisted; it is not a pass.
+            timeline?.Observe(a,q,input.Task,day);
             var duplicate=encounters.TryGetValue(q.Id,out var prior) && time-prior < TimeSpan.FromHours(24);
             var novelty=encounters.ContainsKey(q.Id) ? .5m : q.VariantGroupId.HasValue && variants.Contains(q.VariantGroupId.Value) ? .8m : 1m;
             if (!duplicate) encounters[q.Id]=time;
@@ -153,10 +156,11 @@ public static class Assessment
             }
             // An encounter/teaching event resets retention even if it could not supply evidence.
             foreach (var id in mappings.Select(m => m.KCId).Distinct()) lastKC[id]=time;
+            timeline?.Synchronize(reviews.Values,a);
         }
-        return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList());
+        return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList(),timeline?.Items??[]);
     }
-    public static async Task Rebuild(Database db, Student student, CancellationToken ct=default)
+    public static async Task<(AssessmentInput[] Inputs,TeachingAnchor[] Teaching)> LoadInputs(Database db,Student student,CancellationToken ct=default)
     {
         var attempts=await db.Attempts.Where(a => a.StudentId==student.Id).OrderBy(a => a.Sequence).ToListAsync(ct);
         var sessions=await db.Sessions.Where(s => s.StudentId==student.Id).ToDictionaryAsync(s => s.Id,ct);
@@ -166,9 +170,14 @@ public static class Assessment
         var attemptIds=attempts.Select(a=>a.Id).ToArray();var corrections=await db.Set<CorrectionItem>().Where(c=>c.FamilyId==student.FamilyId && attemptIds.Contains(c.AttemptId)).OrderBy(c=>c.Sequence).ToListAsync(ct);
         var inputs=attempts.Select(a => { var s=sessions[a.SessionId];var correction=corrections.LastOrDefault(c=>c.AttemptId==a.Id);var mappingRelease=correction?.MappingReleaseId??s.ReleaseId; var catalog=Json.Read<Catalog>(releases[mappingRelease].Payload); return new AssessmentInput(a,s,catalog.Questions.Single(q => q.Id==s.QuestionId),grades.Last(g => g.AttemptId==a.Id),catalog.Kcs,tasks[s.TaskId],mappingRelease,correction?.BatchId); }).ToArray();
         var teaching=tasks.Values.Where(t=>t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null).Select(t=>new TeachingAnchor(t.KCId!.Value,t.CompletedAt!.Value)).OrderBy(t=>t.Time).ThenBy(t=>t.KCId).ToArray();
+        return(inputs,teaching);
+    }
+    public static async Task Rebuild(Database db, Student student, CancellationToken ct=default)
+    {
+        var (inputs,teaching)=await LoadInputs(db,student,ct);
         var hash=Content.Hash(Json.Write(new {inputs,teaching,rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
         if (student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash,ct)) return;
-        var gen=new Generation { FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=attempts.LastOrDefault()?.Sequence??0 };
+        var gen=new Generation { FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
         db.Generations.Add(gen);
         var output=Replay(student.FamilyId,student.Id,gen.Id,student.TimeZone,inputs,teaching);
         db.Evidence.AddRange(output.Evidence); db.Masteries.AddRange(output.Masteries); db.Reviews.AddRange(output.Reviews);

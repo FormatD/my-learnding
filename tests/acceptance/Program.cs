@@ -103,6 +103,35 @@ Test("周报复习采用最新判分、实际作答日期与学生时区，空�
     ReviewPassSummary Read(DateOnly day,string zone)=>ReviewReporting.Calculate([i.Attempt],[i.Session],[i.Task],[corrected,i.Grade],zone,day,day);
     Eq(Read(new(2026,1,7),"Asia/Shanghai").Rate,null);Eq(Read(new(2026,1,8),"Asia/Shanghai").GradedEncounters,1);Eq(Read(new(2026,1,8),"Asia/Shanghai").IndependentPasses,0);Eq(Read(new(2026,1,7),"UTC").Encounters,1);
 });
+ReviewCoverageSummary Coverage(DateOnly start,DateOnly end,params AssessmentInput[] inputs)
+{
+    var result=Assessment.Replay(family,student,generation,"Asia/Shanghai",inputs,collectReviewHistory:true);
+    return ReviewCoverageReporting.Calculate(result.ReviewHistory,"Asia/Shanghai",start,end);
+}
+Test("复习覆盖保留未做到期和期初逾期，不把今日待办当历史",()=>{
+    var i=Input(1,false);var day=new DateOnly(2026,1,1);
+    Eq(Coverage(day,day.AddDays(1),i).Rate,null);var due=Coverage(day,day.AddDays(6),i);Eq(due.DueSchedules,1);Eq(due.ExecutedSchedules,0);Eq(due.UnexecutedSchedules,1);
+    var overdue=Coverage(day.AddDays(7),day.AddDays(13),i);Eq(overdue.OverdueAtStart,1);Eq(overdue.Rate,0m);
+});
+Test("复习覆盖按阶段到期保留，晚作答不虚增往周执行",()=>{
+    var id=Guid.NewGuid();var items=new[]{Input(1,false,questionId:id),Input(2,day:2,questionId:id,type:"Review"),Input(3,day:7,questionId:id,type:"Review"),Input(4,day:30,questionId:id,type:"Review")};
+    var r=Coverage(new(2026,1,1),new(2026,1,8),items);Eq(r.DueSchedules,2);Eq(r.ExecutedSchedules,2);Eq(r.Rate,1m);
+    var late=new[]{Input(1,false,questionId:id),Input(2,day:9,questionId:id,type:"Review")};var past=Coverage(new(2026,1,1),new(2026,1,7),late);Eq(past.DueSchedules,1);Eq(past.ExecutedSchedules,0);Eq(past.Items[0].Schedule.ExecutedAttemptId,late[1].Attempt.Id);
+    Eq(Coverage(new(2026,1,8),new(2026,1,14),late).ExecutedSchedules,1);
+});
+Test("覆盖执行不要求通过或判分，到期前重置不制造未做日程",()=>{
+    var id=Guid.NewGuid();var original=Input(1,false,questionId:id);var pending=Input(2,day:2,questionId:id,type:"Review",result:"Pending");
+    Eq(Coverage(new(2026,1,1),new(2026,1,7),original,pending).ExecutedSchedules,1);
+    var hinted=Input(2,day:2,questionId:id,type:"Review",hint:1);var h=Coverage(new(2026,1,1),new(2026,1,7),original,hinted);Eq(h.DueSchedules,2);Eq(h.ExecutedSchedules,1);
+    var early=Input(2,false,day:1,questionId:id);var reset=Coverage(new(2026,1,1),new(2026,1,7),original,early);Eq(reset.DueSchedules,1);Eq(reset.Items[0].Schedule.DueDate,new DateOnly(2026,1,4));
+    var ordered=Assessment.Replay(family,student,generation,"Asia/Shanghai",[original,hinted],collectReviewHistory:true);var reversed=Assessment.Replay(family,student,generation,"Asia/Shanghai",[hinted,original],collectReviewHistory:true);Eq(Json.Write(ordered.ReviewHistory),Json.Write(reversed.ReviewHistory));
+});
+Test("覆盖保留能力保持日程，实际目标匹配才执行，并按学生时区分期",()=>{
+    var items=Enumerable.Range(1,10).Select(n=>Input(n)).ToList();var review=Input(11,day:8,type:"Review");review.Task.ReviewTargetId=kc.Id;items.Add(review);
+    var r=Coverage(new(2026,1,1),new(2026,1,14),items.ToArray());Eq(r.DueSchedules,1);Eq(r.ExecutedSchedules,1);Eq(r.Items[0].Schedule.TargetType,"KC");
+    review.Task.ReviewTargetId=Guid.NewGuid();Eq(Coverage(new(2026,1,1),new(2026,1,14),items.ToArray()).ExecutedSchedules,0);
+    var wrong=Input(1,false);wrong.Attempt.CreatedAt=new(2026,1,1,23,50,0,TimeSpan.Zero);Eq(Coverage(new(2026,1,1),new(2026,1,3),wrong).DueSchedules,0);Eq(Coverage(new(2026,1,1),new(2026,1,4),wrong).DueSchedules,1);
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

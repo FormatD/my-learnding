@@ -7,7 +7,7 @@ public record PlanAdjustmentDetails(Guid PlanId,Guid RevisionId,string Reason,Gu
 public record WeeklyAdjustment(Guid Id,DateTimeOffset RecordedAt,bool Published,PlanAdjustmentDetails Details);
 public record TaskTransitionDetails(Guid StudentId,Guid TaskId,string From,string To,string? Reason);
 public record WeeklyTransition(Guid Id,DateTimeOffset RecordedAt,TaskTransitionDetails Details);
-public record WeeklySummary(DateOnly Start,DateOnly End,DateOnly CurrentDate,DateTimeOffset ObservedAt,string TimeZone,WeeklyCounts Original,WeeklyCounts Adjusted,int ActualMinutes,int DueReviews,int Pending,ParentBurdenSummary ParentBurden,BudgetExecutability BudgetExecutability,ReviewPassSummary ReviewPass,WeeklyTask[] Tasks,WeeklyAdjustment[] Adjustments,WeeklyTransition[] Transitions,string HistoryNote);
+public record WeeklySummary(DateOnly Start,DateOnly End,DateOnly CurrentDate,DateTimeOffset ObservedAt,string TimeZone,WeeklyCounts Original,WeeklyCounts Adjusted,int ActualMinutes,int DueReviews,int Pending,ParentBurdenSummary ParentBurden,BudgetExecutability BudgetExecutability,ReviewPassSummary ReviewPass,ReviewCoverageSummary ReviewCoverage,WeeklyTask[] Tasks,WeeklyAdjustment[] Adjustments,WeeklyTransition[] Transitions,string HistoryNote);
 public static class WeeklyReporting
 {
     public static async Task<WeeklySummary> Read(Database db,Actor actor,Guid id,DateOnly? end,CancellationToken ct=default)
@@ -27,7 +27,8 @@ public static class WeeklyReporting
         var transitions=transitionAudits.Select(a=>new WeeklyTransition(a.Id,a.CreatedAt,Json.Read<TaskTransitionDetails>(a.Details))).Where(a=>a.Details.StudentId==id && tids.Contains(a.Details.TaskId)).ToArray();
         var burden=await ParentBurden.Summary(db,id,start,last);var due=await db.Reviews.CountAsync(r=>r.StudentId==id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=today,ct);var pending=await db.Outbox.CountAsync(o=>o.StudentId==id && o.ProcessedAt==null,ct);
         var reviewPass=await ReviewReporting.Read(db,id,s.TimeZone,start,last,ct);
-        var result=new WeeklySummary(start,last,today,observed,s.TimeZone,new(original.Count,tasks.Count(t=>original.Contains(t.Id) && t.Status=="Completed")),new(current.Count,tasks.Count(t=>current.Contains(t.Id) && t.Status=="Completed")),tasks.Sum(t=>t.ActualMinutes??0),due,pending,burden,BudgetReporting.Calculate(tasks,adjustments),reviewPass,rows,adjustments,transitions,"按所选日期内的已发布计划及当前任务状态汇总；当前到期复习不代表往周覆盖率。旧调整及执行审计只有摘要，未保存的原因不能推算。草稿任务不进入完成率。");
+        var reviewCoverage=await ReviewCoverageReporting.Read(db,s,start,last,ct);
+        var result=new WeeklySummary(start,last,today,observed,s.TimeZone,new(original.Count,tasks.Count(t=>original.Contains(t.Id) && t.Status=="Completed")),new(current.Count,tasks.Count(t=>current.Contains(t.Id) && t.Status=="Completed")),tasks.Sum(t=>t.ActualMinutes??0),due,pending,burden,BudgetReporting.Calculate(tasks,adjustments),reviewPass,reviewCoverage,rows,adjustments,transitions,"按所选日期内的已发布计划及当前任务状态汇总；当前到期复习不代表往周覆盖率。旧调整及执行审计只有摘要，未保存的原因不能推算。草稿任务不进入完成率。");
         await tx.CommitAsync(ct);return result;
     }
 }

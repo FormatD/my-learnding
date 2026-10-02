@@ -4,7 +4,7 @@ from datetime import date,timedelta
 from pathlib import Path
 import api_acceptance
 from api_acceptance import Client,TODAY
-from review_reporting_acceptance import verify as verify_weekly_reviews
+from review_reporting_acceptance import verify as verify_weekly_reviews,verify_coverage_correction
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--browser",action="store_true",help="Also verify weekly review presentation against the same disposable API.");args=parser.parse_args()
@@ -78,6 +78,7 @@ def main():
                 if args.browser:
                     browser_env={**env,'LEARNING_TEST_URL':f'http://127.0.0.1:{port}','REVIEW_REPORT_STUDENT':sid}
                     subprocess.run(['npm','--prefix',str(root/'src/web'),'run','test:e2e','--','tests/review-report.spec.ts'],env=browser_env,check=True,timeout=120)
+                verify_coverage_correction(c,fixture)
         finally:
             if child is not None and child.poll() is None:child.terminate();child.wait(timeout=10)
             subprocess.run(['dropdb','--force',database],env=env,check=True)

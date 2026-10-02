@@ -9,6 +9,7 @@ def verify(c,fixture):
     path='/students/'+sid+'/weekly-summary'
     initial=c.request(path)['reviewPass']
     assert initial['encounters']==0 and initial['rate'] is None
+    coverage=c.request(path)['reviewCoverage'];assert coverage['dueSchedules']==1 and coverage['executedSchedules']==0 and coverage['unexecutedSchedules']==1
     c.request('/students/'+sid+'/plans/'+TODAY+':generate',{})
     plan=c.request('/students/'+sid+'/plans/'+TODAY)
     task=next(t for t in plan['tasks'] if t['type']=='Review' and t['questionId']==fixture['questionId'] and t['status']=='Planned')
@@ -20,9 +21,11 @@ def verify(c,fixture):
     aid=result['attempt']['id']
     current=c.request(path)['reviewPass']
     assert current['encounters']==1 and current['gradedEncounters']==1 and current['independentPasses']==1 and current['rate']==1
+    covered=c.request(path)['reviewCoverage'];assert covered['dueSchedules']==1 and covered['executedSchedules']==1 and covered['rate']==1
+    assert covered['items'][0]['schedule']['executedAttemptId']==aid
     assert current['items'][0]['attemptId']==aid and current['items'][0]['reason']=='TRUSTED_INDEPENDENT'
     old=(date.fromisoformat(TODAY)-timedelta(days=7)).isoformat()
-    assert c.request(path+'?end='+old)['reviewPass']['rate'] is None
+    past=c.request(path+'?end='+old);assert past['reviewPass']['rate'] is None and past['reviewCoverage']['rate'] is None
     print('PASS weekly review uses actual first-answer date; skipped/answer-only tasks and prior practice excluded; empty past week unknown')
     for _ in range(100):
         if c.request('/students/'+sid+'/mastery')['pending']==0:break
@@ -40,3 +43,19 @@ def verify(c,fixture):
     assert retried['encounters']==1 and retried['gradedEncounters']==1 and retried['independentPasses']==0
     assert 'ReviewPassSummary' in c.request('/openapi.json')['components']['schemas']
     print('PASS correct retry cannot replace failed first answer; typed review report contract')
+
+
+def verify_coverage_correction(c,fixture):
+    sid=fixture['studentId']
+    for _ in range(100):
+        if c.request('/students/'+sid+'/mastery')['pending']==0:break
+        time.sleep(.1)
+    else:raise AssertionError('projection did not settle')
+    original=next(a for a in c.request('/students/'+sid+'/attempts')['attempts'] if a['answer']=='999' and a['number']==1)
+    body={'result':'Correct','reason':'隔离验收：更正最初错题，重新计算历史到期依据'}
+    preview=c.request('/attempts/'+original['id']+'/grading-preview',body)
+    c.request('/attempts/'+original['id']+'/grading-revisions',{**body,'previewHash':preview['previewHash']},expected=202)
+    report=c.request('/students/'+sid+'/weekly-summary')['reviewCoverage']
+    assert report['dueSchedules']==0 and report['rate'] is None and report['items']==[]
+    assert report['ruleVersion']=='review/1'
+    print('PASS correction of original wrong answer reconstructs due cohort; removed obligation stays unknown instead of fabricated 100%')

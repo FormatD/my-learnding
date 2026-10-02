@@ -3333,6 +3333,93 @@
         },
         "type": "object"
       },
+      "ReviewCoverageItem": {
+        "properties": {
+          "executedInPeriod": {
+            "type": "boolean"
+          },
+          "overdueAtStart": {
+            "type": "boolean"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/ReviewOccurrence"
+          }
+        },
+        "required": [
+          "schedule",
+          "executedInPeriod",
+          "overdueAtStart"
+        ],
+        "type": "object"
+      },
+      "ReviewCoverageSummary": {
+        "properties": {
+          "dueSchedules": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "executedSchedules": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewCoverageItem"
+            },
+            "type": "array"
+          },
+          "note": {
+            "type": "string"
+          },
+          "overdueAtStart": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "rate": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "ruleVersion": {
+            "type": "string"
+          },
+          "unexecutedSchedules": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "dueSchedules",
+          "executedSchedules",
+          "unexecutedSchedules",
+          "overdueAtStart",
+          "rate",
+          "items",
+          "ruleVersion",
+          "note"
+        ],
+        "type": "object"
+      },
       "ReviewEncounter": {
         "properties": {
           "attemptId": {
@@ -3394,6 +3481,77 @@
           "graded",
           "independentlyPassed",
           "reason"
+        ],
+        "type": "object"
+      },
+      "ReviewOccurrence": {
+        "properties": {
+          "closedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dueDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "executedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "executedAttemptId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scheduledAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "scheduledByAttemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "targetId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "targetType",
+          "targetId",
+          "kcId",
+          "stage",
+          "dueDate",
+          "scheduledByAttemptId",
+          "scheduledAt",
+          "closedAt",
+          "executedAttemptId",
+          "executedAt"
         ],
         "type": "object"
       },
@@ -4080,6 +4238,9 @@
               "string"
             ]
           },
+          "reviewCoverage": {
+            "$ref": "#/components/schemas/ReviewCoverageSummary"
+          },
           "reviewPass": {
             "$ref": "#/components/schemas/ReviewPassSummary"
           },
@@ -4117,6 +4278,7 @@
           "parentBurden",
           "budgetExecutability",
           "reviewPass",
+          "reviewCoverage",
           "tasks",
           "adjustments",
           "transitions",
