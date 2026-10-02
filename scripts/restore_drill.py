@@ -55,6 +55,20 @@ def expected_rows(tables,families,students,foreign_keys):
     for name,value in tables.items():
         for index,row in enumerate(value['rows']):
             if name in {'AuthSessions','Commands'} or (name=='Families' and row['Id'] in deleted_families) or (name=='Students' and (row['FamilyId'],row['Id']) in deleted_students):removed[name].add(index)
+    # Older archives may predate the nullable student FK on detailed audit notes.
+    affected_plans={(r['FamilyId'],r['Id']) for r in tables['Plans']['rows'] if (r['FamilyId'],r['StudentId']) in deleted_students}
+    def copy_text(raw):
+        escapes={'n':'\n','r':'\r','t':'\t','b':'\b','f':'\f','v':'\v','\\':'\\'}
+        def decode(match):
+            value=match.group(1)
+            if value.startswith('x') and len(value)>1:return chr(int(value[1:],16))
+            if value[0] in '01234567':return chr(int(value,8))
+            return escapes.get(value,value)
+        return re.sub(r'\\([0-7]{1,3}|x[0-9a-fA-F]{1,2}|.)',decode,raw)
+    for index,row in enumerate(tables['Audits']['rows']):
+        if row['Action'] not in {'TaskTransition','PlanAdjusted'}:continue
+        details=json.loads(copy_text(row['Details']))
+        if (row['FamilyId'],details.get('studentId')) in deleted_students or (row['FamilyId'],details.get('planId')) in affected_plans:removed['Audits'].add(index)
     # Student-owned images have no student FK. Keep any image still used by another student or a source.
     for index,file in enumerate(tables['PrivateFile']['rows']):
         linked=[r for r in tables['PaperWrong']['rows'] if r['FileId']==file['Id']]

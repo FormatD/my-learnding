@@ -11,7 +11,7 @@ async function save(){busy.value=true;error.value='';try{await api(editing.value
 <template>
   <section class="card">
     <h2>家长投入记录</h2><p class="muted">由家长填写实际耗时。日常确认与调整、集中建库与审核分开统计；没有记录的日期不按零投入计算，补记也不代表已完成连续试用。</p>
-    <p v-if="burden?.recordCount">本周已记录 {{burden.recordedDays}} 天 · 日常维护 {{burden.dailyMinutes}} 分钟 · 内容审核 {{burden.contentReviewMinutes}} 分钟</p><p v-else class="empty">本周尚未记录投入，暂不能评价家长维护成本。</p>
+    <p v-if="burden?.recordCount">所选一周已记录 {{burden.recordedDays}} 天 · 日常维护 {{burden.dailyMinutes}} 分钟 · 内容审核 {{burden.contentReviewMinutes}} 分钟</p><p v-else class="empty">所选一周尚未记录投入，暂不能评价家长维护成本。</p>
     <form @submit.prevent="save" class="burden-form">
       <label>投入日期<input type="date" v-model="date" :max="localDate(timeZone)" required></label>
       <label>投入类别<select v-model="category"><option value="Daily">日常确认与调整</option><option value="ContentReview">集中建库与内容审核</option></select></label>
@@ -21,7 +21,7 @@ async function save(){busy.value=true;error.value='';try{await api(editing.value
       <div v-if="error"><p class="error" role="alert">{{error}}</p><button type="button" @click="load" :disabled="busy">刷新投入记录</button></div>
       <div><button class="primary" :disabled="busy">{{editing?'保存投入更正':'记录实际投入'}}</button><button v-if="editing" type="button" @click="reset" :disabled="busy">取消更正</button></div>
     </form>
-    <p class="muted">下方保留最近28天填写的记录；上方周汇总只计算近7天。</p>
+    <p class="muted">下方保留最近28天填写的记录；上方周汇总只计算所选的7天。</p>
     <div v-for="r in allRecords?.records||[]" :key="r.id" class="content-row"><div><h3>{{r.date}} · {{r.category==='Daily'?'日常维护':'内容审核'}} · {{r.minutes}} 分钟</h3><p>{{r.note||'家长填写的实际投入'}}<span v-if="r.supersedesId"> · 已更正：{{r.correctionReason}}</span></p></div><button @click="edit(r)" :disabled="busy">更正投入记录</button></div>
     <details v-if="allRecords?.history?.some((r:any)=>allRecords.records.every((a:any)=>a.id!==r.id))"><summary>保留的投入历史</summary><p v-for="r in allRecords.history" :key="r.id">{{r.date}} · {{r.category==='Daily'?'日常维护':'内容审核'}} · {{r.minutes}} 分钟 · {{r.note}} <span v-if="r.correctionReason"> · 更正原因：{{r.correctionReason}}</span></p></details>
   </section>

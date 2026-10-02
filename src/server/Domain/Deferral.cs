@@ -18,7 +18,10 @@ public static class Deferral
             {
                 var old=await db.PlanRevisions.SingleAsync(r=>r.Id==plan.ActiveRevisionId);
                 var revision=new PlanRevision {FamilyId=a.FamilyId,PlanId=plan.Id,ReleaseId=old.ReleaseId,Number=await db.PlanRevisions.Where(r=>r.PlanId==plan.Id).MaxAsync(r=>r.Number)+1,Budget=old.Budget,Reserved=old.Reserved,Status="Published",InputHash=Content.Hash(old.InputHash+Json.Write(input)+id),Warnings=old.Warnings,Candidates=old.Candidates};db.Add(revision);
-                foreach(var place in await db.Placements.Where(p=>p.RevisionId==old.Id && p.TaskId!=id).OrderBy(p=>p.Sequence).ToListAsync())db.Placements.Add(new(){FamilyId=a.FamilyId,RevisionId=revision.Id,TaskId=place.TaskId,Sequence=place.Sequence});
+                var oldPlaces=await db.Placements.Where(p=>p.RevisionId==old.Id).OrderBy(p=>p.Sequence).ToListAsync();
+                foreach(var place in oldPlaces.Where(p=>p.TaskId!=id))db.Placements.Add(new(){FamilyId=a.FamilyId,RevisionId=revision.Id,TaskId=place.TaskId,Sequence=place.Sequence});
+                var beforeIds=oldPlaces.Select(p=>p.TaskId).ToArray();var afterIds=beforeIds.Where(t=>t!=id).ToArray();
+                db.Audits.Add(new(){FamilyId=a.FamilyId,StudentId=task.StudentId,ActorId=a.Id,Action="PlanAdjusted",Details=Json.Write(new PlanAdjustmentDetails(plan.Id,revision.Id,input.Reason,beforeIds,afterIds,[id],[],afterIds,"TaskDeferral",input.Date))});
                 plan.ActiveRevisionId=revision.Id;
             }
             var target=await Planning.Generate(db,s,input.Date);

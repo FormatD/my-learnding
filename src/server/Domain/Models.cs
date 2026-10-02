@@ -315,6 +315,7 @@ public class Candidate : Row
 }
 public class Audit : Row
 {
+    public Guid? StudentId { get; set; }
     public Guid ActorId { get; set; }
     public string Action { get; set; } = "";
     public string Details { get; set; } = "";

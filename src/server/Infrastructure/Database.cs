@@ -61,6 +61,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         Foreign<Account, FamilyMembership>(b,"AccountId");
         b.Entity<FamilyMembership>().HasIndex(m=>new {m.FamilyId,m.AccountId}).IsUnique();
         b.Entity<Family>().HasOne<Account>().WithMany().HasForeignKey(f=>new {f.Id,f.OwnerAccountId}).HasPrincipalKey(a=>new {a.FamilyId,a.Id}).OnDelete(DeleteBehavior.Restrict);
+        Foreign<Student, Audit>(b,"StudentId");
         Foreign<Student, ParentBurdenRecord>(b,"StudentId");
         Foreign<ParentBurdenRecord, ParentBurdenRecord>(b,"SupersedesId");
         b.Entity<ParentBurdenRecord>().HasIndex(r=>r.SupersedesId).IsUnique();

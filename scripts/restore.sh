@@ -38,6 +38,10 @@ WHERE f."FamilyId" = :'family'::uuid
   AND f."Id" IN (SELECT p."FileId" FROM "PaperWrong" p WHERE p."StudentId" = :'student'::uuid)
   AND NOT EXISTS (SELECT 1 FROM "PaperWrong" p WHERE p."FileId" = f."Id" AND p."StudentId" <> :'student'::uuid)
   AND NOT EXISTS (SELECT 1 FROM "Sources" s WHERE s."FamilyId" = :'family'::uuid AND s."Hash" = f."Hash");
+DELETE FROM "Audits" a WHERE a."FamilyId"=:'family'::uuid AND (
+  (CASE WHEN a."Action"='TaskTransition' THEN a."Details"::jsonb ELSE '{}'::jsonb END)->>'studentId'=:'student'
+  OR (CASE WHEN a."Action"='PlanAdjusted' THEN a."Details"::jsonb ELSE '{}'::jsonb END)->>'planId'
+     IN (SELECT p."Id"::text FROM "Plans" p WHERE p."FamilyId"=:'family'::uuid AND p."StudentId"=:'student'::uuid));
 DELETE FROM "Students" WHERE "Id" = :'student'::uuid AND "FamilyId" = :'family'::uuid;
 DELETE FROM "AuthSessions" WHERE "StudentId" = :'student'::uuid AND "FamilyId" = :'family'::uuid;
 DELETE FROM "Commands" WHERE "FamilyId" = :'family'::uuid;

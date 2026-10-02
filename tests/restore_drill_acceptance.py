@@ -27,10 +27,17 @@ def main():
                 ('{burden1}','{family_id}','{student_id}','{actor}',CURRENT_DATE,'Daily',7.5,E'核对作业\\n原始说明',NULL,'','ParentReported',CURRENT_TIMESTAMP),
                 ('{burden2}','{family_id}','{student_id}','{actor}',CURRENT_DATE,'Daily',3,'更正说明','{burden1}','扣除休息时间','ParentReported',CURRENT_TIMESTAMP)'''
             subprocess.run(['psql','-v','ON_ERROR_STOP=1','-c',burden_sql],env=env,check=True,stdout=subprocess.DEVNULL)
+            legacy_detail=json.dumps({'studentId':student_id,'taskId':str(uuid.uuid4()),'from':'Ready','to':'Skipped','reason':"原跳过说明\n制表\t反斜杠\\与孩子's记录"},ensure_ascii=False).replace("'","''")
+            audit_sql=f'''INSERT INTO "Audits" ("Id","FamilyId","StudentId","ActorId","Action","Details","CreatedAt") VALUES
+                ('{uuid.uuid4()}','{family_id}',NULL,'{actor}','TaskTransition','{legacy_detail}',CURRENT_TIMESTAMP),
+                ('{uuid.uuid4()}','{family_id}','{student_id}','{actor}','TaskTransition','{legacy_detail}',CURRENT_TIMESTAMP);
+                INSERT INTO "Audits" ("Id","FamilyId","StudentId","ActorId","Action","Details","CreatedAt") SELECT
+                '{uuid.uuid4()}','{family_id}',NULL,'{actor}','PlanAdjusted',json_build_object('planId',"Id",'reason','原计划调整原因')::text,CURRENT_TIMESTAMP FROM "Plans" WHERE "StudentId"='{student_id}';'''
+            subprocess.run(['psql','-v','ON_ERROR_STOP=1','-c',audit_sql],env=env,check=True,stdout=subprocess.DEVNULL)
             created=backup.execute(backup.load_config(configfile));result=restore_drill.execute(configfile)
             assert result['status']=='Passed' and result['allRetainedColumnsEqual'] and result['retainedRowsCompared']>10 and result['tableCount']>=30
             assert not result['independentDiskVerified'] and not result['sustainedRpoVerified']
-            print('PASS 真实归档逐列比较所有表、证据与复习；家长投入原记录/更正链及COPY内换行/制表/反斜杠/NEL保持原样',flush=True)
+            print('PASS 真实归档逐列比较所有表、证据与复习；家长投入/更正链、学生关联与未关联旧审计说明及COPY内换行/制表/反斜杠/NEL保持原样',flush=True)
             (tmp/'students.txt').write_text(fixture['familyId']+','+fixture['studentId']+'\n')
             deleted=restore_drill.execute(configfile);assert deleted['retainedRowsCompared']<result['retainedRowsCompared']
             (tmp/'families.txt').write_text(fixture['familyId']+','+str(uuid.uuid4())+'\n')

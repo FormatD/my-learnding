@@ -152,14 +152,20 @@ public static class Endpoints
             var a=ctx.Actor();a.Require("Parent");var rev=await Owned<PlanRevision>(db,a,id);
             if (rev.Status!="Draft" || string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"ADJUST_INVALID","只可调整草稿，并需填写原因。");
             var placements=await db.Placements.Where(p => p.RevisionId==id).ToListAsync();
-            if (input.TaskIds.Distinct().Count()!=input.TaskIds.Length || input.TaskIds.Any(t => !placements.Any(p => p.TaskId==t))) throw new ApiError(422,"INVALID_TASK_IDS","任务顺序无效。");
+            if (input.TaskIds.Distinct().Count()!=input.TaskIds.Length || input.TaskIds.Any(t => !placements.Any(p => p.TaskId==t)) || input.LockedIds.Distinct().Count()!=input.LockedIds.Length || input.LockedIds.Any(t=>!input.TaskIds.Contains(t))) throw new ApiError(422,"INVALID_TASK_IDS","任务顺序无效。");
+            var beforeIds=placements.OrderBy(p=>p.Sequence).Select(p=>p.TaskId).ToArray();
             foreach (var p in placements)
             {
                 var t=await Owned<StudyTask>(db,a,p.TaskId);
                 if (!input.TaskIds.Contains(t.Id)) { if (t.Mandatory || t.Status is "Completed" or "InProgress") throw new ApiError(422,"FIXED_TASK","不能移除已执行或必做任务。");db.Placements.Remove(p); }
                 else { p.Sequence=Array.IndexOf(input.TaskIds,t.Id);t.Locked=input.LockedIds.Contains(t.Id); }
             }
-            rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);return Results.Ok(rev);
+            rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);
+            var appliedIds=await db.Placements.Where(p=>p.RevisionId==id).OrderBy(p=>p.Sequence).Select(p=>p.TaskId).ToArrayAsync();
+            var adjustment=new PlanAdjustmentDetails(rev.PlanId,rev.Id,input.Reason,beforeIds,appliedIds,beforeIds.Except(appliedIds).ToArray(),input.LockedIds,input.TaskIds);
+            var parentPlan=await Owned<Plan>(db,a,rev.PlanId);
+            db.Audits.Add(new(){FamilyId=a.FamilyId,StudentId=parentPlan.StudentId,ActorId=a.Id,Action="PlanAdjusted",Details=Json.Write(adjustment)});
+            return Results.Ok(rev);
         });
         api.MapGet("/students/{id:guid}/today",async (Guid id,Database db,HttpContext ctx) => { var s=await ctx.Actor().Student(db,id);return await PlanView(db,id,Today(s),true); });
         api.MapPost("/tasks/{id:guid}:transition",async (Guid id,TransitionInput input,Database db,HttpContext ctx) =>
@@ -176,7 +182,7 @@ public static class Endpoints
                 var sessions=await db.Sessions.Where(s => s.TaskId==id).Select(s => s.Id).ToArrayAsync();var attempts=await db.Attempts.Where(x => sessions.Contains(x.SessionId)).ToListAsync();
                 if (attempts.Count==0 || !await db.Gradings.AnyAsync(g => attempts.Select(x => x.Id).Contains(g.AttemptId) && g.Result!="Pending")) throw new ApiError(422,"SUBMISSION_REQUIRED","请先作答并等待判分。");
             }
-            var now=DateTimeOffset.UtcNow;
+            var previousStatus=t.Status;var now=DateTimeOffset.UtcNow;
             if(t.Status=="InProgress" && t.StartedAt!=null)t.TrackedSeconds+=(int)Math.Max(0,(now-t.StartedAt.Value).TotalSeconds);
             t.Status=input.Status;
             if(input.Status=="InProgress")t.StartedAt=now;
@@ -185,6 +191,7 @@ public static class Endpoints
                 t.StartedAt=null;t.ActualMinutes=a.Role=="Parent" && input.ActualMinutes!=null?input.ActualMinutes:Math.Max(1,(int)Math.Ceiling(t.TrackedSeconds/60m));
                 if(input.Status=="Completed")t.CompletedAt=now;
             }
+            db.Audits.Add(new(){FamilyId=a.FamilyId,StudentId=t.StudentId,ActorId=a.Id,Action="TaskTransition",Details=Json.Write(new TaskTransitionDetails(t.StudentId,t.Id,previousStatus,input.Status,input.Reason))});
             await db.SaveChangesAsync();
             var plans=await (from p in db.Plans join place in db.Placements on p.ActiveRevisionId equals (Guid?)place.RevisionId where place.TaskId==id select p).ToListAsync();
             foreach(var plan in plans)
@@ -258,17 +265,7 @@ public static class Endpoints
         api.MapGet("/students/{id:guid}/mastery/{kcId:guid}",async (Guid id,Guid kcId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return new { mastery=await db.Masteries.SingleOrDefaultAsync(m => m.StudentId==id && m.GenerationId==s.ActiveGenerationId && m.KCId==kcId),evidence=await db.Evidence.Where(e => e.StudentId==id && e.GenerationId==s.ActiveGenerationId && e.KCId==kcId).OrderBy(e => e.OccurredAt).ToListAsync() }; });
         api.MapGet("/students/{id:guid}/reviews",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return await db.Reviews.Where(r => r.StudentId==id && r.GenerationId==s.ActiveGenerationId).OrderBy(r => r.DueDate).ToListAsync(); });
         api.MapPost("/students/{id:guid}:rebuild",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);await Assessment.Rebuild(db,s);return Results.Ok(new { generation=s.ActiveGenerationId }); });
-        api.MapGet("/students/{id:guid}/weekly-summary",async (Guid id,Database db,HttpContext ctx) =>
-        {
-            var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var today=Today(s);var start=today.AddDays(-6);
-            var plans=await db.Plans.Where(p => p.StudentId==id && p.Date>=start && p.Date<=today).ToListAsync();var ids=plans.Select(p => p.Id).ToArray();
-            var revisions=await db.PlanRevisions.Where(r => ids.Contains(r.PlanId) && r.Status=="Published").OrderBy(r => r.Number).ToListAsync();
-            var originalIds=revisions.GroupBy(r => r.PlanId).Select(g => g.First().Id).ToArray();var currentIds=plans.Select(p => p.ActiveRevisionId).ToArray();
-            var placements=await db.Placements.Where(p => originalIds.Contains(p.RevisionId) || currentIds.Contains(p.RevisionId)).ToListAsync();var tids=placements.Select(p => p.TaskId).ToArray();var tasks=await db.Tasks.Where(t => tids.Contains(t.Id)).ToListAsync();
-            var original=placements.Where(p => originalIds.Contains(p.RevisionId)).Select(p => p.TaskId).Distinct().ToArray();var current=placements.Where(p => currentIds.Contains(p.RevisionId)).Select(p => p.TaskId).Distinct().ToArray();
-            var parentBurden=await ParentBurden.Summary(db,id,start,today);
-            return new { start,end=today,parentBurden,original=new { total=original.Length,completed=tasks.Count(t => original.Contains(t.Id) && t.Status=="Completed") },adjusted=new { total=current.Length,completed=tasks.Count(t => current.Contains(t.Id) && t.Status=="Completed") },actualMinutes=tasks.Sum(t => t.ActualMinutes??0),dueReviews=await db.Reviews.CountAsync(r => r.StudentId==id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=today),pending=await db.Outbox.CountAsync(o => o.StudentId==id && o.ProcessedAt==null) };
-        });
+        api.MapGet("/students/{id:guid}/weekly-summary",async(Guid id,DateOnly? end,Database db,HttpContext ctx)=>await WeeklyReporting.Read(db,ctx.Actor(),id,end,ctx.RequestAborted));
         api.MapGet("/audit",async (Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");return await db.Audits.Where(a => a.FamilyId==ctx.Actor().FamilyId).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(); });
         api.MapGet("/jobs",async (Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");return await db.Outbox.Where(j=>j.FamilyId==ctx.Actor().FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).Take(100).ToListAsync();});
         api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);if(job.ProcessedAt!=null)throw new ApiError(409,"JOB_COMPLETED","结果已经处理，不需要再次重试。");job.Retries=0;job.NextAttemptAt=null;job.Error=null;return Results.Accepted("/api/v1/jobs",job);});

@@ -1,0 +1,20 @@
+<script setup lang="ts">
+import {ref,watch} from 'vue';
+import {localDate} from '../api';
+const props=defineProps<{summary:any,busy:boolean,timeZone:string}>();const emit=defineEmits<{select:[date:string]}>();
+const end=ref(props.summary?.end||localDate(props.timeZone));watch(()=>props.summary?.end,v=>{if(v)end.value=v;});
+function shift(days:number){const value=new Date((props.summary?.end||localDate(props.timeZone))+'T12:00:00Z');value.setUTCDate(value.getUTCDate()+days);const date=value.toISOString().slice(0,10);emit('select',date>localDate(props.timeZone)?localDate(props.timeZone):date);}
+const names:Record<string,string>={Planned:'待发布',Ready:'准备开始',InProgress:'进行中',Completed:'已完成',Skipped:'已跳过',Deferred:'已延期',Abandoned:'已结束'};
+</script>
+<template>
+  <div class="page-heading"><div><p class="eyebrow">WEEK / 每周回顾</p><h1>一周的小步，累积成进步</h1><p class="muted">调整计划保留原始分母，未完成的任务不会被隐藏。</p></div></div>
+  <form class="week-selector" @submit.prevent="emit('select',end)"><label>周报结束日期<input type="date" v-model="end" :max="localDate(timeZone)" min="2000-01-07" required :disabled="busy"></label><button :disabled="busy">查看所选一周</button><button type="button" @click="shift(-7)" :disabled="busy">前一周</button><button type="button" @click="shift(7)" :disabled="busy||(summary?.end||end)>=localDate(timeZone)">后一周</button><button type="button" @click="emit('select',localDate(timeZone))" :disabled="busy">返回最近一周</button></form>
+  <p v-if="summary" class="muted" role="status">统计日期：{{summary.start}} 至 {{summary.end}} · {{summary.timeZone}} · 任务状态更新至本次查看</p>
+  <div v-if="summary" class="summary-grid"><section class="card"><p>最初发布任务</p><h2>{{summary.original.completed}} / {{summary.original.total}}</h2><span>完成数 / 原始任务数</span></section><section class="card"><p>调整后任务</p><h2>{{summary.adjusted.completed}} / {{summary.adjusted.total}}</h2><span>完成数 / 最终活动任务数</span></section><section class="card"><p>当前到期复习</p><h2>{{summary.dueReviews}}</h2><span>{{summary.pending}} 个事件等待后台处理；不是往周覆盖率</span></section></div>
+  <section v-if="summary" class="card"><h2>本周计划与调整依据</h2><p class="muted">{{summary.historyNote}}</p>
+    <details v-if="summary.tasks.length"><summary>查看原始、最终及中间版本任务（{{summary.tasks.length}}项）</summary><div v-for="t in summary.tasks" :key="t.taskId" class="content-row"><div><h3>{{t.title}} · {{names[t.status]||t.status}}</h3><p v-for="p in t.placements" :key="p.revisionId">{{p.date}} · 发布版本 {{p.revision}} · {{p.original?'最初计划':''}} {{p.current?'最终活动计划':''}} {{!p.original&&!p.current?'中间发布版本':''}}</p><p>预计 {{t.estimatedMinutes}} 分钟 · {{t.actualMinutes===null?'实际耗时未记录':`当前已知实际耗时 ${t.actualMinutes} 分钟`}}</p></div></div></details><p v-else class="empty">所选日期没有已发布任务，不计入完成率。</p>
+    <details v-if="summary.adjustments.length"><summary>查看家长调整原因（{{summary.adjustments.length}}条）</summary><div v-for="a in summary.adjustments" :key="a.id" class="content-row"><div><p>{{new Date(a.recordedAt).toLocaleString('zh-CN',{timeZone})}} · {{a.details.reason}}<span v-if="a.details.kind==='TaskDeferral'"> · 顺延至 {{a.details.deferredTo}}</span> · {{a.published?'该修订已发布':'仅草稿调整，未计入完成率'}}</p><p>调整前 {{a.details.beforeTaskIds.length}} 项，调整后 {{a.details.afterTaskIds.length}} 项，移除 {{a.details.removedTaskIds.length}} 项</p></div></div></details><p v-else class="muted">所选计划尚无可回看的具体调整原因；旧摘要不能恢复原说明。</p>
+    <details v-if="summary.transitions.length"><summary>查看执行与跳过说明（{{summary.transitions.length}}条）</summary><div v-for="a in summary.transitions" :key="a.id" class="content-row"><div><p>{{summary.tasks.find((t:any)=>t.taskId===a.details.taskId)?.title}} · {{names[a.details.from]||a.details.from}} → {{names[a.details.to]||a.details.to}}</p><p>{{a.details.reason||'未填写原因'}} · {{new Date(a.recordedAt).toLocaleString('zh-CN',{timeZone})}}</p></div></div></details>
+  </section>
+</template>
+<style scoped>.week-selector{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px}.week-selector label{margin:0}.week-selector button{margin-bottom:0}</style>

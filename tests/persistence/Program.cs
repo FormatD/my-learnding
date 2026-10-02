@@ -10,6 +10,17 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="student-audit-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002095324_ParentBurdenRecords");var f=new Family();var s=new Student{FamilyId=f.Id,Name="有实际来源的学生"};var p=new Plan{FamilyId=f.Id,StudentId=s.Id,Date=new DateOnly(2026,10,2)};db.AddRange(f,s,p);await db.SaveChangesAsync();
+    async Task<Guid> OldAudit(string action,string detail){var id=Guid.NewGuid();var actor=Guid.NewGuid();var time=DateTimeOffset.UtcNow;await db.Database.ExecuteSqlInterpolatedAsync($"""INSERT INTO "Audits" ("Id","FamilyId","ActorId","Action","Details","CreatedAt") VALUES ({id},{f.Id},{actor},{action},{detail},{time})""");return id;}
+    var transition=await OldAudit("TaskTransition",Json.Write(new TaskTransitionDetails(s.Id,Guid.NewGuid(),"Ready","Skipped","原跳过说明")));var adjustment=await OldAudit("PlanAdjusted",Json.Write(new PlanAdjustmentDetails(p.Id,Guid.NewGuid(),"原调整说明",[],[],[],[],[])));
+    var generic=await OldAudit("POST:legacy",Content.Hash("原事件"));var orphan=await OldAudit("TaskTransition",Json.Write(new TaskTransitionDetails(Guid.NewGuid(),Guid.NewGuid(),"Ready","Skipped","此前已删除学生的私人说明")));
+    await db.Database.MigrateAsync();db.ChangeTracker.Clear();var audits=await db.Audits.ToListAsync();Assert(audits.Count==3 && audits.Single(a=>a.Id==transition).StudentId==s.Id && audits.Single(a=>a.Id==adjustment).StudentId==s.Id && audits.Single(a=>a.Id==generic).StudentId==null && !audits.Any(a=>a.Id==orphan),"audit scope inferred incorrectly or deleted notes retained");
+    Assert(Json.Read<TaskTransitionDetails>(audits.Single(a=>a.Id==transition).Details).Reason=="原跳过说明","reason rewritten");Console.WriteLine("PASS 旧具体说明按真实学生/计划链接回填；泛化摘要保持未知，已失去所属学生的具体私人说明清除");
+    var another=new Family();var other=new Student{FamilyId=another.Id,Name="其他家庭"};db.AddRange(another,other);await db.SaveChangesAsync();try{await db.Database.ExecuteSqlInterpolatedAsync($"""UPDATE "Audits" SET "StudentId"={other.Id} WHERE "Id"={transition}""");throw new Exception("cross-family audit accepted");}catch(DbException){}
+    await db.Students.Where(x=>x.Id==s.Id).ExecuteDeleteAsync();Assert(await db.Audits.CountAsync()==1 && (await db.Audits.SingleAsync()).Id==generic,"student deletion left private audit notes or erased unrelated generic audit");Console.WriteLine("PASS 数据库拒绝跨家庭审计；删除学生清除具体说明，普通家庭摘要保留");return;
+}
 if(args[0]=="parent-burden-legacy")
 {
     await db.GetService<IMigrator>().MigrateAsync("20261002050245_BuilderRetryAttempts");var f=new Family();var s=new Student{FamilyId=f.Id,Name="原始学生"};db.AddRange(f,s);await db.SaveChangesAsync();
