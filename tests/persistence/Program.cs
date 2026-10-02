@@ -10,6 +10,35 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="mastery-snapshot")
+{
+    await db.Database.MigrateAsync();var family=new Family();var catalog=Content.Fixture();var q=catalog.Questions[0];var release=new Release{FamilyId=family.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};db.AddRange(family,release);await db.SaveChangesAsync();
+    async Task<(Student Student,Outbox Job)> Seed()
+    {
+        var s=new Student{FamilyId=family.Id,ActiveReleaseId=release.Id};var task=new StudyTask{FamilyId=family.Id,StudentId=s.Id,ReleaseId=release.Id,QuestionId=q.Id,Status="InProgress"};var session=new LearningSession{FamilyId=family.Id,StudentId=s.Id,TaskId=task.Id,ReleaseId=release.Id,QuestionId=q.Id};var attempt=new Attempt{FamilyId=family.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var grade=new Grading{FamilyId=family.Id,AttemptId=attempt.Id,Number=1,Result="Incorrect"};var job=new Outbox{FamilyId=family.Id,StudentId=s.Id,AttemptId=attempt.Id};db.AddRange(s,task,session,attempt,grade,job);await db.SaveChangesAsync();return(s,job);
+    }
+    var actor=new Actor(Guid.NewGuid(),family.Id,Guid.NewGuid(),null,"Parent","Parent");var old=await Seed();
+    await using(var reader=Open())
+    {
+        var s=await actor.Student(reader,old.Student.Id);var mastery=await reader.Masteries.Where(m=>m.StudentId==s.Id && m.GenerationId==s.ActiveGenerationId).ToListAsync();
+        await using(var worker=Open())await ProjectionWorker.Consume(worker,await worker.Outbox.SingleAsync(o=>o.Id==old.Job.Id));
+        var pending=await reader.Outbox.CountAsync(o=>o.StudentId==s.Id && o.ProcessedAt==null);
+        Assert(s.ActiveGenerationId==null && mastery.Count==0 && pending==0,"did not reproduce read-committed mixed snapshot");
+    }
+    Console.WriteLine("PASS 精确复现旧读取次序：后台提交夹在查询之间，旧能力与零积压混在同一响应");
+    var fresh=await Seed();var pause=new PauseOutboxCount();var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection).AddInterceptors(pause).Options;
+    await using(var reader=new Database(options))
+    {
+        var reading=Assessment.ReadStatus(reader,actor,fresh.Student.Id);await pause.Ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        try{await using var worker=Open();await ProjectionWorker.Consume(worker,await worker.Outbox.SingleAsync(o=>o.Id==fresh.Job.Id));}finally{pause.Resume.TrySetResult();}
+        var snapshot=await reading;Assert(snapshot.Generation==null && snapshot.Masteries.Count==0 && snapshot.Pending==1,"read snapshot mixed old mastery with new receipt");
+    }
+    await using(var reader=Open())
+    {
+        var result=await Assessment.ReadStatus(reader,actor,fresh.Student.Id);Assert(result.Generation!=null && result.Masteries.Count==1 && result.Pending==0,"fresh status did not expose committed projection");
+    }
+    Console.WriteLine("PASS 同一数据库快照保持旧能力与待处理一起返回；下一次读取显示新证据与零积压");return;
+}
 if(args[0]=="goal-legacy")
 {
     await db.GetService<IMigrator>().MigrateAsync("20261001203019_ScheduledLearningGoals");
@@ -157,5 +186,18 @@ sealed class BuilderFailure(Guid runId):SaveChangesInterceptor
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData data,InterceptionResult<int> result,CancellationToken cancellationToken=default)
     {
         if(data.Context!.ChangeTracker.Entries<Candidate>().Any(e=>e.State==EntityState.Added && e.Entity.RunId==runId))throw new IOException("Injected save failure in disposable database");return ValueTask.FromResult(result);
+    }
+}
+
+sealed class PauseOutboxCount:DbCommandInterceptor
+{
+    public TaskCompletionSource Ready {get;}=new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource Resume {get;}=new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int paused;
+    public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command,CommandEventData data,InterceptionResult<DbDataReader> result,CancellationToken cancellationToken=default)
+    {
+        if(command.CommandText.Contains("count(*)",StringComparison.Ordinal) && command.CommandText.Contains("\"Outbox\"",StringComparison.Ordinal) && Interlocked.Exchange(ref paused,1)==0)
+        {Ready.TrySetResult();await Resume.Task.WaitAsync(TimeSpan.FromSeconds(10),cancellationToken);}
+        return result;
     }
 }

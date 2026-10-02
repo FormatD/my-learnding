@@ -4,11 +4,24 @@ namespace Learning;
 public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null);
 public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
+public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
 public static class Assessment
 {
     public const string EvidenceRuleVersion="evidence/1.1";
     public const string MasteryModelVersion="mastery/1.1";
     public const string ReviewRuleVersion="review/1";
+    public static async Task<AssessmentStatus> ReadStatus(Database db,Actor actor,Guid studentId,CancellationToken ct=default)
+    {
+        actor.Require("Parent");
+        // Pending and the active generation must describe the same committed snapshot.
+        // Otherwise a worker commit between queries can make old mastery look fully caught up.
+        await using var tx=await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead,ct);
+        var student=await actor.Student(db,studentId);
+        var mastery=await db.Masteries.Where(m=>m.StudentId==studentId && m.GenerationId==student.ActiveGenerationId).ToListAsync(ct);
+        var pending=await db.Outbox.CountAsync(o=>o.StudentId==studentId && o.ProcessedAt==null,ct);
+        await tx.CommitAsync(ct);
+        return new(student.ActiveGenerationId,mastery,pending);
+    }
     private sealed class Stats
     {
         public Mastery Value = new();
