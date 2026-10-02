@@ -5,6 +5,7 @@ import ContentEditor from './components/ContentEditor.vue';
 import PaperReview from './components/PaperReview.vue';
 import GoalEditor from './components/GoalEditor.vue';
 import FamilySettings from './components/FamilySettings.vue';
+import KnowledgeChanges from './components/KnowledgeChanges.vue';
 type Item = Record<string, any>;
 const deletionReceipt=ref<Item|null>(null);try{deletionReceipt.value=JSON.parse(sessionStorage.getItem('family-deletion-receipt')||'null')}catch{sessionStorage.removeItem('family-deletion-receipt')}
 function closeReceipt(){deletionReceipt.value=null;sessionStorage.removeItem('family-deletion-receipt')}
@@ -115,6 +116,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
           <ContentEditor v-if="draftId" :model-value="editingCatalog" v-model:title="draftTitle" :busy="busy" :published-ids="publishedKCIds" @save="saveDraft" @cancel="draftId=''" />
           <section v-if="can('ContentEditor')" class="card"><h2>草稿与审核</h2><div v-for="d in content.drafts" class="content-row"><div><h3>{{d.title}}</h3><p>{{status[d.status]}} · 版本 {{d.version}}</p></div><button v-if="d.status!=='Published'" @click="editDraft(d)">编辑</button><button v-if="d.status!=='Published'&&can('Publisher')" :disabled="busy||!!draftId" @click="publishContent(d)">审核答案与映射后发布</button><button v-else @click="run(async()=>{await api('/content/drafts',{title:d.title+' · 修订',catalog:JSON.parse(d.payload)});await refresh()})">创建新修订</button></div><p v-if="!content.drafts.length" class="empty">从样例开始，或在辅助建库中准备来源。</p></section>
           <section class="card"><h2>已发布版本</h2><div v-for="r in content.releases" class="content-row"><div><h3>内容版本 {{r.number}}</h3><p>内容指纹 {{r.hash.slice(0,12)}} · 发布后保持不变</p><details><summary>教材与课程目录</summary><p v-for="b in JSON.parse(r.payload).textbooks||[]">{{b.publisher}} · {{b.grade}} 年级{{b.semester}} · {{b.edition}}</p><p v-for="u in JSON.parse(r.payload).units||[]">第 {{u.sequence}} 单元 · {{u.title}}</p><p v-for="c in JSON.parse(r.payload).courses||[]">{{c.title}} · {{c.provider}}</p></details><details><summary>能力定义与来源</summary><div v-for="k in JSON.parse(r.payload).kcs" class="content-editor-row"><p>{{k.name}}</p><button v-if="can('ContentEditor')" @click="showProvenance(k.id)" :disabled="busy">查看能力来源</button></div></details></div><button v-if="can('Parent')" :disabled="busy||!studentId" @click="bindContent(r.id)">{{student?.activeReleaseId===r.id?'当前学生已绑定':'绑定当前学生'}}</button></div></section>
+          <KnowledgeChanges v-if="can('ContentEditor')" :releases="content.releases" :publisher="can('Publisher')" :disabled="busy" />
         </template>
         <template v-else-if="page==='assessment'">
           <div class="page-heading"><div><p class="eyebrow">EVIDENCE / 学习依据</p><h1>看见进步，也看见缺口</h1><p class="muted">掌握状态是安排学习的线索；每条贡献都能回溯。</p></div><button @click="run(refresh)" :disabled="busy">刷新后台结果</button></div>

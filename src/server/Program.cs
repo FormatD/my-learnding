@@ -118,7 +118,7 @@ app.Use(async (ctx,next) =>
     }
     finally { ctx.Response.Body=response; }
 });
-app.MapGet("/api/health",() => new { status="ok",version="0.1.0",rules=new[] { Assessment.EvidenceRuleVersion,Assessment.MasteryModelVersion,"plan/1",Assessment.ReviewRuleVersion } });
+app.MapGet("/api/health",() => new { status="ok",version="0.1.0",rules=new[] { Assessment.EvidenceRuleVersion,Assessment.MasteryModelVersion,Planning.RuleVersion,Assessment.ReviewRuleVersion } });
 app.MapLearningEndpoints();
 app.MapOpenApi("/api/v1/openapi.json");
 app.UseDefaultFiles(); app.UseStaticFiles(); app.MapFallbackToFile("index.html");

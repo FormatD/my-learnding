@@ -95,6 +95,13 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<PaperWrong>().HasIndex(x=>x.AttemptId).IsUnique();
         b.Entity<Embedding>().HasIndex(e=>new {e.FamilyId,e.EntityRevisionId,e.Space}).IsUnique();
         b.Entity<Alias>().HasIndex(a=>new {a.FamilyId,a.KCId,a.Normalized}).IsUnique();
+        Foreign<Release, KCChangeProposal>(b,"FromReleaseId"); Foreign<Release, KCChangeProposal>(b,"EffectiveReleaseId");
+        Foreign<KCChangeProposal, KCChangeProposalItem>(b,"ProposalId"); Foreign<ContentIdentity, KCChangeProposalItem>(b,"KCId"); Foreign<ContentRevision, KCChangeProposalItem>(b,"ProposedRevisionId");
+        Foreign<KCChangeProposal, KCProposalEvent>(b,"ProposalId"); b.Entity<KCProposalEvent>().HasIndex(e=>new{e.ProposalId,e.Version}).IsUnique();
+        b.Entity<KCChangeProposalItem>().HasIndex(i=>new{i.ProposalId,i.Side,i.KCId}).IsUnique();
+        Foreign<KCChangeProposal, KnowledgeMigration>(b,"ProposalId"); Foreign<ContentIdentity, KnowledgeMigration>(b,"FromKCId"); Foreign<ContentIdentity, KnowledgeMigration>(b,"ToKCId");
+        Foreign<ContentRevision, KnowledgeMigration>(b,"FromRevisionId"); Foreign<ContentRevision, KnowledgeMigration>(b,"ToRevisionId"); Foreign<Release, KnowledgeMigration>(b,"EffectiveReleaseId");
+        b.Entity<KnowledgeMigration>().HasIndex(m=>new{m.ProposalId,m.FromKCId,m.ToKCId}).IsUnique();
         Foreign<ContentIdentity, Alias>(b,"KCId"); Foreign<Candidate, Alias>(b,"CandidateId");
         Foreign<PrivateFile, Source>(b,"FileId");
         Foreign<Student, CorrectionBatch>(b,"StudentId"); Foreign<Release, CorrectionBatch>(b,"ReleaseId");

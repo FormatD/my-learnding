@@ -33,6 +33,7 @@ public static class Publishing
             if (stable!=null && (stable.FamilyId!=release.FamilyId || stable.EntityType!=type || stable.Code!=code)) throw new ApiError(422,"IDENTITY_CONFLICT","内容身份不能跨家庭复用或改变含义。");
             if(stable!=null && type=="KC")
             {
+                if(stable.Status=="Deprecated" && !await db.Releases.AnyAsync(r=>r.Id==release.Id))throw new ApiError(422,"KC_DEPRECATED","新发布不能重新启用已停用能力；历史版本与已领取任务仍保留。请使用新的能力身份。");
                 var prior=await db.Set<ContentRevision>().Where(r=>r.IdentityId==identity && r.EntityType=="KC").OrderBy(r=>r.CreatedAt).FirstOrDefaultAsync();
                 if(prior!=null && Content.MeasurementSignature(Json.Read<KC>(prior.Definition))!=Content.MeasurementSignature((KC)definition))throw new ApiError(422,"MEASUREMENT_IDENTITY_CHANGED","已发布能力的测量行为、边界、类型与覆盖要求保持固定；改变测量含义请新增独立能力。");
             }

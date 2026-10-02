@@ -22,6 +22,8 @@ sh scripts/dev.sh
 
 也可从空白草稿添加能力、测量题、讲解资源和课时。未完成内容允许保存，审核发布前由服务端校验完整性；已有测量定义只读，改变测量含义须新增独立能力。
 
+能力拆分、合并和替换可在“内容与发布”记录人工提案。先整理并发布新能力及测量题，再选择来源与生效版本、填写理由、审核并预览确认。来源能力停用，历史任务和结果保留；权重不复制或分摊掌握状态，学生内容版本由家长单独选择。
+
 纸质错题可先保存图片和待校正正文，在“证据与复习”补齐并审核归因。原题未入库时可创建原题草稿，人工审核发布并绑定新内容版本；核对同一道原题、原始答案和判分依据后预览确认，才代录首次作答。使用本次确认时间，不推测历史练习间隔。已确认记录保留，后续通过判分更正修订。
 
 目标可用阅读、听力和能力练习模板，设置指定星期、起止日期、每周次数与优先级。完成次数按学生当地实际完成日期统计；能力练习必须提交作答，阅读与听力只记录行为。目标编辑、暂停、恢复保留设置及修订历史；新计划采用新设置，旧任务保留生成时的目标快照。
@@ -51,12 +53,13 @@ python3 tests/family_migration_acceptance.py
 python3 tests/catalog_migration_acceptance.py
 python3 tests/plan_boundaries_api_acceptance.py
 python3 tests/plan_rule_migration_acceptance.py
+python3 tests/knowledge_changes_api_acceptance.py
 python3 tests/restore_acceptance.py
 python3 tests/family_restore_acceptance.py
 cd src/web && npm run test:e2e
 ```
 
-常规接口验收需要服务已经启动，只创建验收家庭。计划边界验收自行启动隔离服务；计划边界与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
+常规接口验收需要服务已经启动，只创建验收家庭。计划边界和能力变更验收自行启动隔离服务；能力变更验收另需 GPG 做隔离加密恢复。计划边界、能力变更与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
 
 ## 运行配置
 
