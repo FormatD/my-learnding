@@ -1,0 +1,722 @@
+{
+  "kcs": [
+    {
+      "id": "0c363de7-3ac8-4131-9847-bf05f34be164",
+      "revisionId": "4de6c878-08ea-478c-ab66-8d80ad624508",
+      "code": "MATH.G3.MIXED.MULDIV_FIRST",
+      "name": "先乘除后加减",
+      "behavior": "独立完成先乘除后加减任务，并说明先算哪一步",
+      "boundary": "不含小括号；使用表内乘除",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "ebff8c58-1388-4610-9683-b97616984193",
+      "revisionId": "4b40afa6-5afc-4dd6-b814-a82b0629e673",
+      "code": "MATH.G3.MIXED.ADD_SUB_ORDER",
+      "name": "加减同级从左到右",
+      "behavior": "独立完成加减同级从左到右任务，并说明先算哪一步",
+      "boundary": "仅含加减同级运算",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "ddbf0f82-66e6-4686-a917-93379a456c48",
+      "revisionId": "546cd74d-8ec2-4b31-b5b8-dae4978a8aae",
+      "code": "MATH.G3.MIXED.MULDIV_ORDER",
+      "name": "乘除同级从左到右",
+      "behavior": "独立完成乘除同级从左到右任务，并说明先算哪一步",
+      "boundary": "仅含乘除同级运算",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "4ea7feda-435b-420f-8a03-213da1efd7a2",
+      "revisionId": "f22e9e79-7347-49db-9f9e-3f78545e51d2",
+      "code": "MATH.G3.MIXED.PARENTHESES",
+      "name": "先算小括号",
+      "behavior": "独立完成先算小括号任务，并说明先算哪一步",
+      "boundary": "一个小括号，不含嵌套",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "40c80338-ca16-4202-85a6-b752c8a9d468",
+      "revisionId": "443546ce-9dd4-457f-b9ee-2eb4a224bc37",
+      "code": "MATH.G3.MIXED.APPLY_MULT_ADD",
+      "name": "乘加应用",
+      "behavior": "独立完成乘加应用任务，并说明先算哪一步",
+      "boundary": "给定乘加算式，不同时测阅读",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "8727daec-c9d7-41bc-9932-496d2474c915",
+      "revisionId": "37a61c04-164a-4e92-880d-63b4469a54ee",
+      "code": "MATH.G3.MIXED.APPLY_MULT_SUB",
+      "name": "乘减应用",
+      "behavior": "独立完成乘减应用任务，并说明先算哪一步",
+      "boundary": "给定乘减算式，不同时测阅读",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "bcc4088f-de9d-48ff-a380-dc8f67e4da78",
+      "revisionId": "12aef1be-8ac7-4840-bd9d-114a49ff6d62",
+      "code": "MATH.G3.MIXED.APPLY_DIV_ADD",
+      "name": "除加应用",
+      "behavior": "独立完成除加应用任务，并说明先算哪一步",
+      "boundary": "给定除加算式，不同时测阅读",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "a2236fd8-fc44-4f31-baa4-f0e2cbb1bc00",
+      "revisionId": "c6181319-be85-4752-8930-803e07938519",
+      "code": "MATH.G3.MIXED.APPLY_DIV_SUB",
+      "name": "除减应用",
+      "behavior": "独立完成除减应用任务，并说明先算哪一步",
+      "boundary": "给定除减算式，不同时测阅读",
+      "type": "Procedure",
+      "requiredCoverage": null
+    },
+    {
+      "id": "7a6b53b1-725c-43f8-8a53-ab9d521b072a",
+      "revisionId": "18dfa572-a229-463a-b025-1711cad1562b",
+      "code": "MATH.G3.MIXED.MODEL_TWO_STEP",
+      "name": "两步问题列式",
+      "behavior": "独立完成两步问题列式任务，并说明先算哪一步",
+      "boundary": "只观察列式，不用最终计算推断建模",
+      "type": "Application",
+      "requiredCoverage": null
+    }
+  ],
+  "questions": [
+    {
+      "id": "481cab06-3b40-41fb-bbc0-a675d727427d",
+      "revisionId": "9e90e800-9d52-48af-8728-a4c8659ab6d0",
+      "stem": "3 + 4 × 2 = ?",
+      "answer": "11",
+      "explanation": "先确定运算顺序，再分步计算。结果为 11。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "0c363de7-3ac8-4131-9847-bf05f34be164",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "17ff1d23-f3cb-4c9e-880b-b4cfea6ff349",
+      "revisionId": "2ed7e410-d024-4d5d-8394-ea6fde2956a4",
+      "stem": "18 − 12 ÷ 3 = ?",
+      "answer": "14",
+      "explanation": "先确定运算顺序，再分步计算。结果为 14。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "0c363de7-3ac8-4131-9847-bf05f34be164",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "c30e5a83-354a-49ee-b86e-bfa489bb5964",
+      "revisionId": "d258acd2-54d4-4890-b40d-ac33004dcc9e",
+      "stem": "24 − 8 + 6 = ?",
+      "answer": "22",
+      "explanation": "先确定运算顺序，再分步计算。结果为 22。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "ebff8c58-1388-4610-9683-b97616984193",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "36684d13-909a-4462-8a28-cfa47bd47309",
+      "revisionId": "da75ca73-72ee-4cff-8220-947ef86106df",
+      "stem": "16 + 7 − 9 = ?",
+      "answer": "14",
+      "explanation": "先确定运算顺序，再分步计算。结果为 14。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "ebff8c58-1388-4610-9683-b97616984193",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "473e302e-a115-4fe0-a130-5b59ef4de881",
+      "revisionId": "0d573f02-ca30-420b-9670-c299fc266db6",
+      "stem": "24 ÷ 3 × 2 = ?",
+      "answer": "16",
+      "explanation": "先确定运算顺序，再分步计算。结果为 16。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "ddbf0f82-66e6-4686-a917-93379a456c48",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "6fbaf104-b940-4d80-82b9-7f6c42c7b693",
+      "revisionId": "5b1272e6-9a25-466d-87a4-7dc07de0c0d4",
+      "stem": "4 × 6 ÷ 3 = ?",
+      "answer": "8",
+      "explanation": "先确定运算顺序，再分步计算。结果为 8。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "ddbf0f82-66e6-4686-a917-93379a456c48",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "27b12071-10cb-4dcd-969c-5f3413f4af1a",
+      "revisionId": "684a8a36-a080-4451-95f0-7cdaebe95ade",
+      "stem": "(8 + 4) ÷ 3 = ?",
+      "answer": "4",
+      "explanation": "先确定运算顺序，再分步计算。结果为 4。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "4ea7feda-435b-420f-8a03-213da1efd7a2",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "先算小括号里面。"
+    },
+    {
+      "id": "aa1b34a8-09c8-4fc4-8809-7a06d97c6c8a",
+      "revisionId": "b652323f-e8d0-4b98-98fd-29114d7e6778",
+      "stem": "5 × (9 − 3) = ?",
+      "answer": "30",
+      "explanation": "先确定运算顺序，再分步计算。结果为 30。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "4ea7feda-435b-420f-8a03-213da1efd7a2",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "先算小括号里面。"
+    },
+    {
+      "id": "1c4f3315-977f-441f-a94b-53156f413bef",
+      "revisionId": "7abc497f-e299-41fc-bd59-1f37d2581bb5",
+      "stem": "3 × 6 + 5 = ?",
+      "answer": "23",
+      "explanation": "先确定运算顺序，再分步计算。结果为 23。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "40c80338-ca16-4202-85a6-b752c8a9d468",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "57f4ba13-23d0-4610-826b-97502c858d0a",
+      "revisionId": "07715df7-94bf-4a63-a41b-9a1886ec23b5",
+      "stem": "4 + 7 × 2 = ?",
+      "answer": "18",
+      "explanation": "先确定运算顺序，再分步计算。结果为 18。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "40c80338-ca16-4202-85a6-b752c8a9d468",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "50ce61e2-9aa0-4327-b8b8-3d65bba6e72e",
+      "revisionId": "23068b10-21d7-4ce2-aa92-433b18136461",
+      "stem": "30 − 4 × 5 = ?",
+      "answer": "10",
+      "explanation": "先确定运算顺序，再分步计算。结果为 10。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "8727daec-c9d7-41bc-9932-496d2474c915",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "220e3acb-a6ab-4166-8e3a-b42c753352cb",
+      "revisionId": "c07636d8-584d-4a84-a59a-0b2380c10cf5",
+      "stem": "6 × 4 − 8 = ?",
+      "answer": "16",
+      "explanation": "先确定运算顺序，再分步计算。结果为 16。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "8727daec-c9d7-41bc-9932-496d2474c915",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "7e8ce81f-9356-4bae-8cb6-01685fb98956",
+      "revisionId": "3551cad7-059e-4018-b6fc-ecb1e0045d3e",
+      "stem": "18 ÷ 3 + 7 = ?",
+      "answer": "13",
+      "explanation": "先确定运算顺序，再分步计算。结果为 13。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "bcc4088f-de9d-48ff-a380-dc8f67e4da78",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "73de129b-30a2-485e-bc5b-efc3807e1728",
+      "revisionId": "c84d51df-44ae-47e4-83db-4f10f4e97d28",
+      "stem": "8 + 24 ÷ 4 = ?",
+      "answer": "14",
+      "explanation": "先确定运算顺序，再分步计算。结果为 14。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "bcc4088f-de9d-48ff-a380-dc8f67e4da78",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "4f726fd8-7ef5-4924-ad16-8560c283e63a",
+      "revisionId": "20874dce-da45-4238-be3d-f7a9b9679bc6",
+      "stem": "25 − 18 ÷ 3 = ?",
+      "answer": "19",
+      "explanation": "先确定运算顺序，再分步计算。结果为 19。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "a2236fd8-fc44-4f31-baa4-f0e2cbb1bc00",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "aad06925-05b1-42ce-b8c6-47afe67a5f57",
+      "revisionId": "14d2fe8b-1667-403b-8529-32eee90f2674",
+      "stem": "32 ÷ 4 − 5 = ?",
+      "answer": "3",
+      "explanation": "先确定运算顺序，再分步计算。结果为 3。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "a2236fd8-fc44-4f31-baa4-f0e2cbb1bc00",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "10d625c0-554e-46c5-9b82-2d65bf75bf72",
+      "revisionId": "3b18be17-64e9-4ed2-81d5-1f0820afd176",
+      "stem": "有 3 盒铅笔，每盒 6 支，再添 5 支。只写一个综合算式。",
+      "answer": "3×6+5",
+      "explanation": "参考列式：3×6+5。家长根据数量关系判分。",
+      "type": "ShortAnswer",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "7a6b53b1-725c-43f8-8a53-ab9d521b072a",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "559d4db8-68f9-40a7-9f4e-a8fd65c84a87",
+      "revisionId": "0978f052-3d93-4018-8e51-7df7c22c8234",
+      "stem": "有 24 个苹果，平均装 4 袋，吃掉一袋里的 2 个。只写这一袋剩下数量的算式。",
+      "answer": "24÷4-2",
+      "explanation": "参考列式：24÷4-2。家长根据数量关系判分。",
+      "type": "ShortAnswer",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "7a6b53b1-725c-43f8-8a53-ab9d521b072a",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "d0f7061b-dd37-4dea-9361-1acc9773bd69",
+      "revisionId": "1339240c-dde9-4988-91e2-07be5b4f064a",
+      "stem": "7 + 5 × 3 = ?",
+      "answer": "22",
+      "explanation": "先确定运算顺序，再分步计算。结果为 22。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "0c363de7-3ac8-4131-9847-bf05f34be164",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "乘除优先；同级运算从左到右。"
+    },
+    {
+      "id": "9676c553-d26c-41a6-b7df-a45cdcc720c2",
+      "revisionId": "b569626f-92ae-4b32-ad2f-eefcae7365d7",
+      "stem": "(18 − 6) ÷ 4 = ?",
+      "answer": "3",
+      "explanation": "先确定运算顺序，再分步计算。结果为 3。",
+      "type": "Numeric",
+      "difficulty": "Medium",
+      "policy": "SingleKC",
+      "mappings": [
+        {
+          "kcId": "4ea7feda-435b-420f-8a03-213da1efd7a2",
+          "role": "Primary",
+          "share": 1,
+          "mode": "WholeItem",
+          "step": null
+        }
+      ],
+      "variantGroupId": null,
+      "coverage": "Basic",
+      "hint": "先算小括号里面。"
+    }
+  ],
+  "resources": [
+    {
+      "id": "dae2f9ed-58fa-44f3-941b-766e9bf31932",
+      "title": "先乘除后加减 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "0c363de7-3ac8-4131-9847-bf05f34be164"
+      ],
+      "url": null
+    },
+    {
+      "id": "50e2a033-a778-4e8a-a1b4-77eb8fd2d0e3",
+      "title": "加减同级从左到右 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "ebff8c58-1388-4610-9683-b97616984193"
+      ],
+      "url": null
+    },
+    {
+      "id": "eef0bd02-7d80-48b6-8b2b-4ffbca4193a0",
+      "title": "乘除同级从左到右 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "ddbf0f82-66e6-4686-a917-93379a456c48"
+      ],
+      "url": null
+    },
+    {
+      "id": "f4dbe27e-2574-422b-8e95-9699e46a0ee9",
+      "title": "先算小括号 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "4ea7feda-435b-420f-8a03-213da1efd7a2"
+      ],
+      "url": null
+    },
+    {
+      "id": "42a1c774-617d-4d60-88e0-6c8f74ce4b5f",
+      "title": "乘加应用 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "40c80338-ca16-4202-85a6-b752c8a9d468"
+      ],
+      "url": null
+    },
+    {
+      "id": "5f3a5667-cb29-4301-9bee-f34405531efb",
+      "title": "乘减应用 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "8727daec-c9d7-41bc-9932-496d2474c915"
+      ],
+      "url": null
+    },
+    {
+      "id": "d7871c2f-80b5-4331-96db-6b925af3a5f3",
+      "title": "除加应用 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "bcc4088f-de9d-48ff-a380-dc8f67e4da78"
+      ],
+      "url": null
+    },
+    {
+      "id": "ec7e9bc7-8367-4c4e-8654-01de70da4645",
+      "title": "除减应用 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "a2236fd8-fc44-4f31-baa4-f0e2cbb1bc00"
+      ],
+      "url": null
+    },
+    {
+      "id": "64c9c9ff-0227-48b0-88f7-5137d1ba1efd",
+      "title": "两步问题列式 · 纸笔讲解",
+      "paperReference": "使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",
+      "minutes": 5,
+      "kcIds": [
+        "7a6b53b1-725c-43f8-8a53-ab9d521b072a"
+      ],
+      "url": null
+    }
+  ],
+  "lessons": [
+    {
+      "id": "40547143-a389-4824-b33b-da5fca3d7ee3",
+      "title": "小熊购物 · 乘加、乘减",
+      "sequence": 1,
+      "kcIds": [
+        "0c363de7-3ac8-4131-9847-bf05f34be164",
+        "40c80338-ca16-4202-85a6-b752c8a9d468",
+        "8727daec-c9d7-41bc-9932-496d2474c915"
+      ],
+      "unitId": "d20bb1b2-a094-4b22-ba15-e9409d48b600",
+      "courseId": null,
+      "revisionId": "ce0e8c36-5dc1-4b35-b1de-1496cecb8fe9",
+      "estimatedMinutes": 5,
+      "sourceRefs": null
+    },
+    {
+      "id": "e99ecfc2-0510-4752-874e-4458ba2089c5",
+      "title": "买文具 · 除加、除减",
+      "sequence": 2,
+      "kcIds": [
+        "0c363de7-3ac8-4131-9847-bf05f34be164",
+        "bcc4088f-de9d-48ff-a380-dc8f67e4da78",
+        "a2236fd8-fc44-4f31-baa4-f0e2cbb1bc00"
+      ],
+      "unitId": "d20bb1b2-a094-4b22-ba15-e9409d48b600",
+      "courseId": null,
+      "revisionId": "f93c0e3f-aa31-496d-ba26-1d0990ca5a11",
+      "estimatedMinutes": 5,
+      "sourceRefs": null
+    },
+    {
+      "id": "f29dad06-c145-4543-b40d-e038b7083491",
+      "title": "过河 · 小括号与两步问题",
+      "sequence": 3,
+      "kcIds": [
+        "4ea7feda-435b-420f-8a03-213da1efd7a2",
+        "7a6b53b1-725c-43f8-8a53-ab9d521b072a"
+      ],
+      "unitId": "d20bb1b2-a094-4b22-ba15-e9409d48b600",
+      "courseId": null,
+      "revisionId": "d0e37eef-b7c0-486f-bfc0-f991d0a906e6",
+      "estimatedMinutes": 5,
+      "sourceRefs": null
+    },
+    {
+      "id": "2ffd872b-a574-41fa-b6c2-7dd45584d0f0",
+      "title": "单元整理 · 同级运算顺序",
+      "sequence": 4,
+      "kcIds": [
+        "ebff8c58-1388-4610-9683-b97616984193",
+        "ddbf0f82-66e6-4686-a917-93379a456c48"
+      ],
+      "unitId": "d20bb1b2-a094-4b22-ba15-e9409d48b600",
+      "courseId": null,
+      "revisionId": "da3def1c-8e12-49f7-a98c-53c4e8a098bc",
+      "estimatedMinutes": 5,
+      "sourceRefs": null
+    }
+  ],
+  "relations": [
+    {
+      "from": "0c363de7-3ac8-4131-9847-bf05f34be164",
+      "to": "4ea7feda-435b-420f-8a03-213da1efd7a2",
+      "type": "Prerequisite"
+    },
+    {
+      "from": "4ea7feda-435b-420f-8a03-213da1efd7a2",
+      "to": "7a6b53b1-725c-43f8-8a53-ab9d521b072a",
+      "type": "Prerequisite"
+    }
+  ],
+  "textbooks": [
+    {
+      "id": "32e55277-6106-45ce-a564-d3fde0175259",
+      "revisionId": "5175b423-e6fe-42b1-8a34-d449dc14f690",
+      "publisher": "北师大版",
+      "edition": "具体印次待核对",
+      "subject": "Math",
+      "grade": 3,
+      "semester": "上册",
+      "sourceId": null
+    }
+  ],
+  "units": [
+    {
+      "id": "d20bb1b2-a094-4b22-ba15-e9409d48b600",
+      "revisionId": "3d01d6bb-1833-4be9-9414-905aba2d004b",
+      "textbookId": "32e55277-6106-45ce-a564-d3fde0175259",
+      "title": "混合运算",
+      "sequence": 1
+    }
+  ],
+  "courses": []
+}

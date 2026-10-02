@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Learning;
 
 if(args.Length==2 && args[0]=="--export-unit-pack"){File.WriteAllText(args[1],Json.Write(MixedOperationsPack.Create()));return 0;}
+if(args.Length==2 && args[0]=="--export-flow-fixture"){File.WriteAllText(args[1],Json.Write(Content.Fixture()));return 0;}
 var tests=new List<(string,Action)>();
 void Test(string name,Action action) => tests.Add((name,action));
 void Eq<T>(T actual,T expected) { if (!Equals(actual,expected)) throw new Exception($"expected {expected}, actual {actual}"); }
@@ -152,6 +153,7 @@ Test("掌握周报更正按新结果重算，未来结果不越过期末，新�
     var split=MasteryWeek(new(2026,1,8),new(2026,1,14),first,later,fresh).Items.Single(m=>m.KCId==other.Id);Eq(split.Before,null);Eq(split.After.EffectiveEvidence,1m);Eq(split.After.Status,"Learning");
     Eq(MasteryWeek(new(2025,12,1),new(2025,12,7),first,later).Items.Length,0);
 });
+Test("交接JSON夹具内容合法且重放、更正、并发提交后序列满足独立预期",FixtureCases.Verify);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

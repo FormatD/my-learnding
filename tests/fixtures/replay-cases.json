@@ -1,0 +1,218 @@
+[
+  {
+    "anchor": "2026-01-01T08:00:00+00:00",
+    "timeZone": "Asia/Shanghai",
+    "name": "review-d0-d2-d7-d30",
+    "events": [
+      {
+        "sequence": 1,
+        "questionIndex": 0,
+        "sessionKey": "1",
+        "result": "Incorrect",
+        "answer": "999"
+      },
+      {
+        "sequence": 2,
+        "questionIndex": 0,
+        "sessionKey": "2",
+        "day": 2,
+        "type": "Review",
+        "answer": "11"
+      },
+      {
+        "sequence": 3,
+        "questionIndex": 0,
+        "sessionKey": "3",
+        "day": 7,
+        "type": "Review",
+        "answer": "11"
+      },
+      {
+        "sequence": 4,
+        "questionIndex": 0,
+        "sessionKey": "4",
+        "day": 30,
+        "type": "Review",
+        "answer": "11"
+      }
+    ],
+    "evidenceParts": 4,
+    "masteries": [
+      {
+        "code": "MATH.G3.MIXED.MULDIV_FIRST",
+        "alpha": 3.725,
+        "beta": 3
+      }
+    ],
+    "reviews": [
+      {
+        "targetType": "WrongQuestion",
+        "questionIndex": 0,
+        "stage": "R3",
+        "dueDate": "2026-01-31",
+        "status": "Completed"
+      },
+      {
+        "targetType": "KC",
+        "questionIndex": 0,
+        "stage": "LowFrequency",
+        "dueDate": "2026-03-02",
+        "status": "Pending"
+      }
+    ]
+  },
+  {
+    "anchor": "2026-01-01T08:00:00+00:00",
+    "timeZone": "Asia/Shanghai",
+    "name": "late-review-from-actual-pass",
+    "events": [
+      {
+        "sequence": 1,
+        "questionIndex": 0,
+        "sessionKey": "1",
+        "result": "Incorrect",
+        "answer": "999"
+      },
+      {
+        "sequence": 2,
+        "questionIndex": 0,
+        "sessionKey": "2",
+        "day": 5,
+        "type": "Review",
+        "answer": "11"
+      }
+    ],
+    "evidenceParts": 2,
+    "masteries": [
+      {
+        "code": "MATH.G3.MIXED.MULDIV_FIRST",
+        "alpha": 2.55,
+        "beta": 3
+      }
+    ],
+    "reviews": [
+      {
+        "targetType": "WrongQuestion",
+        "questionIndex": 0,
+        "stage": "R2",
+        "dueDate": "2026-01-11",
+        "status": "Pending"
+      }
+    ]
+  },
+  {
+    "anchor": "2026-01-01T08:00:00+00:00",
+    "timeZone": "Asia/Shanghai",
+    "name": "first-grading-corrected-retry-is-not-substitute",
+    "events": [
+      {
+        "sequence": 1,
+        "questionIndex": 0,
+        "sessionKey": "same",
+        "result": "Incorrect",
+        "gradingRevisions": [
+          "Incorrect",
+          "Correct"
+        ],
+        "answer": "999"
+      },
+      {
+        "sequence": 2,
+        "questionIndex": 0,
+        "sessionKey": "same",
+        "attemptNumber": 2,
+        "result": "Incorrect",
+        "answer": "999"
+      }
+    ],
+    "evidenceParts": 1,
+    "masteries": [
+      {
+        "code": "MATH.G3.MIXED.MULDIV_FIRST",
+        "alpha": 3,
+        "beta": 2
+      }
+    ],
+    "reviews": []
+  },
+  {
+    "anchor": "2026-01-01T08:00:00+00:00",
+    "timeZone": "Asia/Shanghai",
+    "name": "pending-first-answer-retry-not-selected",
+    "events": [
+      {
+        "sequence": 1,
+        "questionIndex": 0,
+        "sessionKey": "same",
+        "result": "Pending",
+        "answer": "未判分的合成答复"
+      },
+      {
+        "sequence": 2,
+        "questionIndex": 0,
+        "sessionKey": "same",
+        "attemptNumber": 2,
+        "answer": "11"
+      }
+    ],
+    "evidenceParts": 0,
+    "masteries": [
+      {
+        "code": "MATH.G3.MIXED.MULDIV_FIRST",
+        "alpha": 2,
+        "beta": 2
+      }
+    ],
+    "reviews": []
+  },
+  {
+    "anchor": "2026-01-01T08:00:00+00:00",
+    "timeZone": "Asia/Shanghai",
+    "name": "committed-concurrent-first-answers-same-timestamp",
+    "events": [
+      {
+        "sequence": 1,
+        "questionIndex": 0,
+        "sessionKey": "1",
+        "result": "Incorrect",
+        "answer": "999"
+      },
+      {
+        "sequence": 2,
+        "questionIndex": 2,
+        "sessionKey": "2",
+        "result": "Incorrect",
+        "answer": "999"
+      }
+    ],
+    "evidenceParts": 2,
+    "masteries": [
+      {
+        "code": "MATH.G3.MIXED.MULDIV_FIRST",
+        "alpha": 2,
+        "beta": 3
+      },
+      {
+        "code": "MATH.G3.MIXED.ADD_SUB_ORDER",
+        "alpha": 2,
+        "beta": 3
+      }
+    ],
+    "reviews": [
+      {
+        "targetType": "WrongQuestion",
+        "questionIndex": 0,
+        "stage": "R1",
+        "dueDate": "2026-01-03",
+        "status": "Pending"
+      },
+      {
+        "targetType": "WrongQuestion",
+        "questionIndex": 2,
+        "stage": "R1",
+        "dueDate": "2026-01-03",
+        "status": "Pending"
+      }
+    ]
+  }
+]

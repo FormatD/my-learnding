@@ -32,6 +32,8 @@ sh scripts/dev.sh
 
 ## 验证
 
+[固定JSON交接样例](tests/fixtures/README.md)随常规规则自动检查；[V1范围核对](docs/v1-audit.md)区分当前实现和未完成的退出条件。
+
 ```sh
 sh scripts/check.sh
 python3 tests/api_acceptance.py
