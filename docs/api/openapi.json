@@ -2262,6 +2262,208 @@
         },
         "type": "object"
       },
+      "MasteryChange": {
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/MasteryCheckpoint"
+          },
+          "attemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MasteryCheckpoint"
+              }
+            ]
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attemptId",
+          "occurredAt",
+          "before",
+          "after"
+        ],
+        "type": "object"
+      },
+      "MasteryChangeSummary": {
+        "properties": {
+          "coverageChanges": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "encounters": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "evidenceParts": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "evidenceRuleVersion": {
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyMasteryItem"
+            },
+            "type": "array"
+          },
+          "modelVersion": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "recheckChanges": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "statusChanges": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "suppressedParts": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "evidenceParts",
+          "encounters",
+          "suppressedParts",
+          "statusChanges",
+          "recheckChanges",
+          "coverageChanges",
+          "items",
+          "evidenceRuleVersion",
+          "modelVersion",
+          "note"
+        ],
+        "type": "object"
+      },
+      "MasteryCheckpoint": {
+        "properties": {
+          "confidence": {
+            "type": "string"
+          },
+          "coveredCoverage": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "delay2": {
+            "type": "boolean"
+          },
+          "delay30": {
+            "type": "boolean"
+          },
+          "delay7": {
+            "type": "boolean"
+          },
+          "distinctQuestions": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "effectiveEvidence": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "needsRecheck": {
+            "type": "boolean"
+          },
+          "probability": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requiredCoverage": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kcId",
+          "kcRevisionId",
+          "name",
+          "status",
+          "needsRecheck",
+          "probability",
+          "confidence",
+          "effectiveEvidence",
+          "distinctQuestions",
+          "requiredCoverage",
+          "coveredCoverage",
+          "delay2",
+          "delay7",
+          "delay30",
+          "reason"
+        ],
+        "type": "object"
+      },
       "MemberInput": {
         "properties": {
           "password": {
@@ -4140,6 +4342,197 @@
         ],
         "type": "object"
       },
+      "WeeklyEvidenceItem": {
+        "properties": {
+          "attemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "correctionBatchId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "gradingId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "mappingReleaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "part": {
+            "type": "string"
+          },
+          "positive": {
+            "type": "boolean"
+          },
+          "rawWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "weight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "attemptId",
+          "gradingId",
+          "releaseId",
+          "mappingReleaseId",
+          "correctionBatchId",
+          "kcRevisionId",
+          "part",
+          "positive",
+          "rawWeight",
+          "weight",
+          "occurredAt"
+        ],
+        "type": "object"
+      },
+      "WeeklyMasteryItem": {
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/MasteryCheckpoint"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MasteryCheckpoint"
+              }
+            ]
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/MasteryChange"
+            },
+            "type": "array"
+          },
+          "coverageChanges": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "encounters": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyEvidenceItem"
+            },
+            "type": "array"
+          },
+          "evidenceParts": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "negativeWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "positiveWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "recheckChanges": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "statusChanges": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "suppressedParts": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "kcId",
+          "name",
+          "before",
+          "after",
+          "evidenceParts",
+          "encounters",
+          "suppressedParts",
+          "positiveWeight",
+          "negativeWeight",
+          "statusChanges",
+          "recheckChanges",
+          "coverageChanges",
+          "changes",
+          "evidence"
+        ],
+        "type": "object"
+      },
       "WeeklyPlacement": {
         "properties": {
           "current": {
@@ -4220,6 +4613,9 @@
           "historyNote": {
             "type": "string"
           },
+          "masteryChanges": {
+            "$ref": "#/components/schemas/MasteryChangeSummary"
+          },
           "observedAt": {
             "format": "date-time",
             "type": "string"
@@ -4279,6 +4675,7 @@
           "budgetExecutability",
           "reviewPass",
           "reviewCoverage",
+          "masteryChanges",
           "tasks",
           "adjustments",
           "transitions",

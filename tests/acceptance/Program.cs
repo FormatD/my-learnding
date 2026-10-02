@@ -132,6 +132,26 @@ Test("覆盖保留能力保持日程，实际目标匹配才执行，并按学�
     review.Task.ReviewTargetId=Guid.NewGuid();Eq(Coverage(new(2026,1,1),new(2026,1,14),items.ToArray()).ExecutedSchedules,0);
     var wrong=Input(1,false);wrong.Attempt.CreatedAt=new(2026,1,1,23,50,0,TimeSpan.Zero);Eq(Coverage(new(2026,1,1),new(2026,1,3),wrong).DueSchedules,0);Eq(Coverage(new(2026,1,1),new(2026,1,4),wrong).DueSchedules,1);
 });
+MasteryChangeSummary MasteryWeek(DateOnly start,DateOnly end,params AssessmentInput[] inputs)=>MasteryReporting.Calculate(Assessment.Replay(family,student,generation,"Asia/Shanghai",inputs,collectMasteryHistory:true),"Asia/Shanghai",start,end);
+Test("掌握周报保留未知期初、每次状态晋级与覆盖，不只比较百分比",()=>{
+    var items=Enumerable.Range(1,10).Select(n=>Input(n)).Append(Input(11,day:8,type:"Review")).Append(Input(12,false,day:9)).ToArray();
+    var r=MasteryWeek(new(2026,1,8),new(2026,1,14),items);var m=r.Items.Single();Eq(m.Before!.Status,"CanDo");Eq(m.After.Status,"Mastered");Eq(m.After.NeedsRecheck,true);Eq(m.StatusChanges,1);Eq(m.RecheckChanges,1);Eq(m.CoverageChanges,1);Eq(m.After.Delay7,true);Eq(m.EvidenceParts,2);Eq(m.Encounters,2);
+    var cleared=MasteryWeek(new(2026,1,8),new(2026,1,14),items.Append(Input(13,day:10)).Append(Input(14,day:11)).ToArray()).Items.Single();Eq(cleared.RecheckChanges,2);Eq(cleared.After.NeedsRecheck,false);
+    var first=MasteryWeek(new(2026,1,1),new(2026,1,7),items);Eq(first.Items[0].Before,null);Eq(first.Items[0].After.Status,"CanDo");Eq(first.StatusChanges,2);
+});
+Test("掌握周报分步证据不冒充独立遇题，零权重和待判分保留缺口",()=>{
+    var id=Guid.NewGuid();var original=Input(1,questionId:id);var duplicate=Input(2,questionId:id);var pending=Input(3,result:"Pending");
+    var r=MasteryWeek(new(2026,1,1),new(2026,1,7),original,duplicate,pending);Eq(r.EvidenceParts,2);Eq(r.Encounters,2);Eq(r.SuppressedParts,1);Eq(r.Items[0].After.DistinctQuestions,1);
+    var partial=Input(1) with {Question=original.Question with {Policy="ObservedSteps",Mappings=[new(kc.Id,"Primary",.5m,"StepObserved","s1"),new(kc.Id,"Primary",.5m,"StepObserved","s2")]},Grade=new Grading{Result="Partial",Steps=Json.Write(new[]{new ObservedStep("s1","Correct"),new ObservedStep("s2","Incorrect")})}};
+    var observed=MasteryWeek(new(2026,1,1),new(2026,1,7),partial);Eq(observed.EvidenceParts,2);Eq(observed.Encounters,1);Eq(observed.Items[0].NegativeWeight,.5m);
+});
+Test("掌握周报更正按新结果重算，未来结果不越过期末，新能力不继承",()=>{
+    var first=Input(1);var later=Input(2,false,day:8);var r=MasteryWeek(new(2026,1,1),new(2026,1,7),first,later);Eq(r.EvidenceParts,1);Eq(r.Items.Single().NegativeWeight,0m);
+    first.Grade.Result="Incorrect";Eq(MasteryWeek(new(2026,1,1),new(2026,1,7),first,later).Items.Single().NegativeWeight,1m);
+    var other=new KC(Guid.NewGuid(),Guid.NewGuid(),"NEW","新能力","独立","新测量");var fresh=Input(3,day:9);fresh=fresh with {Kcs=[other],Question=fresh.Question with {Mappings=[new(other.Id)]}};
+    var split=MasteryWeek(new(2026,1,8),new(2026,1,14),first,later,fresh).Items.Single(m=>m.KCId==other.Id);Eq(split.Before,null);Eq(split.After.EffectiveEvidence,1m);Eq(split.After.Status,"Learning");
+    Eq(MasteryWeek(new(2025,12,1),new(2025,12,7),first,later).Items.Length,0);
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

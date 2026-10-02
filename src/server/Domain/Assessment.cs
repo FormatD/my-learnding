@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
 public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null);
-public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory);
+public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory,List<MasteryEvent> MasteryHistory);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
 public static class Assessment
@@ -32,12 +32,13 @@ public static class Assessment
         public bool Delay2, Delay7, Delay30;
         public HashSet<Guid> DiagnosticPasses = [];
     }
-    public static AssessmentOutput Replay(Guid family, Guid student, Guid generation, string zone, IEnumerable<AssessmentInput> inputs,IEnumerable<TeachingAnchor>? teaching=null,bool collectReviewHistory=false)
+    public static AssessmentOutput Replay(Guid family, Guid student, Guid generation, string zone, IEnumerable<AssessmentInput> inputs,IEnumerable<TeachingAnchor>? teaching=null,bool collectReviewHistory=false,bool collectMasteryHistory=false)
     {
         var evidence = new List<Evidence>();
         var stats = new Dictionary<Guid, Stats>();
         var reviews = new Dictionary<(string, Guid), Review>();
         var timeline=collectReviewHistory?new ReviewTimeline():null;
+        var masteryHistory=new List<MasteryEvent>();
         var encounters = new Dictionary<Guid, DateTimeOffset>();
         var lastKC = new Dictionary<Guid, DateTimeOffset>();
         var variants = new HashSet<Guid>();
@@ -157,8 +158,14 @@ public static class Assessment
             // An encounter/teaching event resets retention even if it could not supply evidence.
             foreach (var id in mappings.Select(m => m.KCId).Distinct()) lastKC[id]=time;
             timeline?.Synchronize(reviews.Values,a);
+            if(collectMasteryHistory)
+                foreach(var id in mappings.Select(m=>m.KCId).Distinct())
+                {
+                    var state=stats[id];var v=state.Value;var kc=input.Kcs.Single(k=>k.Id==id);
+                    masteryHistory.Add(new(a.Id,time,new(id,kc.RevisionId,kc.Name,v.Status,v.NeedsRecheck,v.Probability,v.Confidence,v.EffectiveEvidence,v.DistinctQuestions,(kc.RequiredCoverage??["Basic"]).Order().ToArray(),state.Coverage.Order().ToArray(),state.Delay2,state.Delay7,state.Delay30,v.Reason)));
+                }
         }
-        return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList(),timeline?.Items??[]);
+        return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList(),timeline?.Items??[],masteryHistory);
     }
     public static async Task<(AssessmentInput[] Inputs,TeachingAnchor[] Teaching)> LoadInputs(Database db,Student student,CancellationToken ct=default)
     {
