@@ -37,6 +37,8 @@ sh scripts/check.sh
 python3 tests/api_acceptance.py
 python3 tests/advanced_api_acceptance.py
 python3 tests/boundary_api_acceptance.py
+python3 tests/weekly_reporting_acceptance.py
+python3 tests/budget_reporting_acceptance.py
 python3 tests/concurrency_api_acceptance.py
 python3 tests/progress_api_acceptance.py
 python3 tests/content_authoring_api_acceptance.py

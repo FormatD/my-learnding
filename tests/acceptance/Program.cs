@@ -68,6 +68,19 @@ Test("目录和目标范围不改变能力身份，旧目标范围摘要兼容",
     var before=Goals.Snapshot(goal).Scope;goal.UnitId=unit.Id;Eq(before==Goals.Snapshot(goal).Scope,false);Eq(Goals.ScopeKCs(goal,c).Single(),goal.KCId!.Value);
     goal.KCId=null;Eq(Goals.ScopeKCs(goal,c).Length,c.Kcs.Length);goal.UnitId=Guid.NewGuid();Eq(Goals.ScopeKCs(goal,c).Length,0);
 });
+Test("预算可执行率没有任务保持未知，耗时未知和超时不算预计内完成",()=>{
+    Eq(BudgetReporting.Calculate([],[]).Rate,(decimal?)null);
+    var unknown=new StudyTask{Status="Completed",ActualMinutes=null,Minutes=5};var over=new StudyTask{Status="Completed",ActualMinutes=6,Minutes=5};var skipped=new StudyTask{Status="Skipped",Minutes=5};
+    var result=BudgetReporting.Calculate([unknown,over,skipped],[]);Eq(result.PublishedTasks,3);Eq(result.EligibleTasks,0);Eq(result.UnknownCompletedDuration,1);Eq(result.Rate,(decimal?)0);
+});
+Test("预算可执行率固定身份去重，完成与家长顺延重叠只计一次",()=>{
+    var task=new StudyTask{Status="Completed",Minutes=5,ActualMinutes=5};var detail=new PlanAdjustmentDetails(Guid.NewGuid(),Guid.NewGuid(),"真实家长顺延依据",[task.Id],[],[task.Id],[],[],"TaskDeferral",new DateOnly(2026,10,3));
+    var adjustment=new WeeklyAdjustment(Guid.NewGuid(),DateTimeOffset.UtcNow,true,detail);var result=BudgetReporting.Calculate([task,task],[adjustment,adjustment]);Eq(result.PublishedTasks,1);Eq(result.CompletedWithinEstimate,1);Eq(result.ConfirmedDeferredTasks,1);Eq(result.EligibleTasks,1);Eq(result.Rate,(decimal?)1);
+});
+Test("预算执行不从草稿移除或普通延期状态猜测家长确认",()=>{
+    var task=new StudyTask{Status="Deferred",Minutes=5};var detail=new PlanAdjustmentDetails(Guid.NewGuid(),Guid.NewGuid(),"草稿调整",[task.Id],[],[task.Id],[],[],"TaskDeferral",new DateOnly(2026,10,3));
+    var draft=new WeeklyAdjustment(Guid.NewGuid(),DateTimeOffset.UtcNow,false,detail);var ordinary=draft with{Published=true,Details=detail with{Kind="DraftAdjustment"}};var result=BudgetReporting.Calculate([task],[draft,ordinary]);Eq(result.EligibleTasks,0);Eq(result.ConfirmedDeferredTasks,0);
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

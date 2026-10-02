@@ -391,6 +391,100 @@
         ],
         "type": "object"
       },
+      "BudgetDeferral": {
+        "properties": {
+          "confirmedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "targetDate": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetDate",
+          "reason",
+          "confirmedAt"
+        ],
+        "type": "object"
+      },
+      "BudgetExecutability": {
+        "properties": {
+          "completedWithinEstimate": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "confirmedDeferredTasks": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "eligibleTasks": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "publishedTasks": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "rate": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetTaskResult"
+            },
+            "type": "array"
+          },
+          "unknownCompletedDuration": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "publishedTasks",
+          "completedWithinEstimate",
+          "confirmedDeferredTasks",
+          "eligibleTasks",
+          "unknownCompletedDuration",
+          "rate",
+          "tasks",
+          "note"
+        ],
+        "type": "object"
+      },
       "BudgetInput": {
         "properties": {
           "minutes": {
@@ -413,6 +507,64 @@
         "required": [
           "minutes",
           "reserved"
+        ],
+        "type": "object"
+      },
+      "BudgetTaskResult": {
+        "properties": {
+          "actualMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "completedWithinEstimate": {
+            "type": "boolean"
+          },
+          "deferrals": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetDeferral"
+            },
+            "type": "array"
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "estimatedMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "taskId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unknownCompletedDuration": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "taskId",
+          "title",
+          "status",
+          "estimatedMinutes",
+          "actualMinutes",
+          "completedWithinEstimate",
+          "unknownCompletedDuration",
+          "deferrals",
+          "eligible"
         ],
         "type": "object"
       },
@@ -3760,6 +3912,9 @@
             },
             "type": "array"
           },
+          "budgetExecutability": {
+            "$ref": "#/components/schemas/BudgetExecutability"
+          },
           "currentDate": {
             "format": "date",
             "type": "string"
@@ -3829,6 +3984,7 @@
           "dueReviews",
           "pending",
           "parentBurden",
+          "budgetExecutability",
           "tasks",
           "adjustments",
           "transitions",
