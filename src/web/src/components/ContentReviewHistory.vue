@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import {computed,onMounted,ref} from 'vue';
 import {api} from '../api';
+import {sameCoverage,coverageLabel,teachingMapping} from '../coverage';
 type Item=Record<string,any>;
 const props=defineProps<{draftId:string}>();
 const rows=ref<Item[]>([]),error=ref(''),selected=ref(''),page=ref(0);
 const review=computed(()=>rows.value.find(r=>r.id===selected.value));
 const catalog=computed(()=>review.value?JSON.parse(review.value.sourcePayload):null);
 const questions=computed(()=>catalog.value?.questions.slice(page.value*20,(page.value+1)*20)||[]);
+function coverage(type:string,id:string,m:Item){const row=(catalog.value?.mappingCoverage||[]).find((r:Item)=>sameCoverage(r,type,id,m));return row?`教学覆盖：${row.coverageWeight} · ${coverageLabel(row)} · 作答证据份额：${m.share}`:`未记录独立覆盖权重 · 作答证据份额：${m.share}（实际发布映射另查）`;}
 function name(id:string){return catalog.value?.kcs.find((k:Item)=>k.id===id)?.name||'未记录能力';}
 onMounted(async()=>{try{rows.value=await api('/content/drafts/'+props.draftId+'/reviews');selected.value=rows.value[0]?.id||'';}catch(e){error.value=(e as Error).message;}});
 </script>
@@ -21,10 +23,10 @@ onMounted(async()=>{try{rows.value=await api('/content/drafts/'+props.draftId+'/
     <p>{{review.reasonSource==='UserProvided'?'审核备注':'确认记录'}}：{{review.reason}}</p>
     <p>能力 {{catalog.kcs.length}} 项 · 题目 {{catalog.questions.length}} 题 · 课时 {{catalog.lessons.length}} 项 · 资源 {{catalog.resources.length}} 项</p>
     <details><summary>核对审核时的题目与映射</summary>
-      <article v-for="q in questions" :key="q.id" class="content-editor-row"><p>{{q.stem}}</p><p>答案：{{q.answer}}<br>解析：{{q.explanation}}</p><p>能力关联：{{q.mappings.map((m:Item)=>name(m.kcId)+(m.step?' · '+m.step:'')).join('、')||'无'}}</p></article>
+      <article v-for="q in questions" :key="q.id" class="content-editor-row"><p>{{q.stem}}</p><p>答案：{{q.answer}}<br>解析：{{q.explanation}}</p><p>能力关联：{{q.mappings.map((m:Item)=>name(m.kcId)+(m.step?' · '+m.step:'')).join('、')||'无'}}</p><p v-for="m in q.mappings">{{name(m.kcId)}} · {{coverage('Question',q.id,m)}}</p></article>
       <button @click="page--" :disabled="page===0">上一页题目</button><span> 第 {{page+1}} 页 </span><button @click="page++" :disabled="(page+1)*20>=catalog.questions.length">下一页题目</button>
     </details>
-    <details><summary>核对审核时的课时与资源</summary><article v-for="l in catalog.lessons" :key="l.id" class="content-editor-row"><p>课时：{{l.title}}</p><p>{{l.kcIds.map(name).join('、')}}</p></article><article v-for="r in catalog.resources" :key="r.id" class="content-editor-row"><p>资源：{{r.title}} · {{r.minutes}} 分钟</p><p>{{r.paperReference}}</p><p>{{r.kcIds.map(name).join('、')}}</p></article></details>
+    <details><summary>核对审核时的课时与资源</summary><article v-for="l in catalog.lessons" :key="l.id" class="content-editor-row"><p>课时：{{l.title}}</p><p>{{l.kcIds.map(name).join('、')}}</p><p v-for="id in l.kcIds">{{name(id)}} · {{coverage('Lesson',l.id,teachingMapping(id))}}</p></article><article v-for="r in catalog.resources" :key="r.id" class="content-editor-row"><p>资源：{{r.title}} · {{r.minutes}} 分钟</p><p>{{r.paperReference}}</p><p>{{r.kcIds.map(name).join('、')}}</p><p v-for="id in r.kcIds">{{name(id)}} · {{coverage('Resource',r.id,teachingMapping(id))}}</p></article></details>
   </template>
 </section>
 </template>

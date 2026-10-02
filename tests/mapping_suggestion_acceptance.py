@@ -98,13 +98,13 @@ def verify(document,c):
     other=Client();other.request('/auth/register',{'userName':'mapping-isolation-'+uuid.uuid4().hex[:12],'password':'mapping-private-'+uuid.uuid4().hex},expected=201)
     other.request('/me')
     other.request(path,expected=404);other.request('/builder/mapping-runs',request,expected=404);other.request(path+'/suggestions:decide',body,expected=404)
-    other.request('/content/drafts/'+source['id']+'/reviews',expected=404)
+    other.request('/content/drafts/'+source['id']+'/reviews',expected=404);other.request('/content/drafts/'+source['id']+'/mapping-preview',expected=404)
     child=Client()
     for cookie in c.jar:child.jar.set_cookie(copy.copy(cookie))
     child.etag=c.etag
     sid=c.request('/students',{'name':'映射隔离验收'},expected=201)['id'];child.request('/students/'+sid+'/child-sessions',{})
     child.request('/builder/mapping-runs',expected=403);child.request(path,expected=403);child.request('/builder/mapping-runs',request,expected=403);child.request(path+'/suggestions:decide',body,expected=403)
-    child.request('/content/drafts/'+source['id']+'/reviews',expected=403)
+    child.request('/content/drafts/'+source['id']+'/reviews',expected=403);child.request('/content/drafts/'+source['id']+'/mapping-preview',expected=403)
     with c.http.open(api_acceptance.BASE+'/family/export') as response:
         manifest=json.loads(zipfile.ZipFile(io.BytesIO(response.read())).read('manifest.json'))
     exported=manifest['data']

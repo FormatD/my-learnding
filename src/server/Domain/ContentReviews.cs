@@ -31,6 +31,7 @@ public static class ContentReviews
     {
         if(draft.Status=="Published")throw new ApiError(409,"IMMUTABLE","版本已发布。");
         var review=Capture(draft,actor,input);
+        await CoverageEditing.ValidateSources(db,actor.FamilyId,Json.Read<Catalog>(draft.Payload));
         await CatalogDirectory.ValidateSources(db,actor.FamilyId,Json.Read<Catalog>(draft.Payload));var errors=Content.Validate(Json.Read<Catalog>(draft.Payload));
         if(errors.Length>0)throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));
         db.Add(review);draft.Status="Approved";draft.ReviewedBy=actor.Id;

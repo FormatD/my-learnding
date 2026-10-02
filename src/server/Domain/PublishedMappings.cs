@@ -35,15 +35,16 @@ public static class PublishedMappings
         .Concat(c.Resources.Where(r=>r.RevisionId!=null).Select(r=>new MappingOwnerSelection("Resource",r.Id,r.RevisionId!.Value))).ToArray();
     public static Mapping[] Projection(Catalog c,MappingOwner owner)=>owner.OwnerType=="Question"?owner.Mappings:
         (owner.OwnerType=="Lesson"?c.Lessons.Single(l=>l.Id==owner.Id).KCIds:c.Resources.Single(r=>r.Id==owner.Id).KCIds).Distinct().Select(id=>new Mapping(id,"Primary",0,"None",null)).ToArray();
-    public static bool Matches(Catalog c,MappingOwner owner,MappingSetRevision set,MappingSetItem[] items)
+    public static bool Matches(Catalog c,MappingOwner owner,MappingSetRevision set,MappingSetItem[] items,bool includeCoverage=true)
     {
         var projection=Projection(c,owner);var ordered=items.OrderBy(i=>i.Sequence).ToArray();
         return set.EvidencePolicy==owner.EvidencePolicy && projection.Length==ordered.Length && projection.Zip(ordered).All(pair=>
-            pair.First.KCId==pair.Second.KCId && c.Kcs.Any(k=>k.Id==pair.Second.KCId && k.RevisionId==pair.Second.KCRevisionId) && pair.First.Role==pair.Second.Role && pair.First.Share==pair.Second.EvidenceShare && pair.First.Mode==pair.Second.EvidenceMode && pair.First.Step==pair.Second.Step) && ordered.Select(i=>i.Sequence).SequenceEqual(Enumerable.Range(1,ordered.Length));
+            pair.First.KCId==pair.Second.KCId && c.Kcs.Any(k=>k.Id==pair.Second.KCId && k.RevisionId==pair.Second.KCRevisionId) && pair.First.Role==pair.Second.Role && pair.First.Share==pair.Second.EvidenceShare && pair.First.Mode==pair.Second.EvidenceMode && pair.First.Step==pair.Second.Step && (!includeCoverage || !(c.MappingCoverage??[]).Any(r=>r.OwnerType==owner.OwnerType && r.OwnerId==owner.Id) || CoverageEditing.Weight(c,owner,pair.First)==pair.Second.CoverageWeight)) && ordered.Select(i=>i.Sequence).SequenceEqual(Enumerable.Range(1,ordered.Length));
     }
     public static async Task Bind(Database db,Release release,Catalog c,ContentReviewRecord review)
     {
         if(review.FamilyId!=release.FamilyId || review.SourcePayload!=release.Payload || review.PayloadHash!=release.Hash)throw new ApiError(422,"REVIEW_SNAPSHOT_REQUIRED","发布映射必须对应完整内容审核快照。");
+        await CoverageEditing.ValidateSources(db,release.FamilyId,c);
         foreach(var selection in Owners(c))
         {
             var owner=MappingSuggestions.Owner(c,selection);var definitionHash=Content.Hash(MappingSuggestions.Definition(c,owner.OwnerType,owner.Id));
@@ -53,16 +54,16 @@ public static class PublishedMappings
             {
                 var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==release.FamilyId && i.SetRevisionId==set.Id).ToArrayAsync();
                 if(set.OwnerDefinitionHash!=definitionHash)throw new ApiError(422,"MAPPING_REVISION_IMMUTABLE","同一对象修订不能更改内容与映射。");
-                if(Matches(c,owner,set,items)){chosen=set;break;}
-                if(set.ReviewDecisionId!=null)throw new ApiError(422,"MAPPING_LIBRARY_REVISION_CHANGED","逐项审核映射必须保留原能力版本和完整归因。");
+                if(Matches(c,owner,set,items) && (!(c.MappingCoverage??[]).Any(r=>r.OwnerType==owner.OwnerType && r.OwnerId==owner.Id) || Projection(c,owner).Select((m,i)=>CoverageEditing.Weight(c,owner,m)==items.OrderBy(x=>x.Sequence).ElementAt(i).CoverageWeight).All(v=>v))){chosen=set;break;}
+                if(set.ReviewDecisionId!=null && !Matches(c,owner,set,items,includeCoverage:false))throw new ApiError(422,"MAPPING_LIBRARY_REVISION_CHANGED","逐项审核映射必须保留原能力版本和完整归因。");
             }
             if(chosen==null)
             {
                 var projection=Projection(c,owner);
                 if(projection.Any(m=>decimal.Round(m.Share,6)!=m.Share))throw new ApiError(422,"MAPPING_PRECISION_INVALID","证据份额最多六位小数，请校正后重新审核。");
                 var number=(await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==release.FamilyId && s.OwnerType==owner.OwnerType && s.OwnerId==owner.Id).MaxAsync(s=>(int?)s.RevisionNo)??0)+1;
-                chosen=new(){FamilyId=release.FamilyId,DraftId=review.DraftId,ContentReviewRecordId=review.Id,OwnerType=owner.OwnerType,OwnerId=owner.Id,OwnerRevisionId=owner.RevisionId,OriginalOwnerRevisionId=owner.RevisionId,OwnerDefinitionHash=definitionHash,RevisionNo=number,EvidencePolicy=owner.EvidencePolicy,ReviewStatus="ReviewedCatalog",CoverageOrigin="CatalogDefault"};db.Add(chosen);
-                foreach(var pair in projection.Select((m,i)=>(m,i)))db.Add(new MappingSetItem{FamilyId=release.FamilyId,SetRevisionId=chosen.Id,KCId=pair.m.KCId,KCRevisionId=c.Kcs.Single(k=>k.Id==pair.m.KCId).RevisionId,Role=pair.m.Role,CoverageWeight=1,EvidenceShare=pair.m.Share,EvidenceMode=pair.m.Mode,Step=pair.m.Step,Sequence=pair.i+1,SourceRefs=Json.Write(new[]{MappingSuggestions.SourceRef(review.DraftId,owner)})});
+                chosen=new(){FamilyId=release.FamilyId,DraftId=review.DraftId,ContentReviewRecordId=review.Id,OwnerType=owner.OwnerType,OwnerId=owner.Id,OwnerRevisionId=owner.RevisionId,OriginalOwnerRevisionId=owner.RevisionId,OwnerDefinitionHash=definitionHash,RevisionNo=number,EvidencePolicy=owner.EvidencePolicy,ReviewStatus="ReviewedCatalog",CoverageOrigin=(c.MappingCoverage??[]).Any(r=>r.OwnerType==owner.OwnerType && r.OwnerId==owner.Id && r.Origin!="Default")?"CatalogReviewed":"CatalogDefault"};db.Add(chosen);
+                foreach(var pair in projection.Select((m,i)=>(m,i)))db.Add(new MappingSetItem{FamilyId=release.FamilyId,SetRevisionId=chosen.Id,KCId=pair.m.KCId,KCRevisionId=c.Kcs.Single(k=>k.Id==pair.m.KCId).RevisionId,Role=pair.m.Role,CoverageWeight=CoverageEditing.Weight(c,owner,pair.m),EvidenceShare=pair.m.Share,EvidenceMode=pair.m.Mode,Step=pair.m.Step,Sequence=pair.i+1,SourceRefs=Json.Write(new[]{MappingSuggestions.SourceRef(review.DraftId,owner)}.Concat(CoverageEditing.Entry(c,owner,pair.m)?.SourceSetRevisionId is {} inherited?new[]{"mapping-set:"+inherited}:Array.Empty<string>()).ToArray())});
             }
             db.Add(new ReleaseMappingSet{FamilyId=release.FamilyId,ReleaseId=release.Id,SetRevisionId=chosen.Id,OwnerType=owner.OwnerType,OwnerId=owner.Id,OwnerRevisionId=owner.RevisionId});
         }

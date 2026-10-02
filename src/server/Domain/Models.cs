@@ -112,7 +112,7 @@ public record TextbookUnit(Guid Id,Guid RevisionId,Guid TextbookId,string Title,
 public record Course(Guid Id,Guid RevisionId,string Provider,string Subject,string Title,Guid[]? SourceRefs=null);
 public record Lesson(Guid Id, string Title, int Sequence, Guid[] KCIds,Guid? UnitId=null,Guid? CourseId=null,Guid? RevisionId=null,int EstimatedMinutes=5,Guid[]? SourceRefs=null);
 public record Relation(Guid From, Guid To, string Type = "Prerequisite");
-public record Catalog(KC[] Kcs, Question[] Questions, Resource[] Resources, Lesson[] Lessons, Relation[] Relations,Textbook[]? Textbooks=null,TextbookUnit[]? Units=null,Course[]? Courses=null);
+public record Catalog(KC[] Kcs, Question[] Questions, Resource[] Resources, Lesson[] Lessons, Relation[] Relations,Textbook[]? Textbooks=null,TextbookUnit[]? Units=null,Course[]? Courses=null,MappingCoverage[]? MappingCoverage=null);
 public class Plan : Row
 {
     public Guid StudentId { get; set; }

@@ -1,0 +1,6 @@
+type Item=Record<string,any>;
+export const teachingMapping=(kcId:string)=>({kcId,role:'Primary',share:0,mode:'None',step:null});
+export function sameCoverage(r:Item,type:string,id:string,m:Item){return r.ownerType===type&&r.ownerId===id&&r.kcId===m.kcId&&r.role===m.role&&r.evidenceMode===m.mode&&r.step===(m.step??null)&&r.evidenceShare===m.share;}
+export function coverageRow(c:Item,type:string,id:string,m:Item){c.mappingCoverage??=[];let row=c.mappingCoverage.find((r:Item)=>sameCoverage(r,type,id,m));if(!row){row={ownerType:type,ownerId:id,kcId:m.kcId,role:m.role,evidenceMode:m.mode,step:m.step??null,evidenceShare:m.share,coverageWeight:1,sourceSetRevisionId:null,origin:'Default'};c.mappingCoverage.push(row);}return row;}
+export function coverageLabel(row:Item){return row.origin==='Inherited'?'继承既有映射权重':row.origin==='Default'?'新增关联 · 默认权重 1（待核对）':'本次明确填写';}
+export function pruneCoverage(c:Item){const rows:Item[]=[];for(const [type,list] of [['Question',c.questions],['Resource',c.resources],['Lesson',c.lessons]] as [string,Item[]][]){for(const o of list){const mappings=type==='Question'?o.mappings:[...new Set<string>(o.kcIds)].map(teachingMapping);for(const m of mappings)rows.push(coverageRow(c,type,o.id,m));}}c.mappingCoverage=rows;}

@@ -30,7 +30,7 @@ onMounted(async()=>{try{data.value=await api('/content/releases/'+props.release.
     <label v-if="data.bindings.length">查看对象类型<select v-model="type"><option value="All">全部</option><option v-for="(label,key) in labels" :key="key" :value="key">{{label}}</option></select></label>
     <article v-for="b in bindings" :key="b.id" class="content-editor-row" :aria-label="labels[b.ownerType]+'发布映射'">
       <h3>{{labels[b.ownerType]}} · {{owner(b)?.stem||owner(b)?.title}}</h3>
-      <p>映射第 {{set(b).revisionNo}} 版 · {{set(b).reviewDecisionId?'逐项映射审核':'整份内容审核'}} · {{set(b).coverageOrigin==='CatalogDefault'?'教学覆盖采用默认权重1':'保留人工覆盖权重'}}</p>
+      <p>映射第 {{set(b).revisionNo}} 版 · {{set(b).reviewDecisionId?'逐项映射审核':'整份内容审核'}} · {{set(b).coverageOrigin==='CatalogDefault'?'教学覆盖采用默认权重1':set(b).coverageOrigin==='CatalogReviewed'?'教学覆盖经整份内容审核':'保留逐项人工覆盖权重'}}</p>
       <div v-for="i in items(b)" :key="i.id"><p>{{kc(i.kcId)?.name}}<br>教学覆盖：{{i.coverageWeight}} · 作答证据份额：{{i.evidenceShare}} · {{modes[i.evidenceMode]}}<span v-if="i.step"> · {{i.step}}</span></p></div>
     </article>
     <template v-if="data.bindings.length"><button @click="page--" :disabled="page===0">上一页映射</button><span> 第 {{page+1}} 页 </span><button @click="page++" :disabled="(page+1)*20>=filtered.length">下一页映射</button></template>

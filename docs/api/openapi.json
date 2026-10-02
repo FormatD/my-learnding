@@ -844,6 +844,15 @@
             },
             "type": "array"
           },
+          "mappingCoverage": {
+            "items": {
+              "$ref": "#/components/schemas/MappingCoverage"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
           "questions": {
             "items": {
               "$ref": "#/components/schemas/Question"
@@ -1122,6 +1131,35 @@
           "provider",
           "subject",
           "title"
+        ],
+        "type": "object"
+      },
+      "CoveragePreview": {
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/Catalog"
+          },
+          "draftId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "draftVersion": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "draftId",
+          "draftVersion",
+          "title",
+          "catalog"
         ],
         "type": "object"
       },
@@ -2344,6 +2382,71 @@
           "releaseId",
           "attemptIds",
           "reason"
+        ],
+        "type": "object"
+      },
+      "MappingCoverage": {
+        "properties": {
+          "coverageWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "evidenceMode": {
+            "type": "string"
+          },
+          "evidenceShare": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "origin": {
+            "default": "Explicit",
+            "type": "string"
+          },
+          "ownerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerType": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "sourceSetRevisionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "step": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "ownerType",
+          "ownerId",
+          "kcId",
+          "role",
+          "evidenceMode",
+          "step",
+          "evidenceShare",
+          "coverageWeight"
         ],
         "type": "object"
       },
@@ -8897,6 +9000,137 @@
             }
           },
           "412": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/drafts/{id}/mapping-preview": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoveragePreview"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
             "content": {
               "application/problem+json": {
                 "schema": {

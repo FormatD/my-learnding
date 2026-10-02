@@ -8,7 +8,7 @@ public static class Content
     public static string MeasurementSignature(KC k)=>Hash(Json.Write(new {behavior=k.Behavior.Trim().Normalize(),boundary=k.Boundary.Trim().Normalize(),k.Type,coverage=(k.RequiredCoverage??["Basic"]).Distinct().OrderBy(x=>x,StringComparer.Ordinal).ToArray()}));
     public static string[] Validate(Catalog c)
     {
-        var errors = new List<string>();errors.AddRange(CatalogDirectory.Validate(c));
+        var errors = new List<string>();errors.AddRange(CatalogDirectory.Validate(c));errors.AddRange(CoverageEditing.Validate(c));
         if(c.Kcs.Length==0 || c.Questions.Length==0)errors.Add("正式内容至少需要一个能力和一道人工作答审核过的测量题");
         var ids = c.Kcs.Select(k => k.Id).ToHashSet();
         if (ids.Count != c.Kcs.Length || c.Kcs.Select(k => k.Code).Distinct().Count() != c.Kcs.Length) errors.Add("KC 身份和编码必须唯一");

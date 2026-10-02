@@ -186,6 +186,7 @@ public static class MappingSuggestions
         return source with
         {
             Kcs=kcs.ToArray(),
+            MappingCoverage=(source.MappingCoverage??[]).Where(r=>r.OwnerType!=owner.OwnerType || r.OwnerId!=owner.Id).Concat(proposal.Items.Select(i=>new MappingCoverage(owner.OwnerType,owner.Id,i.KCId,i.Role,i.EvidenceMode,i.Step,i.EvidenceShare,i.CoverageWeight))).ToArray(),
             Questions=source.Questions.Select(q=>owner.OwnerType=="Question" && q.Id==owner.Id?q with{RevisionId=revision,Policy=proposal.EvidencePolicy,Mappings=mappings}:q).ToArray(),
             Lessons=source.Lessons.Select(l=>owner.OwnerType=="Lesson" && l.Id==owner.Id?l with{RevisionId=revision,KCIds=ids}:l).ToArray(),
             Resources=source.Resources.Select(r=>owner.OwnerType=="Resource" && r.Id==owner.Id?r with{RevisionId=revision,KCIds=ids}:r).ToArray()
