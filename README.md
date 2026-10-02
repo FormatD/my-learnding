@@ -94,4 +94,6 @@ V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实�
 
 本地性能复测：`RUN_PERFORMANCE_BROWSER=1 python3 tests/performance_acceptance.py`（需同上 `CHROMIUM_PATH`）。测量工具自行创建并删除隔离数据库和服务，记录真实作答与后台更新；模拟网络不等于实际平板/Wi-Fi。结果与方法见 `docs/verification/local-performance.json`、`docs/verification/local-performance.md`。读取一致性精确验收：`python3 tests/mastery_snapshot_acceptance.py`，运行前同样先构建 `tests/persistence`。普通浏览器不会执行缺少隔离性能夹具的用例。
 
-到期备份工具：`python3 <脚本绝对路径> --config <私有配置绝对路径> --watch`。独立进程每分钟检查23小时到期条件，成功后执行30天受管保留；失败保留上次成功归档，口令不写入日志。使用 `python3 tests/daily_backup_acceptance.py` 验证真实加密、保留与新空库恢复（先构建 `tests/persistence`）；`RUN_BACKUP_BROWSER=1` 同时运行负责人浏览器，需要 `CHROMIUM_PATH`。本机同盘开发备份已运行，负责人状态与自动告警已接入，独立磁盘、重启启动及持续指标仍待验。服务用 `BackupConfigFile` 指定私有配置，`scripts/dev.sh` 会启用已有本机配置；详细说明见 `docs/runbooks/local.md`。
+到期备份工具：`python3 <脚本绝对路径> --config <私有配置绝对路径> --watch`。独立进程每分钟检查23小时到期条件，成功后执行30天受管保留；失败保留上次成功归档，口令不写入日志。使用 `python3 tests/daily_backup_acceptance.py` 验证真实加密、保留与新空库恢复（先构建 `tests/persistence`）；`RUN_BACKUP_BROWSER=1` 同时运行负责人浏览器，需要 `CHROMIUM_PATH`。本机同盘开发备份已运行，负责人状态与自动告警已接入，独立磁盘、实际整机重启及持续指标仍待验。服务用 `BackupConfigFile` 指定私有配置，`scripts/dev.sh` 会启用已有本机配置；详细说明见 `docs/runbooks/local.md`。
+
+macOS登录启动配置：`python3 scripts/install_backup_agent.py --config <私有配置路径>` 先生成可检查的项目专属plist；加 `--install` 安装到当前用户LaunchAgents。本机已安装并确认系统管理的调度实际运行；每次该用户登录会启动，退出后会重新拉起，不能据此声称已测试实际整机重启或登录前运行。`python3 tests/backup_agent_acceptance.py` 用临时服务和隔离库验证载入、真实备份、持锁不打断及进程终止后重启，结束后清理临时服务。
