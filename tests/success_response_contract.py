@@ -47,7 +47,7 @@ def verify(document, client, registered):
                     assert body.get('content'), 'Success body lacks media declaration'
                     assert all('schema' in media for media in body['content'].values())
     response('/auth/register','post',201,registered)
-    assert set(paths['/api/v1/auth/register']['post']['responses'])=={'201'}
+    assert {code for code in paths['/api/v1/auth/register']['post']['responses'] if code.startswith('2')}=={'201'}
     student=client.request('/students',{'name':'响应契约验收'},expected=201)
     response('/students','post',201,student)
     sid=student['id']

@@ -21,6 +21,7 @@ from openapi_contract import canonical, changes
 import api_acceptance
 from api_acceptance import Client
 from success_response_contract import verify
+from failure_response_contract import verify as verify_failures, verify_rate
 
 
 def main():
@@ -103,6 +104,8 @@ def main():
                     advanced_api_acceptance.main()
                     content_authoring_api_acceptance.main()
                     observed_steps_api_acceptance.main()
+                verify_failures(document,client,env)
+                verify_rate(document)
             finally:
                 if child is not None and child.poll() is None:
                     child.terminate()

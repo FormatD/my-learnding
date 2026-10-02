@@ -48,7 +48,7 @@ public static class Endpoints
             db.Families.Add(family); db.Accounts.Add(account);db.Add(new FamilyMembership{FamilyId=family.Id,AccountId=account.Id,Roles=account.Roles}); await db.SaveChangesAsync();family.OwnerAccountId=account.Id;
             await Security.CreateSession(db,ctx,family.Id,account.Id,null,"Parent"); await tx.CommitAsync();
             return TypedResults.Created("/api/v1/me",new { familyId=family.Id,role="Parent" });
-        }).RequireRateLimiting("auth");
+        }).RequireRateLimiting(ApiPolicy.AuthRatePolicy);
         api.MapPost("/auth/login",async (Credentials input,Database db,HttpContext ctx) =>
         {
             var initial=await db.Accounts.AsNoTracking().SingleOrDefaultAsync(a => a.UserName==input.UserName.Trim());
@@ -57,7 +57,7 @@ public static class Endpoints
             var account=await db.Accounts.SingleOrDefaultAsync(a=>a.Id==initial.Id);
             if (account==null || !await db.Set<FamilyMembership>().AnyAsync(m=>m.FamilyId==account.FamilyId && m.AccountId==account.Id && m.Roles!="") || !Security.Check(input.Password,account.PasswordHash)) throw new ApiError(401,"INVALID_CREDENTIALS","用户名或密码不正确。");
             await Security.CreateSession(db,ctx,account.FamilyId,account.Id,null,"Parent");await tx.CommitAsync(); return TypedResults.Ok(new { role="Parent" });
-        }).RequireRateLimiting("auth");
+        }).RequireRateLimiting(ApiPolicy.AuthRatePolicy);
         api.MapGet("/me",async (Database db,HttpContext ctx) => new { actor=ctx.Actor(),family=await db.Families.SingleAsync(f => f.Id==ctx.Actor().FamilyId) });
         api.MapPost("/logout",async (Database db,HttpContext ctx) => { (await db.AuthSessions.SingleAsync(s => s.Id==ctx.Actor().SessionId)).Revoked=true; ctx.Response.Cookies.Delete(Security.Cookie); return TypedResults.Ok(new { done=true }); });
         api.MapGet("/students",async (Database db,HttpContext ctx) => ctx.Actor().Role!="Child" && !ctx.Actor().Roles.Split(',').Contains("Parent") ? [] : await db.Students.Where(s => s.FamilyId==ctx.Actor().FamilyId && (ctx.Actor().Role!="Child" || s.Id==ctx.Actor().StudentId)).OrderBy(s => s.CreatedAt).ToListAsync());
