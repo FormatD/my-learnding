@@ -3456,6 +3456,13 @@
           "paperReference": {
             "type": "string"
           },
+          "revisionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "title": {
             "type": "string"
           },

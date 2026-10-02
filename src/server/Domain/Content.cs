@@ -36,8 +36,16 @@ public static class Content
             if (q.Policy == "SingleKC" && (q.Mappings.Count(m => m.Mode == "WholeItem") != 1 || q.Mappings.Any(m => m.Mode != "None" && m.Mode != "WholeItem"))) errors.Add($"第 {index+1} 题: 整题只能测量一个 KC");
             if (q.Policy == "ObservedSteps" && q.Mappings.Any(m => m.Mode != "None" && (m.Mode != "StepObserved" || string.IsNullOrWhiteSpace(m.Step)))) errors.Add($"第 {index+1} 题: 步骤归因缺少观察点");
         }
+        if(c.Resources.Select(r=>r.Id).Distinct().Count()!=c.Resources.Length)errors.Add("资源稳定身份不能重复");
+        var resourceRevisions=c.Resources.Where(r=>r.RevisionId!=null).Select(r=>r.RevisionId!.Value).ToArray();
+        if(resourceRevisions.Distinct().Count()!=resourceRevisions.Length)errors.Add("资源修订身份不能重复");
+        var otherIdentities=c.Kcs.Select(k=>k.Id).Concat(c.Questions.Select(q=>q.Id)).Concat(c.Lessons.Select(l=>l.Id)).Concat((c.Textbooks??[]).Select(b=>b.Id)).Concat((c.Units??[]).Select(u=>u.Id)).Concat((c.Courses??[]).Select(course=>course.Id)).ToHashSet();
+        var otherRevisions=c.Kcs.Select(k=>k.RevisionId).Concat(c.Questions.Select(q=>q.RevisionId)).Concat(c.Lessons.Where(l=>l.RevisionId!=null).Select(l=>l.RevisionId!.Value)).Concat((c.Textbooks??[]).Select(b=>b.RevisionId)).Concat((c.Units??[]).Select(u=>u.RevisionId)).Concat((c.Courses??[]).Select(course=>course.RevisionId)).ToHashSet();
+        if(c.Resources.Any(r=>r.RevisionId!=null && otherIdentities.Contains(r.Id)))errors.Add("资源稳定身份与其他内容身份冲突");
+        if(resourceRevisions.Any(otherRevisions.Contains))errors.Add("资源修订身份与其他内容修订冲突");
         foreach (var (r,index) in c.Resources.Select((r,i)=>(r,i)))
         {
+            if(r.Id==Guid.Empty || r.RevisionId==Guid.Empty)errors.Add($"第 {index+1} 个资源: 稳定身份或修订身份无效");
             if (string.IsNullOrWhiteSpace(r.Title) || r.Minutes is <1 or >180 || r.KCIds.Length==0 || r.KCIds.Any(id => !ids.Contains(id)) || (string.IsNullOrWhiteSpace(r.PaperReference) && r.Url == null)) errors.Add($"第 {index+1} 个资源: 资源不可执行");
             if (r.Url != null && (!Uri.TryCreate(r.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https")) errors.Add($"第 {index+1} 个资源: 外链只允许 HTTPS");
         }
@@ -80,7 +88,7 @@ public static class Content
         string[] answers=["11","14","22","14","16","8","4","30","23","18","10","16","13","14","19","3","3×6+5","24÷4-2","22","3"];
         int[] targets=[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,0,3];
         var qs=stems.Select((text,i) => new Question(Guid.NewGuid(),Guid.NewGuid(),text,answers[i],i>=16&&i<=17?$"参考列式：{answers[i]}。家长根据数量关系判分。":$"先确定运算顺序，再分步计算。结果为 {answers[i]}。",i>=16&&i<=17?"ShortAnswer":"Numeric","Medium","SingleKC",[new(kcs[targets[i]].Id)],Hint:i==6||i==7||i==19?"先算小括号里面。":"乘除优先；同级运算从左到右。")).ToArray();
-        var resources=kcs.Select(k => new Resource(Guid.NewGuid(),$"{k.Name} · 纸笔讲解","使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",5,[k.Id])).ToArray();
+        var resources=kcs.Select(k => new Resource(Guid.NewGuid(),$"{k.Name} · 纸笔讲解","使用自备纸笔，家长示范运算顺序，再尝试一道原创例题。",5,[k.Id],RevisionId:Guid.NewGuid())).ToArray();
         var lessons=new[] { new Lesson(Guid.NewGuid(),"小熊购物 · 乘加、乘减",1,[kcs[0].Id,kcs[4].Id,kcs[5].Id]),new Lesson(Guid.NewGuid(),"买文具 · 除加、除减",2,[kcs[0].Id,kcs[6].Id,kcs[7].Id]),new Lesson(Guid.NewGuid(),"过河 · 小括号与两步问题",3,[kcs[3].Id,kcs[8].Id]),new Lesson(Guid.NewGuid(),"单元整理 · 同级运算顺序",4,[kcs[1].Id,kcs[2].Id]) };
         var textbook=new Textbook(Guid.NewGuid(),Guid.NewGuid(),"北师大版","具体印次待核对","Math",3,"上册");
         var unit=new TextbookUnit(Guid.NewGuid(),Guid.NewGuid(),textbook.Id,"混合运算",1);

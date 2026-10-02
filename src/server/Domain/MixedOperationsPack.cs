@@ -63,7 +63,7 @@ public static class MixedOperationsPack
             "示范：18块饼干平均装3袋，从其中一袋拿2块，这袋剩18÷3−2=4块。独立练：24块平均4袋，其中一袋再加3块。这袋有多少？核对列式24÷4+3，结果9。提醒：不是每袋都变化，也不是总数变化。",
             "检查示范：30−4×5。把第一步4×5=20写下，第二步30−20=10；用10+20=30检查。独立练：(9+6)÷3与24÷3×2。核对：5、16。先检查顺序，再检查两次计算。"];
         int[][] targets=[[0],[1],[2],[3],[4],[5],[6],[7],[8],[4,5],[6,7],[0,3],[4,5,8],[6,7,8],[0,1,2,3]];
-        var resources=titles.Select((title,i)=>new Resource(Id($"resource:{i}"),title+" · 原创纸笔课",$"准备纸笔。家长先读示范，孩子写中间步骤，再独立练习。{texts[i]} 完成后请孩子用自己的话说第一步；讲解后练习不冒充独立测量证据。",6,targets[i].Select(t=>kcs[t].Id).ToArray())).ToArray();
+        var resources=titles.Select((title,i)=>new Resource(Id($"resource:{i}"),title+" · 原创纸笔课",$"准备纸笔。家长先读示范，孩子写中间步骤，再独立练习。{texts[i]} 完成后请孩子用自己的话说第一步；讲解后练习不冒充独立测量证据。",6,targets[i].Select(t=>kcs[t].Id).ToArray(),RevisionId:Id($"resource-revision:{i}"))).ToArray();
         var textbook=new Textbook(Id("textbook"),Id("textbook-revision"),"北师大版","具体印次待核对","Math",3,"上册");
         var unit=new TextbookUnit(Id("unit"),Id("unit-revision"),textbook.Id,"混合运算",1);
         var lessons=sample.Lessons.Select((l,i)=>l with {Id=Id($"lesson:{i}"),RevisionId=Id($"lesson-revision:{i}"),UnitId=unit.Id,KCIds=l.KCIds.Select(id=>kcs[Array.FindIndex(sample.Kcs,k=>k.Id==id)].Id).ToArray()}).ToArray();

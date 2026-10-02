@@ -106,7 +106,7 @@ public class Release : Row
 public record KC(Guid Id, Guid RevisionId, string Code, string Name, string Behavior, string Boundary, string Type = "Procedure", string[]? RequiredCoverage = null);
 public record Mapping(Guid KCId, string Role = "Primary", decimal Share = 1, string Mode = "WholeItem", string? Step = null);
 public record Question(Guid Id, Guid RevisionId, string Stem, string Answer, string Explanation, string Type, string Difficulty, string Policy, Mapping[] Mappings, Guid? VariantGroupId = null, string Coverage = "Basic", string? Hint = null);
-public record Resource(Guid Id, string Title, string PaperReference, int Minutes, Guid[] KCIds, string? Url = null);
+public record Resource(Guid Id, string Title, string PaperReference, int Minutes, Guid[] KCIds, string? Url = null,Guid? RevisionId=null);
 public record Textbook(Guid Id,Guid RevisionId,string Publisher,string Edition,string Subject,int Grade,string Semester,Guid? SourceId=null);
 public record TextbookUnit(Guid Id,Guid RevisionId,Guid TextbookId,string Title,int Sequence);
 public record Course(Guid Id,Guid RevisionId,string Provider,string Subject,string Title,Guid[]? SourceRefs=null);

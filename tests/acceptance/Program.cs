@@ -154,6 +154,15 @@ Test("掌握周报更正按新结果重算，未来结果不越过期末，新�
     Eq(MasteryWeek(new(2025,12,1),new(2025,12,7),first,later).Items.Length,0);
 });
 Test("交接JSON夹具内容合法且重放、更正、并发提交后序列满足独立预期",FixtureCases.Verify);
+Test("资源旧快照未记录修订保持合法，新样例具有独立修订",()=>{
+    var c=Content.Fixture();Eq(c.Resources.All(r=>r.RevisionId!=null && r.RevisionId!=Guid.Empty),true);
+    var old=c with {Resources=c.Resources.Select(r=>r with {RevisionId=null}).ToArray()};Eq(Content.Validate(old).Length,0);
+    Eq(Json.Read<Resource>("{\"id\":\"00000000-0000-0000-0000-000000000001\",\"title\":\"旧资源\",\"paperReference\":\"纸笔\",\"minutes\":5,\"kcIds\":[]}").RevisionId,null);
+    Eq(Content.Validate(c with {Resources=[c.Resources[0],c.Resources[0]]}).Any(e=>e.Contains("身份不能重复")),true);
+    Eq(Content.Validate(c with {Resources=[c.Resources[0] with {RevisionId=Guid.Empty}]}).Any(e=>e.Contains("身份无效")),true);
+    Eq(Content.Validate(c with {Resources=[c.Resources[0] with {RevisionId=c.Questions[0].RevisionId}]}).Any(e=>e.Contains("其他内容修订冲突")),true);
+    Eq(Content.Validate(c with {Resources=[c.Resources[0] with {Id=c.Kcs[0].Id}]}).Any(e=>e.Contains("其他内容身份冲突")),true);
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

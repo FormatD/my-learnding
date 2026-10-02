@@ -43,6 +43,11 @@ public static class Publishing
             if (old==null) db.Add(new ContentRevision { Id=revision,FamilyId=release.FamilyId,IdentityId=identity,EntityType=type,Hash=hash,Definition=text });
             db.Add(new ReleaseItem { FamilyId=release.FamilyId,ReleaseId=release.Id,IdentityId=identity,RevisionId=revision,EntityType=type });
         }
+        var legacyResourceIds=c.Resources.Where(r=>r.RevisionId==null).Select(r=>r.Id).ToArray();
+        if(legacyResourceIds.Length>0 && !await db.Releases.AnyAsync(r=>r.Id==release.Id)
+            && await db.Set<ContentIdentity>().AnyAsync(i=>i.FamilyId==release.FamilyId && i.EntityType=="Resource" && legacyResourceIds.Contains(i.Id)))
+            throw new ApiError(422,"RESOURCE_REVISION_REQUIRED","已有独立修订的资源不能退回未记录版本，请保存新修订后重新审核。");
+        foreach(var resource in c.Resources.Where(r=>r.RevisionId!=null))await Add(resource.Id,resource.RevisionId!.Value,"Resource",resource.Id.ToString(),resource);
         foreach(var b in c.Textbooks??[])await Add(b.Id,b.RevisionId,"Textbook",b.Id.ToString(),b);
         foreach(var u in c.Units??[])await Add(u.Id,u.RevisionId,"TextbookUnit",u.Id.ToString(),u);
         foreach(var course in c.Courses??[])await Add(course.Id,course.RevisionId,"Course",course.Id.ToString(),course);
