@@ -168,7 +168,7 @@ public static class Assessment
         }
         return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList(),timeline?.Items??[],masteryHistory,contexts);
     }
-    public static async Task<(AssessmentInput[] Inputs,TeachingAnchor[] Teaching)> LoadInputs(Database db,Student student,CancellationToken ct=default)
+    public static async Task<(AssessmentInput[] Inputs,TeachingAnchor[] Teaching)> LoadInputs(Database db,Student student,CancellationToken ct=default,ISet<Guid>? excludedCorrectionBatches=null)
     {
         var attempts=await db.Attempts.Where(a => a.StudentId==student.Id).OrderBy(a => a.Sequence).ToListAsync(ct);
         var sessions=await db.Sessions.Where(s => s.StudentId==student.Id).ToDictionaryAsync(s => s.Id,ct);
@@ -176,6 +176,7 @@ public static class Assessment
         var releases=await db.Releases.Where(r => r.FamilyId==student.FamilyId).ToDictionaryAsync(r => r.Id,ct);
         var tasks=await db.Tasks.Where(t => t.StudentId==student.Id).ToDictionaryAsync(t => t.Id,ct);
         var attemptIds=attempts.Select(a=>a.Id).ToArray();var corrections=await db.Set<CorrectionItem>().Where(c=>c.FamilyId==student.FamilyId && attemptIds.Contains(c.AttemptId)).OrderBy(c=>c.Sequence).ToListAsync(ct);
+        if(excludedCorrectionBatches!=null){grades=grades.Where(g=>g.CorrectionBatchId==null || !excludedCorrectionBatches.Contains(g.CorrectionBatchId.Value)).ToList();corrections=corrections.Where(c=>!excludedCorrectionBatches.Contains(c.BatchId)).ToList();}
         var mappingIds=attempts.Where(a=>a.MappingSetRevisionId!=null).Select(a=>a.MappingSetRevisionId!.Value).Concat(corrections.Where(c=>c.MappingSetRevisionId!=null).Select(c=>c.MappingSetRevisionId!.Value)).Distinct().ToArray();
         var sets=await db.Set<MappingSetRevision>().Where(m=>m.FamilyId==student.FamilyId && mappingIds.Contains(m.Id)).ToDictionaryAsync(m=>m.Id,ct);
         var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==student.FamilyId && mappingIds.Contains(i.SetRevisionId)).ToArrayAsync(ct);
