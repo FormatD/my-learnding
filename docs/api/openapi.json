@@ -1,0 +1,6759 @@
+{
+  "components": {
+    "schemas": {
+      "Actor": {
+        "properties": {
+          "accountId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "string"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "familyId",
+          "accountId",
+          "studentId",
+          "role",
+          "roles"
+        ],
+        "type": "object"
+      },
+      "AdjustInput": {
+        "properties": {
+          "lockedIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "taskIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "taskIds",
+          "lockedIds",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfActorAndFamily": {
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "family": {
+            "$ref": "#/components/schemas/Family"
+          }
+        },
+        "required": [
+          "actor",
+          "family"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfDateTimeOffsetAndListOfOperationSignalAndStorageStatusAndObjectAndAnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndbooleanAndAnonymousTypeOfintAndintAndintAndintAndintAndBackupStatusAndAnonymousTypeOfbooleanAndstring": {
+        "properties": {
+          "backup": {
+            "$ref": "#/components/schemas/BackupStatus"
+          },
+          "builder": {
+            "$ref": "#/components/schemas/AnonymousTypeOfintAndintAndintAndintAndint"
+          },
+          "model": {
+            "$ref": "#/components/schemas/AnonymousTypeOfbooleanAndstring"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "projection": {
+            "$ref": "#/components/schemas/AnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean"
+          },
+          "requests": {},
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/OperationSignal"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "storage": {
+            "$ref": "#/components/schemas/StorageStatus"
+          }
+        },
+        "required": [
+          "observedAt",
+          "signals",
+          "storage",
+          "requests",
+          "projection",
+          "builder",
+          "backup",
+          "model"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean": {
+        "properties": {
+          "canRetry": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "nextAttemptAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retries": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "student": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "studentId",
+          "student",
+          "createdAt",
+          "retries",
+          "nextAttemptAt",
+          "errorCode",
+          "canRetry"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfGuidAndGuidAndstringAndstring": {
+        "properties": {
+          "accountId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "roles": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "accountId",
+          "roles",
+          "userName"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfGuidAndintAndstringAndboolean": {
+        "properties": {
+          "hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "number": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "withdrawn": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "hash",
+          "withdrawn"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfGuidAndstring": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfGuidAndstringAndstringAndstring": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "policy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "stem",
+          "type",
+          "policy"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndKCProposalEvent[]AndKnowledgeMigration[]Andstring": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/KCProposalEvent"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KCChangeProposalItem"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "migrations": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeMigration"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "notice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/KCChangeProposal"
+          }
+        },
+        "required": [
+          "proposal",
+          "items",
+          "events",
+          "migrations",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndstringAndstringAndstring": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KCChangeProposalItem"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "notice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "previewHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proposal": {
+            "$ref": "#/components/schemas/KCChangeProposal"
+          },
+          "requiredConfirm": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "proposal",
+          "items",
+          "previewHash",
+          "requiredConfirm",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfKCChangeProposal[]AndKCChangeProposalItem[]AndKnowledgeMigration[]AndAnonymousTypeOfGuidAndstringAndstring": {
+        "properties": {
+          "identities": {
+            "items": {
+              "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstring"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KCChangeProposalItem"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "migrations": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeMigration"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "notice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/KCChangeProposal"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "proposals",
+          "items",
+          "migrations",
+          "identities",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfListOfAttemptAndListOfGrading": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "gradings": {
+            "items": {
+              "$ref": "#/components/schemas/Grading"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "attempts",
+          "gradings"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfListOfContentDraftAndListOfRelease": {
+        "properties": {
+          "drafts": {
+            "items": {
+              "$ref": "#/components/schemas/ContentDraft"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "releases": {
+            "items": {
+              "$ref": "#/components/schemas/Release"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "drafts",
+          "releases"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfListOfSourceAndListOfChunkAndListOfBuilderRunAndBuilderAttempt[]AndListOfCandidateAndListOfAnonymousTypeOfGuidAndintAndstringAndbooleanAndstring": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/BuilderAttempt"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/Chunk"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "libraries": {
+            "items": {
+              "$ref": "#/components/schemas/AnonymousTypeOfGuidAndintAndstringAndboolean"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "provider": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/BuilderRun"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "sources",
+          "chunks",
+          "runs",
+          "attempts",
+          "candidates",
+          "libraries",
+          "provider"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfMasteryAndListOfEvidence": {
+        "properties": {
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "mastery": {
+            "$ref": "#/components/schemas/Mastery"
+          }
+        },
+        "required": [
+          "mastery",
+          "evidence"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfbooleanAndstring": {
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "notice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "connected",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfintAndint": {
+        "properties": {
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "reserved": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "minutes",
+          "reserved"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean": {
+        "properties": {
+          "failed": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/AnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndboolean"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "oldestSeconds": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "pending": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "pending",
+          "failed",
+          "oldestSeconds",
+          "jobs"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfintAndintAndintAndintAndint": {
+        "properties": {
+          "drafts": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "failed": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "needsOCR": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "queued": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "unreviewed": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "queued",
+          "failed",
+          "needsOCR",
+          "unreviewed",
+          "drafts"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfstringAndString[]Andstring": {
+        "properties": {
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "hash",
+          "errors",
+          "status"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfstringAndintAndstringAndstring": {
+        "properties": {
+          "attempts": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "previewHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requiredConfirm": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "student": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "student",
+          "attempts",
+          "previewHash",
+          "requiredConfirm"
+        ],
+        "type": "object"
+      },
+      "AnonymousTypeOfstringAndstringAndString[]": {
+        "properties": {
+          "rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "rules"
+        ],
+        "type": "object"
+      },
+      "AnswerInput": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "clientSubmissionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientSubmissionId",
+          "answer"
+        ],
+        "type": "object"
+      },
+      "AssessmentStatus": {
+        "properties": {
+          "generation": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masteries": {
+            "items": {
+              "$ref": "#/components/schemas/Mastery"
+            },
+            "type": "array"
+          },
+          "pending": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "generation",
+          "masteries",
+          "pending"
+        ],
+        "type": "object"
+      },
+      "Attempt": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "answerShown": {
+            "type": "boolean"
+          },
+          "answerSource": {
+            "type": "string"
+          },
+          "clientSubmissionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "hintLevel": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "number": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sequence": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Audit": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actorId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "BackupStatus": {
+        "properties": {
+          "archiveVerified": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "independentDisk": {
+            "type": "boolean"
+          },
+          "lastSnapshotAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nextDueAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notice": {
+            "type": "string"
+          },
+          "restoreCheckedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "restoreDrillSeconds": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "restoreVerified": {
+            "type": "boolean"
+          },
+          "schedulerActive": {
+            "type": "boolean"
+          },
+          "snapshotAgeHours": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured",
+          "available",
+          "verified",
+          "status",
+          "archiveVerified",
+          "restoreVerified",
+          "independentDisk",
+          "schedulerActive",
+          "lastSnapshotAt",
+          "snapshotAgeHours",
+          "nextDueAt",
+          "errorCode",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "BudgetInput": {
+        "properties": {
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "reserved": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "minutes",
+          "reserved"
+        ],
+        "type": "object"
+      },
+      "BuilderAttempt": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "finishedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "inputSnapshot": {
+            "type": "string"
+          },
+          "nextAttemptAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "number": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "retryRound": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "runId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "BuilderRun": {
+        "properties": {
+          "completedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "inputHash": {
+            "type": "string"
+          },
+          "inputVersion": {
+            "type": "string"
+          },
+          "libraryReleaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model": {
+            "type": "string"
+          },
+          "nextAttemptAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "promptVersion": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "retries": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "retryRound": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sourceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Candidate": {
+        "properties": {
+          "behavior": {
+            "type": "string"
+          },
+          "boundary": {
+            "type": "string"
+          },
+          "chunkId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdDraftId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdKCId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decision": {
+            "type": "string"
+          },
+          "existingKCId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "matches": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "reviewReason": {
+            "type": "string"
+          },
+          "reviewedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewedBy": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "runId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "suggestedAction": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Catalog": {
+        "properties": {
+          "courses": {
+            "items": {
+              "$ref": "#/components/schemas/Course"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "kcs": {
+            "items": {
+              "$ref": "#/components/schemas/KC"
+            },
+            "type": "array"
+          },
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/Lesson"
+            },
+            "type": "array"
+          },
+          "questions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": "array"
+          },
+          "relations": {
+            "items": {
+              "$ref": "#/components/schemas/Relation"
+            },
+            "type": "array"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            },
+            "type": "array"
+          },
+          "textbooks": {
+            "items": {
+              "$ref": "#/components/schemas/Textbook"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/TextbookUnit"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "kcs",
+          "questions",
+          "resources",
+          "lessons",
+          "relations"
+        ],
+        "type": "object"
+      },
+      "Chunk": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "locator": {
+            "type": "string"
+          },
+          "sourceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ContentDraft": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "payload": {
+            "type": "string"
+          },
+          "reviewedBy": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Course": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourceRefs": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "provider",
+          "subject",
+          "title"
+        ],
+        "type": "object"
+      },
+      "Credentials": {
+        "properties": {
+          "familyName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userName",
+          "password"
+        ],
+        "type": "object"
+      },
+      "DecisionInput": {
+        "properties": {
+          "behavior": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "boundary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decision": {
+            "type": "string"
+          },
+          "existingKCId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "DeferInput": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "DeleteInput": {
+        "properties": {
+          "confirm": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "previewHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "previewHash",
+          "password",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "DraftInput": {
+        "properties": {
+          "catalog": {
+            "$ref": "#/components/schemas/Catalog"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "catalog"
+        ],
+        "type": "object"
+      },
+      "Evidence": {
+        "properties": {
+          "attemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "correctionBatchId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "factors": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "generationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "gradingId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "mappingReleaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "part": {
+            "type": "string"
+          },
+          "positive": {
+            "type": "boolean"
+          },
+          "rawWeight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "weight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Family": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerAccountId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "FileInput": {
+        "properties": {
+          "base64": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "mimeType",
+          "base64"
+        ],
+        "type": "object"
+      },
+      "Goal": {
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "courseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "endDate": {
+            "format": "date",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "goalType": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "paperReference": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "priority": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "scheduleRule": {
+            "type": "string"
+          },
+          "startDate": {
+            "format": "date",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "targetValue": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "GoalChange": {
+        "properties": {
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "confirmedBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "goalId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "GoalInput": {
+        "properties": {
+          "active": {
+            "default": true,
+            "type": "boolean"
+          },
+          "courseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "days": {
+            "items": {
+              "format": "int32",
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "endDate": {
+            "format": "date",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "goalType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "paperReference": {
+            "type": "string"
+          },
+          "period": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "priority": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "reason": {
+            "default": "家长调整目标",
+            "type": "string"
+          },
+          "startDate": {
+            "format": "date",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetValue": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "title",
+          "minutes",
+          "paperReference"
+        ],
+        "type": "object"
+      },
+      "GradeInput": {
+        "properties": {
+          "previewHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedStep"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "result",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "Grading": {
+        "properties": {
+          "attemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "gradedBy": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "number": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "HintInput": {
+        "properties": {
+          "level": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "level"
+        ],
+        "type": "object"
+      },
+      "KC": {
+        "properties": {
+          "behavior": {
+            "type": "string"
+          },
+          "boundary": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "requiredCoverage": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "default": "Procedure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "code",
+          "name",
+          "behavior",
+          "boundary"
+        ],
+        "type": "object"
+      },
+      "KCChangeApply": {
+        "properties": {
+          "confirm": {
+            "type": "string"
+          },
+          "previewHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "previewHash",
+          "confirm"
+        ],
+        "type": "object"
+      },
+      "KCChangeDecision": {
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "KCChangeInput": {
+        "properties": {
+          "effectiveReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fromKCIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "fromReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "proposalType": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/KCChangeTarget"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "proposalType",
+          "rationale",
+          "fromReleaseId",
+          "effectiveReleaseId",
+          "fromKCIds",
+          "targets"
+        ],
+        "type": "object"
+      },
+      "KCChangeProposal": {
+        "properties": {
+          "appliedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appliedBy": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "effectiveReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fromReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "proposalType": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "reviewedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewedBy": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "KCChangeProposalItem": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "proposalId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "proposedRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "side": {
+            "type": "string"
+          },
+          "weight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "KCChangeTarget": {
+        "properties": {
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "weight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "kcId"
+        ],
+        "type": "object"
+      },
+      "KCProposalEvent": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actorId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "proposalId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "KnowledgeMigration": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "effectiveReleaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "evidencePolicy": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fromKCId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fromRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "migrationType": {
+            "type": "string"
+          },
+          "proposalId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "toKCId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "toRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "weight": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "Lesson": {
+        "properties": {
+          "courseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estimatedMinutes": {
+            "default": 5,
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sequence": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "sourceRefs": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "unitId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "sequence",
+          "kcIds"
+        ],
+        "type": "object"
+      },
+      "ManualTaskInput": {
+        "properties": {
+          "mandatory": {
+            "default": true,
+            "type": "boolean"
+          },
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "questionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resourceRef": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "default": "Resource",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "minutes",
+          "resourceRef"
+        ],
+        "type": "object"
+      },
+      "Mapping": {
+        "properties": {
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "mode": {
+            "default": "WholeItem",
+            "type": "string"
+          },
+          "role": {
+            "default": "Primary",
+            "type": "string"
+          },
+          "share": {
+            "default": 1,
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "step": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "kcId"
+        ],
+        "type": "object"
+      },
+      "MappingCorrectionInput": {
+        "properties": {
+          "attemptIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "previewHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "releaseId",
+          "attemptIds",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "Mastery": {
+        "properties": {
+          "alpha": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "beta": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "confidence": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "distinctQuestions": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "effectiveEvidence": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "gaps": {
+            "type": "string"
+          },
+          "generationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "needsRecheck": {
+            "type": "boolean"
+          },
+          "probability": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MemberInput": {
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "userName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userName",
+          "password"
+        ],
+        "type": "object"
+      },
+      "MemberRolesInput": {
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "roles",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "ObservedStep": {
+        "properties": {
+          "hintLevel": {
+            "default": 0,
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "result": {
+            "type": "string"
+          },
+          "step": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "result"
+        ],
+        "type": "object"
+      },
+      "OperationSignal": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "count": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "guidance": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "title",
+          "count",
+          "guidance"
+        ],
+        "type": "object"
+      },
+      "Outbox": {
+        "properties": {
+          "attemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "nextAttemptAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "processedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retries": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "PDFInput": {
+        "properties": {
+          "allowExternalAI": {
+            "default": false,
+            "type": "boolean"
+          },
+          "fileId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "usageScope": {
+            "default": "FamilyOnly",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fileId",
+          "title"
+        ],
+        "type": "object"
+      },
+      "PaperConfirmation": {
+        "properties": {
+          "answerShown": {
+            "default": false,
+            "type": "boolean"
+          },
+          "hintLevel": {
+            "default": 0,
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "previewHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "questionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "sameQuestionConfirmed": {
+            "default": false,
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedStep"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          }
+        },
+        "required": [
+          "releaseId",
+          "questionId",
+          "result",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "PaperDraftInput": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "default": "ShortAnswer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "releaseId",
+          "kcId",
+          "answer",
+          "explanation"
+        ],
+        "type": "object"
+      },
+      "PaperInput": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "errorType": {
+            "default": "Unknown",
+            "type": "string"
+          },
+          "fileId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stem": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stem",
+          "answer"
+        ],
+        "type": "object"
+      },
+      "PaperWrong": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "attemptId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confirmationReason": {
+            "type": "string"
+          },
+          "confirmedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "confirmedBy": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "draftId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorType": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fileId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "questionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "stem": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ParentBurdenInput": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "minutes": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "date",
+          "category",
+          "minutes"
+        ],
+        "type": "object"
+      },
+      "ParentBurdenRecord": {
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "correctionReason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "minutes": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "recordedBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "supersedesId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "ParentBurdenSummary": {
+        "properties": {
+          "contentReviewMinutes": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "dailyMinutes": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ParentBurdenRecord"
+            },
+            "type": "array"
+          },
+          "method": {
+            "type": "string"
+          },
+          "recordCount": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "recordedDays": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/ParentBurdenRecord"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "method",
+          "dailyMinutes",
+          "contentReviewMinutes",
+          "recordedDays",
+          "recordCount",
+          "records",
+          "history"
+        ],
+        "type": "object"
+      },
+      "PlanAdjustmentDetails": {
+        "properties": {
+          "afterTaskIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "beforeTaskIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "deferredTo": {
+            "format": "date",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "default": "DraftAdjustment",
+            "type": "string"
+          },
+          "lockedIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "planId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "removedTaskIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "requestedTaskIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "planId",
+          "revisionId",
+          "reason",
+          "beforeTaskIds",
+          "afterTaskIds",
+          "removedTaskIds",
+          "lockedIds",
+          "requestedTaskIds"
+        ],
+        "type": "object"
+      },
+      "Progress": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "lessonId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ProgressChange": {
+        "properties": {
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "confirmedBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "newProgressId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "oldProgressId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ProgressCorrectionInput": {
+        "properties": {
+          "lessonId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lessonId",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "PublishInput": {
+        "properties": {
+          "confirmWarnings": {
+            "default": false,
+            "type": "boolean"
+          },
+          "previewHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "previewHash"
+        ],
+        "type": "object"
+      },
+      "Question": {
+        "properties": {
+          "answer": {
+            "type": "string"
+          },
+          "coverage": {
+            "default": "Basic",
+            "type": "string"
+          },
+          "difficulty": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "hint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "mappings": {
+            "items": {
+              "$ref": "#/components/schemas/Mapping"
+            },
+            "type": "array"
+          },
+          "policy": {
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "stem": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "variantGroupId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "stem",
+          "answer",
+          "explanation",
+          "type",
+          "difficulty",
+          "policy",
+          "mappings"
+        ],
+        "type": "object"
+      },
+      "ReasonInput": {
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
+      "Relation": {
+        "properties": {
+          "from": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "to": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "default": "Prerequisite",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object"
+      },
+      "Release": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "number": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "payload": {
+            "type": "string"
+          },
+          "publishedBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "withdrawn": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "Resource": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "minutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "paperReference": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "paperReference",
+          "minutes",
+          "kcIds"
+        ],
+        "type": "object"
+      },
+      "Review": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dueDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "errorType": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "generationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stage": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "targetId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "wrongCount": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "RunInput": {
+        "properties": {
+          "provider": {
+            "default": "Mock",
+            "type": "string"
+          },
+          "sourceId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId"
+        ],
+        "type": "object"
+      },
+      "Source": {
+        "properties": {
+          "allowExternalAI": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "fileId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "usageScope": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SourceInput": {
+        "properties": {
+          "allowExternalAI": {
+            "default": false,
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "usageScope": {
+            "default": "FamilyOnly",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ],
+        "type": "object"
+      },
+      "StorageStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "freeBytes": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "freeFraction": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          },
+          "low": {
+            "type": "boolean"
+          },
+          "notice": {
+            "type": "string"
+          },
+          "totalBytes": {
+            "format": "int64",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "available",
+          "totalBytes",
+          "freeBytes",
+          "freeFraction",
+          "low",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "Student": {
+        "properties": {
+          "activeGenerationId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "activeReleaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "dailyMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "grade": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "StudentInput": {
+        "properties": {
+          "dailyMinutes": {
+            "default": 30,
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "grade": {
+            "default": 3,
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "timeZone": {
+            "default": "Asia/Shanghai",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "TaskTransitionDetails": {
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "taskId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "studentId",
+          "taskId",
+          "from",
+          "to",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "Textbook": {
+        "properties": {
+          "edition": {
+            "type": "string"
+          },
+          "grade": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "semester": {
+            "type": "string"
+          },
+          "sourceId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "publisher",
+          "edition",
+          "subject",
+          "grade",
+          "semester"
+        ],
+        "type": "object"
+      },
+      "TextbookUnit": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sequence": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "textbookId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revisionId",
+          "textbookId",
+          "title",
+          "sequence"
+        ],
+        "type": "object"
+      },
+      "TransitionInput": {
+        "properties": {
+          "actualMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "reason": {
+            "default": "",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "WeeklyAdjustment": {
+        "properties": {
+          "details": {
+            "$ref": "#/components/schemas/PlanAdjustmentDetails"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "recordedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recordedAt",
+          "published",
+          "details"
+        ],
+        "type": "object"
+      },
+      "WeeklyCounts": {
+        "properties": {
+          "completed": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "total": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "total",
+          "completed"
+        ],
+        "type": "object"
+      },
+      "WeeklyPlacement": {
+        "properties": {
+          "current": {
+            "type": "boolean"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "original": {
+            "type": "boolean"
+          },
+          "planId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "revision": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "revisionId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "planId",
+          "revisionId",
+          "date",
+          "revision",
+          "original",
+          "current"
+        ],
+        "type": "object"
+      },
+      "WeeklySummary": {
+        "properties": {
+          "actualMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "adjusted": {
+            "$ref": "#/components/schemas/WeeklyCounts"
+          },
+          "adjustments": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyAdjustment"
+            },
+            "type": "array"
+          },
+          "currentDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "dueReviews": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "end": {
+            "format": "date",
+            "type": "string"
+          },
+          "historyNote": {
+            "type": "string"
+          },
+          "observedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "original": {
+            "$ref": "#/components/schemas/WeeklyCounts"
+          },
+          "parentBurden": {
+            "$ref": "#/components/schemas/ParentBurdenSummary"
+          },
+          "pending": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "start": {
+            "format": "date",
+            "type": "string"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyTask"
+            },
+            "type": "array"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "transitions": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyTransition"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "currentDate",
+          "observedAt",
+          "timeZone",
+          "original",
+          "adjusted",
+          "actualMinutes",
+          "dueReviews",
+          "pending",
+          "parentBurden",
+          "tasks",
+          "adjustments",
+          "transitions",
+          "historyNote"
+        ],
+        "type": "object"
+      },
+      "WeeklyTask": {
+        "properties": {
+          "actualMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "estimatedMinutes": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "placements": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyPlacement"
+            },
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
+          },
+          "taskId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "taskId",
+          "title",
+          "status",
+          "estimatedMinutes",
+          "actualMinutes",
+          "placements"
+        ],
+        "type": "object"
+      },
+      "WeeklyTransition": {
+        "properties": {
+          "details": {
+            "$ref": "#/components/schemas/TaskTransitionDetails"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "recordedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recordedAt",
+          "details"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Learning.Api | v1",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.1",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfstringAndstringAndString[]"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/attempts/{id}/grading-context": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/attempts/{id}/grading-preview": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/attempts/{id}/grading-revisions": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GradeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/audit": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Audit"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfListOfSourceAndListOfChunkAndListOfBuilderRunAndBuilderAttempt[]AndListOfCandidateAndListOfAnonymousTypeOfGuidAndintAndstringAndbooleanAndstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/candidates/{id}:decide": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/runs": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/runs/{id}:retry": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfListOfContentDraftAndListOfRelease"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/directory-sources": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstring"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/drafts": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/drafts/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/drafts/{id}/preview": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfstringAndString[]Andstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/drafts/{id}:publish": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/drafts/{id}:review": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/fixture": {
+      "post": {
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kc-changes": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfKCChangeProposal[]AndKCChangeProposalItem[]AndKnowledgeMigration[]AndAnonymousTypeOfGuidAndstringAndstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KCChangeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kc-changes/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndKCProposalEvent[]AndKnowledgeMigration[]Andstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KCChangeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kc-changes/{id}/preview": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfKCChangeProposalAndKCChangeProposalItem[]AndstringAndstringAndstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kc-changes/{id}:apply": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KCChangeApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kc-changes/{id}:decide": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KCChangeDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kc-changes/{id}:submit": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/kcs/{id}/provenance": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/pdf-sources": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PDFInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/releases/{id}:withdraw": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/sources": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/unit-pack": {
+      "post": {
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/family/delete-preview": {
+      "get": {
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/family/export": {
+      "get": {
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/family/members": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndGuidAndstringAndstring"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/family/members/{id}/roles": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberRolesInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/family:delete": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/files": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/files/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/goals/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Outbox"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/jobs/{id}:retry": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/logout": {
+      "post": {
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfActorAndFamily"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/operations": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfDateTimeOffsetAndListOfOperationSignalAndStorageStatusAndObjectAndAnonymousTypeOfintAndintAnddoubleAndIEnumerableOfAnonymousTypeOfGuidAndGuidAndstringAndDateTimeOffsetAndintAndDateTimeOffsetAndstringAndbooleanAndAnonymousTypeOfintAndintAndintAndintAndintAndBackupStatusAndAnonymousTypeOfbooleanAndstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/paper-wrongs/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/paper-wrongs/{id}/confirm": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperConfirmation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/paper-wrongs/{id}/draft": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperDraftInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/paper-wrongs/{id}/preview": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperConfirmation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/parent-burden/{id}:correct": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParentBurdenInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/plans/{id}/questions": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstringAndstringAndstring"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/plans/{id}/tasks": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualTaskInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/plans/{id}:adjust": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/plans/{id}:publish": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/sessions/{id}/attempts": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/sessions/{id}/hints": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HintInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students": {
+      "get": {
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Student"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/attempts": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfListOfAttemptAndListOfGrading"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/availability/{date}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfintAndint"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/catalog": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/child-sessions": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/content/{releaseId}:bind": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "releaseId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/delete-preview": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfstringAndintAndstringAndstring"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/export": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/goal-changes": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GoalChange"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/goals": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Goal"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/mapping-corrections:confirm": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingCorrectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/mapping-corrections:preview": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MappingCorrectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/mastery": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentStatus"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/mastery/{kcId}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kcId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymousTypeOfMasteryAndListOfEvidence"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/paper-wrongs": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PaperWrong"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaperInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/parent-burden": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParentBurdenSummary"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      },
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParentBurdenInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/plans/{date}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/plans/{date}:generate": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/progress": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeHistory",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Progress"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/progress-changes": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProgressChange"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/progress/{progressId}:correct": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "progressId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProgressCorrectionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/reviews": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Review"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/school-progress/{date}/{lessonId}": {
+      "put": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "lessonId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/today": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}/weekly-summary": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeeklySummary"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}:delete": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/students/{id}:rebuild": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/sessions": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}:defer": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeferInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}:transition": {
+      "post": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {}
+        },
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Learning.Api"
+    }
+  ]
+}

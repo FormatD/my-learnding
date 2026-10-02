@@ -42,6 +42,8 @@ python3 tests/progress_api_acceptance.py
 python3 tests/content_authoring_api_acceptance.py
 python3 tests/provenance_api_acceptance.py
 python3 tests/schema_dictionary_acceptance.py
+python3 tests/openapi_contract_acceptance.py
+python3 tests/openapi_acceptance.py
 python3 tests/observed_steps_api_acceptance.py
 python3 tests/paper_learning_api_acceptance.py
 python3 tests/goals_api_acceptance.py
@@ -85,6 +87,7 @@ PDF 限 10 MB、200 页，无文本层明确返回 `NEEDS_OCR`。Mock Builder �
 - `docs/runbooks/local.md`：备份、恢复、删除清单、运行与故障处理。
 - [内容维护手册](docs/runbooks/content-maintenance.md)：来源使用范围、人工审核、发布、撤回和更正。
 - [数据字典](docs/data-dictionary.md)与[结构维护手册](docs/runbooks/schema-maintenance.md)：实际字段、约束、索引和只读核对方式。
+- [接口契约与自动检查](docs/runbooks/api-contract.md)：实际接口快照、兼容检查、本地自动化入口及覆盖限制。
 - `docs/adr`：实现决策。
 
 V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实平板试用及连续四周家庭观察未被开发测试替代。
