@@ -1,11 +1,13 @@
 """AT22/26/36 against a disposable PostgreSQL database and an isolated API listener."""
-import copy,getpass,json,os,secrets,socket,subprocess,tempfile,time,urllib.request,uuid
+import argparse,copy,getpass,json,os,secrets,socket,subprocess,tempfile,time,urllib.request,uuid
 from datetime import date,timedelta
 from pathlib import Path
 import api_acceptance
 from api_acceptance import Client,TODAY
+from review_reporting_acceptance import verify as verify_weekly_reviews
 
 def main():
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--browser",action="store_true",help="Also verify weekly review presentation against the same disposable API.");args=parser.parse_args()
     root=Path(__file__).resolve().parent.parent;env=os.environ.copy();suffix=uuid.uuid4().hex[:12];database='learning_fault_'+suffix
     env.update(PGHOST='127.0.0.1',PGPORT='55432',PGUSER=getpass.getuser(),PGDATABASE=database,PLAN_TEST_USERNAME='plan-fixture-'+suffix,PLAN_TEST_PASSWORD=secrets.token_hex(20))
     env['PATH']='/opt/homebrew/opt/postgresql@16/bin:'+env['PATH'];connection=f'Host=127.0.0.1;Port=55432;Database={database};Username={env["PGUSER"]}';env['PERSISTENCE_TEST_CONNECTION']=connection;env['ConnectionStrings__Learning']=connection
@@ -72,6 +74,10 @@ def main():
                 child_client=Client();child_client.request('/auth/login',credentials);child_client.request('/me');child_client.request('/students/'+sid2+'/child-sessions',{});resumed=child_client.request('/tasks/'+running['id']+'/sessions',{});assert resumed['sessionId']==running_session['sessionId'] and resumed['stem']==running_session['stem'] and resumed['releaseId']==fixture['releaseId'] and resumed['stem']!=question['stem']
                 answer=next(q['answer'] for q in catalog['questions'] if q['id']==running['questionId']);child_client.request('/sessions/'+resumed['sessionId']+'/attempts',{'clientSubmissionId':str(uuid.uuid4()),'answer':answer},expected=201);done=child_client.request('/tasks/'+running['id']+':transition',{'status':'Completed','actualMinutes':599});assert done['actualMinutes']==9 and done['trackedSeconds']>=480 and done['startedAt'] is None
                 print('PASS AT26 切换内容和重发布仍恢复原题/会话，进行中计时不中断，孩子无法伪造实际耗时')
+                verify_weekly_reviews(c,fixture)
+                if args.browser:
+                    browser_env={**env,'LEARNING_TEST_URL':f'http://127.0.0.1:{port}','REVIEW_REPORT_STUDENT':sid}
+                    subprocess.run(['npm','--prefix',str(root/'src/web'),'run','test:e2e','--','tests/review-report.spec.ts'],env=browser_env,check=True,timeout=120)
         finally:
             if child is not None and child.poll() is None:child.terminate();child.wait(timeout=10)
             subprocess.run(['dropdb','--force',database],env=env,check=True)

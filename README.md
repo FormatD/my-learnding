@@ -57,6 +57,8 @@ python3 tests/goal_migration_acceptance.py
 python3 tests/family_migration_acceptance.py
 python3 tests/catalog_migration_acceptance.py
 python3 tests/plan_boundaries_api_acceptance.py
+# 可选：对同一隔离服务运行复习报告浏览器验收
+python3 tests/plan_boundaries_api_acceptance.py --browser
 python3 tests/plan_rule_migration_acceptance.py
 python3 tests/knowledge_changes_api_acceptance.py
 python3 tests/operations_api_acceptance.py

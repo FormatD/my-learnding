@@ -81,6 +81,28 @@ Test("预算执行不从草稿移除或普通延期状态猜测家长确认",()=
     var task=new StudyTask{Status="Deferred",Minutes=5};var detail=new PlanAdjustmentDetails(Guid.NewGuid(),Guid.NewGuid(),"草稿调整",[task.Id],[],[task.Id],[],[],"TaskDeferral",new DateOnly(2026,10,3));
     var draft=new WeeklyAdjustment(Guid.NewGuid(),DateTimeOffset.UtcNow,false,detail);var ordinary=draft with{Published=true,Details=detail with{Kind="DraftAdjustment"}};var result=BudgetReporting.Calculate([task],[draft,ordinary]);Eq(result.EligibleTasks,0);Eq(result.ConfirmedDeferredTasks,0);
 });
+ReviewPassSummary ReviewReport(DateOnly start,DateOnly end,params AssessmentInput[] inputs)
+{
+    foreach(var i in inputs)i.Session.TaskId=i.Task.Id;
+    return ReviewReporting.Calculate(inputs.Select(i=>i.Attempt),inputs.Select(i=>i.Session).DistinctBy(s=>s.Id),inputs.Select(i=>i.Task).DistinctBy(t=>t.Id),inputs.Select(i=>i.Grade),"Asia/Shanghai",start,end);
+}
+Test("周报复习分母只含首次已判分复习，提示与待判分不补通过",()=>{
+    var start=new DateOnly(2026,1,1);var end=start.AddDays(6);
+    var items=new[]{Input(1,type:"Review"),Input(2,false,type:"Review"),Input(3,hint:1,type:"Review"),Input(4,type:"Review",result:"Pending"),Input(5,type:"Review",result:"Partial"),Input(6),Input(7,type:"Review",attemptNo:2)};
+    var r=ReviewReport(start,end,items);Eq(r.Encounters,5);Eq(r.GradedEncounters,4);Eq(r.IndependentPasses,1);Eq(r.PendingEncounters,1);Eq(r.Rate,.25m);
+    items[0].Attempt.AnswerShown=true;Eq(ReviewReport(start,end,items).IndependentPasses,0);
+});
+Test("周报复习重复原题遵守历史24小时窗，观察点提示不算独立",()=>{
+    var id=Guid.NewGuid();var original=Input(1,day:0,questionId:id);var repeated=Input(2,day:0,questionId:id,type:"Review");var later=Input(3,day:2,questionId:id,type:"Review");
+    var r=ReviewReport(new(2026,1,1),new(2026,1,7),later,repeated,original);Eq(r.GradedEncounters,2);Eq(r.IndependentPasses,1);Eq(r.Items[0].Reason,"ROLLING_24H");
+    later.Grade.Steps=Json.Write(new[]{new ObservedStep("calculate","Correct",1)});Eq(ReviewReport(new(2026,1,1),new(2026,1,7),original,later).IndependentPasses,0);
+});
+Test("周报复习采用最新判分、实际作答日期与学生时区，空分母未知",()=>{
+    var i=Input(1,type:"Review");i.Session.TaskId=i.Task.Id;i.Attempt.CreatedAt=new DateTimeOffset(2026,1,7,16,1,0,TimeSpan.Zero);
+    var corrected=new Grading{AttemptId=i.Attempt.Id,Number=2,Result="Incorrect"};i.Grade.Number=1;
+    ReviewPassSummary Read(DateOnly day,string zone)=>ReviewReporting.Calculate([i.Attempt],[i.Session],[i.Task],[corrected,i.Grade],zone,day,day);
+    Eq(Read(new(2026,1,7),"Asia/Shanghai").Rate,null);Eq(Read(new(2026,1,8),"Asia/Shanghai").GradedEncounters,1);Eq(Read(new(2026,1,8),"Asia/Shanghai").IndependentPasses,0);Eq(Read(new(2026,1,7),"UTC").Encounters,1);
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

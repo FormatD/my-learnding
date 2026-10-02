@@ -3333,6 +3333,134 @@
         },
         "type": "object"
       },
+      "ReviewEncounter": {
+        "properties": {
+          "attemptId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "graded": {
+            "type": "boolean"
+          },
+          "gradedAt": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "gradingId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "independentlyPassed": {
+            "type": "boolean"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "questionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "sessionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "taskId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "attemptId",
+          "sessionId",
+          "taskId",
+          "questionId",
+          "occurredAt",
+          "gradingId",
+          "gradedAt",
+          "result",
+          "graded",
+          "independentlyPassed",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "ReviewPassSummary": {
+        "properties": {
+          "encounters": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "gradedEncounters": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "independentPasses": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewEncounter"
+            },
+            "type": "array"
+          },
+          "note": {
+            "type": "string"
+          },
+          "pendingEncounters": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "rate": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "encounters",
+          "gradedEncounters",
+          "independentPasses",
+          "pendingEncounters",
+          "rate",
+          "items",
+          "note"
+        ],
+        "type": "object"
+      },
       "RunInput": {
         "properties": {
           "provider": {
@@ -3952,6 +4080,9 @@
               "string"
             ]
           },
+          "reviewPass": {
+            "$ref": "#/components/schemas/ReviewPassSummary"
+          },
           "start": {
             "format": "date",
             "type": "string"
@@ -3985,6 +4116,7 @@
           "pending",
           "parentBurden",
           "budgetExecutability",
+          "reviewPass",
           "tasks",
           "adjustments",
           "transitions",
