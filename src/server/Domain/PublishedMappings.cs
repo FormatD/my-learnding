@@ -76,6 +76,22 @@ public static class PublishedMappings
             throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","固定映射与原题快照不一致，请核对发布记录。");
         return question with{Policy=set.EvidencePolicy,Mappings=items.OrderBy(i=>i.Sequence).Select(i=>new Mapping(i.KCId,i.Role,i.EvidenceShare,i.EvidenceMode,i.Step)).ToArray()};
     }
+    public static void RequireReference(bool modern,Guid? questionRevision,Guid? mapping)
+    {
+        if(modern && questionRevision!=null && mapping==null)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","记录缺少应有的固定映射，请核对原发布和学习记录；不会自动使用其他版本。");
+    }
+    public static async Task<Question> ReadQuestion(Database db,Release release,Question question,Guid? questionRevision,Guid? mapping)
+    {
+        if(questionRevision!=null && questionRevision!=question.RevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","记录的原题修订与发布快照不一致。");
+        if(mapping==null)
+        {
+            if(questionRevision!=null)RequireReference(await db.Set<ContentReviewRecord>().AnyAsync(r=>r.FamilyId==release.FamilyId && r.PublishedReleaseId==release.Id && r.PublishedMappingVersion=="mapping-container/1"),questionRevision,mapping);
+            return question;
+        }
+        if(await Resolve(db,release,question)!=mapping)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","固定映射与原发布记录不一致。");
+        var set=await db.Set<MappingSetRevision>().SingleAsync(s=>s.FamilyId==release.FamilyId && s.Id==mapping);var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==release.FamilyId && i.SetRevisionId==set.Id).ToArrayAsync();
+        return Project(Json.Read<Catalog>(release.Payload),question,set,items);
+    }
     public static async Task<Guid?> Resolve(Database db,Release release,Question question)
     {
         if(!await db.Set<ContentReviewRecord>().AnyAsync(r=>r.FamilyId==release.FamilyId && r.PublishedReleaseId==release.Id && r.PublishedMappingVersion=="mapping-container/1"))return null;

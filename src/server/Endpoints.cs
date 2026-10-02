@@ -23,20 +23,17 @@ public static class Endpoints
     static async Task<Question> QuestionFor(Database db,LearningSession s)
     {
         var release=await db.Releases.SingleAsync(r=>r.Id==s.ReleaseId && r.FamilyId==s.FamilyId);var catalog=Json.Read<Catalog>(release.Payload);var question=catalog.Questions.Single(q=>q.Id==s.QuestionId);
-        if(s.QuestionRevisionId!=null && s.QuestionRevisionId!=question.RevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","会话原题修订与发布快照不一致。");
-        if(s.MappingSetRevisionId==null)return question;
-        if(await PublishedMappings.Resolve(db,release,question)!=s.MappingSetRevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","会话固定映射与原发布记录不一致。");
-        var set=await db.Set<MappingSetRevision>().SingleAsync(m=>m.Id==s.MappingSetRevisionId && m.FamilyId==s.FamilyId);
-        var items=await db.Set<MappingSetItem>().Where(i=>i.SetRevisionId==set.Id && i.FamilyId==s.FamilyId).ToArrayAsync();
-        return PublishedMappings.Project(catalog,question,set,items);
+        return await PublishedMappings.ReadQuestion(db,release,question,s.QuestionRevisionId,s.MappingSetRevisionId);
     }
     static async Task<(Catalog Catalog,Question Question,Guid ReleaseId)> GradingContext(Database db,Attempt attempt)
     {
         var session=await db.Sessions.SingleAsync(x=>x.Id==attempt.SessionId && x.FamilyId==attempt.FamilyId);
         var correction=await db.Set<CorrectionItem>().Where(x=>x.AttemptId==attempt.Id && x.FamilyId==attempt.FamilyId).OrderByDescending(x=>x.Sequence).FirstOrDefaultAsync();
-        var releaseId=correction?.MappingReleaseId??session.ReleaseId;
-        var catalog=Json.Read<Catalog>((await db.Releases.SingleAsync(x=>x.Id==releaseId && x.FamilyId==attempt.FamilyId)).Payload);
-        return(catalog,catalog.Questions.Single(q=>q.Id==session.QuestionId),releaseId);
+        var original=await QuestionFor(db,session);
+        if(attempt.MappingSetRevisionId!=session.MappingSetRevisionId || attempt.QuestionRevisionId!=null && attempt.QuestionRevisionId!=original.RevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","原作答与原会话的版本依据不一致。");
+        var releaseId=correction?.MappingReleaseId??session.ReleaseId;var release=await db.Releases.SingleAsync(r=>r.Id==releaseId && r.FamilyId==attempt.FamilyId);var catalog=Json.Read<Catalog>(release.Payload);
+        var question=correction==null?original:await PublishedMappings.ReadQuestion(db,release,catalog.Questions.Single(q=>q.Id==session.QuestionId),correction.QuestionRevisionId,correction.MappingSetRevisionId);
+        return(catalog,question,releaseId);
     }
     internal static void ValidateGrade(GradeInput input,Question question)
     {
@@ -238,7 +235,7 @@ public static class Endpoints
             var existing=await db.Sessions.Where(s => s.TaskId==id).OrderByDescending(s => s.StartedAt).FirstOrDefaultAsync();
             if(release.Withdrawn && existing==null)throw new ApiError(422,"WITHDRAWN","内容已撤回，请联系家长。");
             var session=existing??new LearningSession { FamilyId=a.FamilyId,StudentId=task.StudentId,TaskId=id,ReleaseId=release.Id,QuestionId=q.Id,QuestionRevisionId=q.RevisionId,MappingSetRevisionId=await PublishedMappings.Resolve(db,release,q) };
-            if (existing==null) db.Sessions.Add(session);
+            if (existing==null) db.Sessions.Add(session);else q=await QuestionFor(db,session);
             var lastAttempt=await db.Attempts.Where(x=>x.SessionId==session.Id).OrderByDescending(x=>x.Number).FirstOrDefaultAsync();
             var lastGrade=lastAttempt==null?null:await db.Gradings.Where(g=>g.AttemptId==lastAttempt.Id).OrderByDescending(g=>g.Number).FirstOrDefaultAsync();
             var canComplete=await (from attempt in db.Attempts join grade in db.Gradings on attempt.Id equals grade.AttemptId where attempt.SessionId==session.Id && grade.Result!="Pending" select grade.Id).AnyAsync();

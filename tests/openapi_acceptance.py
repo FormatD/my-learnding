@@ -27,6 +27,7 @@ from resource_revision_acceptance import verify as verify_resources
 from mapping_suggestion_acceptance import verify as verify_mappings
 from content_review_acceptance import verify as verify_content_reviews
 from published_mapping_acceptance import verify as verify_published_mappings
+from learning_reference_acceptance import verify as verify_learning_references
 from independent_mapping_acceptance import verify as verify_independent_mappings
 from evidence_revocation_acceptance import verify as verify_revocations
 
@@ -99,6 +100,7 @@ def main():
                 verify_published_mappings(document,client)
                 verify_revocations(document,client)
                 verify_independent_mappings(document,client)
+                verify_learning_references(document,client,env)
                 encoded = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
                 if args.export:
                     args.export.parent.mkdir(parents=True, exist_ok=True)

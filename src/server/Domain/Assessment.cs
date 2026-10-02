@@ -185,6 +185,7 @@ public static class Assessment
         var bindingKeys=bindings.Select(b=>(b.ReleaseId,b.OwnerId,b.OwnerRevisionId,b.SetRevisionId)).ToHashSet();
         var usedReleases=attempts.Select(a=>sessions[a.SessionId].ReleaseId).Concat(corrections.Select(c=>c.MappingReleaseId)).Distinct().ToArray();
         var catalogs=usedReleases.ToDictionary(id=>id,id=>Json.Read<Catalog>(releases[id].Payload));
+        var modernReleases=(await db.Set<ContentReviewRecord>().Where(r=>r.FamilyId==student.FamilyId && r.PublishedReleaseId!=null && usedReleases.Contains(r.PublishedReleaseId.Value) && r.PublishedMappingVersion=="mapping-container/1").Select(r=>r.PublishedReleaseId!.Value).ToArrayAsync(ct)).ToHashSet();
         var batches=await db.Set<CorrectionBatch>().Where(b=>b.FamilyId==student.FamilyId && b.StudentId==student.Id).ToDictionaryAsync(b=>b.Id,ct);
         var inputs=attempts.Select(a=>
         {
@@ -194,6 +195,13 @@ public static class Assessment
             var original=catalogs[session.ReleaseId].Questions.Single(q=>q.Id==session.QuestionId);
             if(session.QuestionRevisionId!=null && session.QuestionRevisionId!=original.RevisionId || a.QuestionRevisionId!=null && a.QuestionRevisionId!=original.RevisionId || correction?.QuestionRevisionId!=null && correction.QuestionRevisionId!=question.RevisionId)
                 throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","记录的题目修订与固定内容版本不一致。");
+            PublishedMappings.RequireReference(modernReleases.Contains(session.ReleaseId),session.QuestionRevisionId,session.MappingSetRevisionId);
+            if(session.MappingSetRevisionId is {} originalSet)
+            {
+                if(!bindingKeys.Contains((session.ReleaseId,session.QuestionId,original.RevisionId,originalSet)) || !sets.TryGetValue(originalSet,out var fixedOriginal))throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","原会话映射与发布记录不一致。");
+                PublishedMappings.Project(catalogs[session.ReleaseId],original,fixedOriginal,itemLookup[originalSet].ToArray());
+            }
+            if(correction!=null)PublishedMappings.RequireReference(modernReleases.Contains(mappingRelease),correction.QuestionRevisionId,correction.MappingSetRevisionId);
             var mapping=correction!=null?correction.MappingSetRevisionId:a.MappingSetRevisionId;
             if(mapping!=null)
             {
