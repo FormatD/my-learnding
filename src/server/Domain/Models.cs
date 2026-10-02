@@ -191,6 +191,7 @@ public class Attempt : Row
 }
 public class Grading : Row
 {
+    public Guid? CorrectionBatchId { get; set; }
     public Guid AttemptId { get; set; }
     public int Number { get; set; }
     public string Result { get; set; } = "Pending";
@@ -220,6 +221,8 @@ public class Generation : Row
 }
 public class AssessmentContext : Row
 {
+    public Guid? GradingCorrectionBatchId { get; set; }
+    public Guid? MappingCorrectionBatchId { get; set; }
     public Guid StudentId { get; set; }
     public Guid GenerationId { get; set; }
     public Guid AttemptId { get; set; }

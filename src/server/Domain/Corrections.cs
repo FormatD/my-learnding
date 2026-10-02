@@ -3,6 +3,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Learning;
 public class CorrectionBatch : Row
 {
+    public string? Cause { get; set; }
+    public string? AffectedAttemptIds { get; set; }
+    public Guid? SourceGradingRevisionId { get; set; }
     public Guid StudentId { get; set; }
     public Guid ReleaseId { get; set; }
     public string PreviewHash { get; set; } = "";
@@ -49,7 +52,7 @@ public static class Corrections
         {
             var a=ctx.Actor();a.Require("Parent");var p=await Preview(db,a,id,input);
             if(input.PreviewHash!=p.Hash)throw new ApiError(412,"CORRECTION_PREVIEW_CHANGED","作答或评估世代已变化，请重新预览。");
-            var batch=new CorrectionBatch {FamilyId=a.FamilyId,StudentId=id,ReleaseId=p.Release.Id,PreviewHash=p.Hash,Reason=input.Reason,ConfirmedBy=a.Id};db.Add(batch);
+            var batch=new CorrectionBatch {FamilyId=a.FamilyId,StudentId=id,ReleaseId=p.Release.Id,PreviewHash=p.Hash,Reason=input.Reason,ConfirmedBy=a.Id,Cause="Mapping",AffectedAttemptIds=Json.Write(input.AttemptIds)};db.Add(batch);
             foreach(var attemptId in input.AttemptIds)
             {
                 var attempt=await db.Attempts.SingleAsync(x=>x.Id==attemptId && x.FamilyId==a.FamilyId);

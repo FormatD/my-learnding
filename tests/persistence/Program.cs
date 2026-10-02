@@ -14,11 +14,14 @@ if(args[0]=="assessment-context-legacy")
 {
     await db.GetService<IMigrator>().MigrateAsync("20261002191928_LearningMappingReferences");
     var f=new Family();var catalog=Content.Fixture();var q=catalog.Questions[0];var r=new Release{FamilyId=f.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};var s=new Student{FamilyId=f.Id,ActiveReleaseId=r.Id};var t=new StudyTask{FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,QuestionId=q.Id};var session=new LearningSession{FamilyId=f.Id,StudentId=s.Id,TaskId=t.Id,ReleaseId=r.Id,QuestionId=q.Id};var a=new Attempt{FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var g=new Grading{FamilyId=f.Id,AttemptId=a.Id,Number=1,Result="Incorrect"};var gen=new Generation{FamilyId=f.Id,StudentId=s.Id,Status="Active",InputHash="legacy-evaluation"};
-    db.AddRange(f,r,s,t,session,a,g,gen);await db.SaveChangesAsync();await Publishing.Register(db,r);s.ActiveGenerationId=gen.Id;await db.SaveChangesAsync();
+    db.AddRange(f,r,s,t,session,a,gen);await db.SaveChangesAsync();
+    await db.Database.ExecuteSqlInterpolatedAsync($"""INSERT INTO "Gradings" ("Id","FamilyId","AttemptId","Number","Result","Method","Reason","Steps","CreatedAt") VALUES ({g.Id},{f.Id},{a.Id},1,'Incorrect','Rule','','[]',{g.CreatedAt})""");
+    var legacyBatch=Guid.NewGuid();var actor=Guid.NewGuid();await db.Database.ExecuteSqlInterpolatedAsync($"""INSERT INTO "CorrectionBatch" ("Id","FamilyId","StudentId","ReleaseId","PreviewHash","Reason","ConfirmedBy","Status","CreatedAt") VALUES ({legacyBatch},{f.Id},{s.Id},{r.Id},'legacy-preview','旧映射确认记录',{actor},'Confirmed',{g.CreatedAt})""");
+    db.Add(new CorrectionItem{FamilyId=f.Id,BatchId=legacyBatch,AttemptId=a.Id,MappingReleaseId=r.Id});await Publishing.Register(db,r);s.ActiveGenerationId=gen.Id;await db.SaveChangesAsync();
     var eid=Guid.NewGuid();var when=DateTimeOffset.UtcNow;var kc=q.Mappings[0].KCId;var revision=catalog.Kcs.Single(k=>k.Id==kc).RevisionId;
     await db.Database.ExecuteSqlInterpolatedAsync($"""INSERT INTO "Evidence" ("Id","FamilyId","StudentId","GenerationId","AttemptId","GradingId","ReleaseId","KCId","KCRevisionId","Part","Positive","RawWeight","Weight","Factors","OccurredAt","CreatedAt") VALUES ({eid},{f.Id},{s.Id},{gen.Id},{a.Id},{g.Id},{r.Id},{kc},{revision},'WholeItem',false,1,1,'legacy factor',{when},{when})""");
     async Task<string> OldBytes(){await db.Database.OpenConnectionAsync();using var cmd=db.Database.GetDbConnection().CreateCommand();cmd.CommandText=$"SELECT (to_jsonb(e)-'ContextId')::text FROM \"Evidence\" e WHERE \"Id\"='{eid}'";return (string)(await cmd.ExecuteScalarAsync())!;}
-    var old=await OldBytes();await db.Database.MigrateAsync();db.ChangeTracker.Clear();Assert(await OldBytes()==old && (await db.Evidence.SingleAsync()).ContextId==null && !await db.Set<AssessmentContext>().AnyAsync(),"upgrade changed old evidence or invented a context");
+    var old=await OldBytes();await db.Database.MigrateAsync();db.ChangeTracker.Clear();Assert(await OldBytes()==old && (await db.Evidence.SingleAsync()).ContextId==null && !await db.Set<AssessmentContext>().AnyAsync(),"upgrade changed old evidence or invented a context");Assert(!await db.Set<EvidenceRevocation>().AnyAsync() && (await db.Gradings.SingleAsync()).CorrectionBatchId==null && (await db.Set<CorrectionBatch>().SingleAsync()).Cause==null,"upgrade fabricated revocations or grading causes");
     await using(var tx=await db.Database.BeginTransactionAsync()){await db.Lock(f.Id);await Assessment.Rebuild(db,await db.Students.SingleAsync());await tx.CommitAsync();}
     var context=await db.Set<AssessmentContext>().SingleAsync();Assert(context.MappingSource=="LegacySnapshot" && context.MappingSetRevisionId==null && context.ActivationStatus=="Active" && context.QuestionRevisionId==q.RevisionId,"new replay guessed a legacy mapping or missed its actual question");
     Assert(await OldBytes()==old && (await db.Evidence.SingleAsync(e=>e.Id==eid)).ContextId==null && (await db.Evidence.SingleAsync(e=>e.GenerationId==context.GenerationId)).ContextId==context.Id,"new replay rewrote old evidence or left new evidence without context");
@@ -142,9 +145,17 @@ if(args[0]=="seed")
     var t=new StudyTask {FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,QuestionId=q.Id,Status="InProgress"};var session=new LearningSession {FamilyId=f.Id,StudentId=s.Id,TaskId=t.Id,ReleaseId=r.Id,QuestionId=q.Id};var a=new Attempt {FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var g=new Grading {FamilyId=f.Id,AttemptId=a.Id,Number=1,Result="Incorrect"};var job=new Outbox {FamilyId=f.Id,StudentId=s.Id,AttemptId=a.Id};
     db.AddRange(f,r,s,t,session,a,g,job);await db.SaveChangesAsync();await Publishing.Register(db,r);await db.SaveChangesAsync();Console.WriteLine("SEEDED");return;
 }
+if(args[0]=="revocation-seed")
+{
+    var s=await db.Students.SingleAsync();var a=await db.Attempts.SingleAsync();var old=await db.Gradings.SingleAsync();var batch=new CorrectionBatch{FamilyId=s.FamilyId,StudentId=s.Id,ReleaseId=s.ActiveReleaseId!.Value,Cause="Grading",AffectedAttemptIds=Json.Write(new[]{a.Id}),SourceGradingRevisionId=old.Id,Reason="一次性故障验收的明确判分更正",PreviewHash="fault-confirmed"};var g=new Grading{FamilyId=s.FamilyId,AttemptId=a.Id,Number=2,Result="Correct",Method="ParentConfirmed",Reason=batch.Reason,CorrectionBatchId=batch.Id};db.AddRange(batch,g,new Outbox{FamilyId=s.FamilyId,StudentId=s.Id,AttemptId=a.Id});await db.SaveChangesAsync();return;
+}
+if(args[0]=="revocation-recover")
+{
+    var pending=await db.Outbox.SingleAsync(o=>o.ProcessedAt==null);Assert(await ProjectionWorker.Consume(db,pending),"correction not processed");var rev=await db.Set<EvidenceRevocation>().SingleAsync();var old=await db.Evidence.SingleAsync(e=>e.Id==rev.EvidenceId);Assert(!old.Positive && old.Weight==1 && (await db.Set<CorrectionBatch>().SingleAsync()).Status=="Applied" && await db.Generations.CountAsync()==2 && await db.Set<AssessmentContext>().CountAsync()==2 && (await db.Masteries.SingleAsync(m=>m.GenerationId==rev.ReplacementGenerationId)).Alpha==3,"replacement or revocation did not commit together");Assert(!await ProjectionWorker.Consume(db,pending) && await db.Set<EvidenceRevocation>().CountAsync()==1,"duplicate correction duplicated revocation");Console.WriteLine("PASS 更正崩溃后重试一次提交撤销、替代证据、上下文与活动指针；重复消费不重复撤销，旧证据不改写");return;
+}
 if(args[0]=="crash")
 {
-    await using var crashing=Open(true);var pending=await crashing.Outbox.SingleAsync();await ProjectionWorker.Consume(crashing,pending);throw new Exception("Should have been terminated before commit");
+    await using var crashing=Open(true);var pending=await crashing.Outbox.SingleAsync(o=>o.ProcessedAt==null);await ProjectionWorker.Consume(crashing,pending);throw new Exception("Should have been terminated before commit");
 }
 if(args[0]=="builder-retry-legacy")
 {

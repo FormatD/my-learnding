@@ -4,7 +4,7 @@
 
 ## 保存与切换
 
-AssessmentContext按每世代、每作答保存实际GradingRevisionId、MappingSetRevisionId、QuestionRevisionId、ContentReleaseId、MappingReleaseId、EvidenceRuleVersion和CorrectionBatchId。完整重建采用每次作答的最新有效判分及最后确认的映射更正；判分更正不替换原始答案，发布更好的映射也不自动重解释旧作答。
+AssessmentContext按每世代、每作答保存实际GradingRevisionId、MappingSetRevisionId、QuestionRevisionId、ContentReleaseId、MappingReleaseId、EvidenceRuleVersion和CorrectionBatchId，并分别保留实际GradingCorrectionBatchId与MappingCorrectionBatchId。后续限额因更正而变化时，通用CorrectionBatchId指向本次重放原因，两个来源字段仍指向该作答实际采用的判分与映射更正。完整重建采用每次作答的最新有效判分及最后确认的映射更正；判分更正不替换原始答案，发布更好的映射也不自动重解释旧作答。
 
 每条上下文明确MappingSource：FixedContainer使用实际固定容器；LegacySnapshot使用原发布快照，不猜测旧映射版本。AdmissionStatus为Pending、RetryExcluded、NoEvidence、ObservedSteps或Eligible。ObservedSteps仍只按已观察结果产生证据，未知步骤不产生正负证据；Eligible也不保证有正权重，重复窗口/提示等规则继续适用。重试不取代首次作答。
 
@@ -36,4 +36,4 @@ python3 tests/worker_fault_acceptance.py
 npm run test:e2e --prefix src/web -- assessment-context.spec.ts
 ```
 
-接口/迁移/故障验收使用自动清理的临时数据库，浏览器用专门标记的验收家庭。合成记录、构造更正和临时恢复耗时不代替正式教材审核、实体设备完整一天或四周真实家庭使用。EvidenceRevocation、设计独立映射创建入口、其他旧引用路径和增量/全量比较仍需继续核对开发。
+接口/迁移/故障验收使用自动清理的临时数据库，浏览器用专门标记的验收家庭。合成记录、构造更正和临时恢复耗时不代替正式教材审核、实体设备完整一天或四周真实家庭使用。[证据撤销](evidence-revocations.md)已接入同一事务；设计独立映射创建入口、其他旧引用路径和增量/全量比较仍需继续核对开发。

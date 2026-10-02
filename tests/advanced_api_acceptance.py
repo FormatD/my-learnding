@@ -44,7 +44,7 @@ def main():
     initial_context=c.request('/students/'+sid+'/assessment-contexts');ctx1=initial_context['contexts'][0]
     assert ctx1['mappingSetRevisionId']==binding1['setRevisionId'] and ctx1['gradingRevisionId']==a['grading']['id'] and ctx1['evidenceRuleVersion']=='evidence/1.1' and ctx1['activationStatus']=='Active'
     assert ctx1['mappingSource']=='FixedContainer' and ctx1['questionRevisionId']==q1['revisionId'] and ctx1['contentReleaseId']==r1['id'] and ctx1['mappingReleaseId']==r1['id']
-    assert c.request('/students/'+sid+'/mastery/'+oldkc)['evidence'][0]['contextId']==ctx1['id']
+    initial_evidence=c.request('/students/'+sid+'/mastery/'+oldkc)['evidence'][0];assert initial_evidence['contextId']==ctx1['id']
     print('PASS AT09 切换发布版本后，当前会话仍按领取内容归因')
     correction={'releaseId':r2['id'],'attemptIds':[a['attempt']['id']],'reason':'人工确认原映射错误'}
     p=c.request('/students/'+sid+'/mapping-corrections:preview',correction)
@@ -65,6 +65,9 @@ def main():
     assert ctx2['id']!=ctx1['id'] and ctx2['mappingSetRevisionId']==binding2['setRevisionId'] and ctx2['correctionBatchId']==correction_row['batchId'] and ctx2['gradingRevisionId']==ctx1['gradingRevisionId']
     assert ctx2['activationStatus']=='Active' and detail['evidence'][0]['contextId']==ctx2['id']
     retired=c.request('/students/'+sid+'/assessment-contexts?generation='+initial_context['generation']['id']);assert retired['contexts'][0]=={**ctx1,'activationStatus':'Retired'} and retired['generation']['status']=='Retired'
+    revocations=c.request('/students/'+sid+'/evidence-revocations');assert revocations['total']==1 and revocations['revocations'][0]['evidenceId']==initial_evidence['id'] and revocations['revocations'][0]['correctionBatchId']==correction_row['batchId']
+    assert revocations['evidence'][0]==initial_evidence and revocations['batches'][0]['cause']=='Mapping' and revocations['batches'][0]['status']=='Applied'
+    assert export['evidenceRevocations'][0]['id']==revocations['revocations'][0]['id'] and data['EvidenceRevocation'][0]['id']==revocations['revocations'][0]['id']
     assert {ctx1['id'],ctx2['id']}.issubset({x['id'] for x in export['assessmentContexts']}) and {ctx1['id'],ctx2['id']}.issubset({x['id'] for x in data['AssessmentContext']})
     # Explicit repeated rebuild reuses the fixed generation and context IDs.
     c.request('/students/'+sid+':rebuild',{})

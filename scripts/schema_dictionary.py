@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "EvidenceRevocation": "已确认更正导致的错误历史证据撤销；原证据不改写，同一证据最多撤销一次。",
     "AssessmentContext": "每世代每作答的固定判分、映射、规则和准入状态；历史缺失不回填。",
     "Accounts": "家长账号；口令仅保存哈希。",
     "Alias": "人工审核的能力别名。",

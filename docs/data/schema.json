@@ -112,6 +112,10 @@
     {
       "id": "20261002201644_AssessmentContexts",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002204255_EvidenceRevocations",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -487,6 +491,22 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "GradingCorrectionBatchId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MappingCorrectionBatchId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -518,6 +538,22 @@
           "name": "FK_AssessmentContext_CorrectionBatch_FamilyId_CorrectionBatchId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"CorrectionBatchId\") REFERENCES \"CorrectionBatch\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_CorrectionBatch_FamilyId_GradingCorrectio~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"GradingCorrectionBatchId\") REFERENCES \"CorrectionBatch\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_CorrectionBatch_FamilyId_MappingCorrectio~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingCorrectionBatchId\") REFERENCES \"CorrectionBatch\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -625,10 +661,22 @@
           "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_GenerationId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"GenerationId\")"
         },
         {
+          "name": "IX_AssessmentContext_FamilyId_GradingCorrectionBatchId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_GradingCorrectionBatchId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"GradingCorrectionBatchId\")"
+        },
+        {
           "name": "IX_AssessmentContext_FamilyId_GradingRevisionId",
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_GradingRevisionId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"GradingRevisionId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_MappingCorrectionBatchId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_MappingCorrectionBatchId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"MappingCorrectionBatchId\")"
         },
         {
           "name": "IX_AssessmentContext_FamilyId_MappingReleaseId",
@@ -2616,6 +2664,30 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "AffectedAttemptIds",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Cause",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceGradingRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -2631,6 +2703,14 @@
           "name": "FK_CorrectionBatch_Families_FamilyId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_CorrectionBatch_Gradings_FamilyId_SourceGradingRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SourceGradingRevisionId\") REFERENCES \"Gradings\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -2678,6 +2758,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_CorrectionBatch_FamilyId_ReleaseId\" ON public.\"CorrectionBatch\" USING btree (\"FamilyId\", \"ReleaseId\")"
+        },
+        {
+          "name": "IX_CorrectionBatch_FamilyId_SourceGradingRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_CorrectionBatch_FamilyId_SourceGradingRevisionId\" ON public.\"CorrectionBatch\" USING btree (\"FamilyId\", \"SourceGradingRevisionId\")"
         },
         {
           "name": "IX_CorrectionBatch_FamilyId_StudentId",
@@ -3274,6 +3360,14 @@
       ],
       "constraints": [
         {
+          "name": "AK_Evidence_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_Evidence_AssessmentContext_FamilyId_ContextId_GenerationId_~",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"ContextId\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingId\") REFERENCES \"AssessmentContext\"(\"FamilyId\", \"Id\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingRevisionId\") ON DELETE CASCADE",
@@ -3340,6 +3434,12 @@
       ],
       "indexes": [
         {
+          "name": "AK_Evidence_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_Evidence_FamilyId_Id\" ON public.\"Evidence\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
           "name": "IX_Evidence_ContextId_KCId_Part_Positive",
           "unique": true,
           "valid": true,
@@ -3398,6 +3498,177 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Evidence\" ON public.\"Evidence\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "EvidenceRevocation",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidenceId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CorrectionBatchId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReplacementGenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Effect",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_EvidenceRevocation_CorrectionBatch_FamilyId_CorrectionBatch~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CorrectionBatchId\") REFERENCES \"CorrectionBatch\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_EvidenceRevocation_Evidence_FamilyId_EvidenceId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"EvidenceId\") REFERENCES \"Evidence\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_EvidenceRevocation_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_EvidenceRevocation_Generations_FamilyId_ReplacementGenerati~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ReplacementGenerationId\") REFERENCES \"Generations\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_EvidenceRevocation_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_EvidenceRevocation",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_EvidenceRevocation_EvidenceId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_EvidenceRevocation_EvidenceId\" ON public.\"EvidenceRevocation\" USING btree (\"EvidenceId\")"
+        },
+        {
+          "name": "IX_EvidenceRevocation_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_EvidenceRevocation_FamilyId\" ON public.\"EvidenceRevocation\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_EvidenceRevocation_FamilyId_CorrectionBatchId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_EvidenceRevocation_FamilyId_CorrectionBatchId\" ON public.\"EvidenceRevocation\" USING btree (\"FamilyId\", \"CorrectionBatchId\")"
+        },
+        {
+          "name": "IX_EvidenceRevocation_FamilyId_EvidenceId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_EvidenceRevocation_FamilyId_EvidenceId\" ON public.\"EvidenceRevocation\" USING btree (\"FamilyId\", \"EvidenceId\")"
+        },
+        {
+          "name": "IX_EvidenceRevocation_FamilyId_ReplacementGenerationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_EvidenceRevocation_FamilyId_ReplacementGenerationId\" ON public.\"EvidenceRevocation\" USING btree (\"FamilyId\", \"ReplacementGenerationId\")"
+        },
+        {
+          "name": "IX_EvidenceRevocation_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_EvidenceRevocation_FamilyId_StudentId\" ON public.\"EvidenceRevocation\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "PK_EvidenceRevocation",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_EvidenceRevocation\" ON public.\"EvidenceRevocation\" USING btree (\"Id\")"
         }
       ]
     },
@@ -4156,6 +4427,14 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "CorrectionBatchId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -4171,6 +4450,14 @@
           "name": "FK_Gradings_Attempts_FamilyId_AttemptId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"AttemptId\") REFERENCES \"Attempts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_Gradings_CorrectionBatch_FamilyId_CorrectionBatchId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CorrectionBatchId\") REFERENCES \"CorrectionBatch\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -4216,6 +4503,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Gradings_FamilyId_AttemptId\" ON public.\"Gradings\" USING btree (\"FamilyId\", \"AttemptId\")"
+        },
+        {
+          "name": "IX_Gradings_FamilyId_CorrectionBatchId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Gradings_FamilyId_CorrectionBatchId\" ON public.\"Gradings\" USING btree (\"FamilyId\", \"CorrectionBatchId\")"
         },
         {
           "name": "PK_Gradings",

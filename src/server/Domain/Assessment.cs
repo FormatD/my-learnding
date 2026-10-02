@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
-public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null,Guid? MappingSetRevisionId=null);
+public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null,Guid? MappingSetRevisionId=null,Guid? GradingCorrectionBatchId=null,Guid? MappingCorrectionBatchId=null);
 public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory,List<MasteryEvent> MasteryHistory,List<AssessmentContext> Contexts);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
@@ -54,7 +54,7 @@ public static class Assessment
         foreach (var input in inputs.OrderBy(x => x.Attempt.Sequence).ThenBy(x => x.Attempt.Id))
         {
             var a=input.Attempt; var q=input.Question; var g=input.Grade; var s=input.Session;
-            var context=new AssessmentContext{FamilyId=family,StudentId=student,GenerationId=generation,AttemptId=a.Id,GradingRevisionId=g.Id,MappingSetRevisionId=input.MappingSetRevisionId,QuestionRevisionId=q.RevisionId,ContentReleaseId=s.ReleaseId,MappingReleaseId=input.MappingReleaseId??s.ReleaseId,CorrectionBatchId=input.CorrectionBatchId,EvidenceRuleVersion=EvidenceRuleVersion,MappingSource=input.MappingSetRevisionId!=null?"FixedContainer":"LegacySnapshot",EvidencePolicy=q.Policy,AdmissionStatus=a.Number!=1?"RetryExcluded":g.Result is not "Correct" and not "Incorrect" and not "Partial"?"Pending":q.Policy=="NoEvidence"?"NoEvidence":q.Policy=="ObservedSteps"?"ObservedSteps":"Eligible"};contexts.Add(context);
+            var context=new AssessmentContext{FamilyId=family,StudentId=student,GenerationId=generation,AttemptId=a.Id,GradingRevisionId=g.Id,MappingSetRevisionId=input.MappingSetRevisionId,QuestionRevisionId=q.RevisionId,ContentReleaseId=s.ReleaseId,MappingReleaseId=input.MappingReleaseId??s.ReleaseId,CorrectionBatchId=input.CorrectionBatchId,GradingCorrectionBatchId=input.GradingCorrectionBatchId,MappingCorrectionBatchId=input.MappingCorrectionBatchId,EvidenceRuleVersion=EvidenceRuleVersion,MappingSource=input.MappingSetRevisionId!=null?"FixedContainer":"LegacySnapshot",EvidencePolicy=q.Policy,AdmissionStatus=a.Number!=1?"RetryExcluded":g.Result is not "Correct" and not "Incorrect" and not "Partial"?"Pending":q.Policy=="NoEvidence"?"NoEvidence":q.Policy=="ObservedSteps"?"ObservedSteps":"Eligible"};contexts.Add(context);
             if (a.Number != 1) continue; // Never substitute a later retry for an ungraded first answer.
             var time=a.CreatedAt; var day=Local(time);
             // Execution is a submitted first answer, even if pending or assisted; it is not a pass.
@@ -184,6 +184,7 @@ public static class Assessment
         var bindingKeys=bindings.Select(b=>(b.ReleaseId,b.OwnerId,b.OwnerRevisionId,b.SetRevisionId)).ToHashSet();
         var usedReleases=attempts.Select(a=>sessions[a.SessionId].ReleaseId).Concat(corrections.Select(c=>c.MappingReleaseId)).Distinct().ToArray();
         var catalogs=usedReleases.ToDictionary(id=>id,id=>Json.Read<Catalog>(releases[id].Payload));
+        var batches=await db.Set<CorrectionBatch>().Where(b=>b.FamilyId==student.FamilyId && b.StudentId==student.Id).ToDictionaryAsync(b=>b.Id,ct);
         var inputs=attempts.Select(a=>
         {
             var session=sessions[a.SessionId];var correction=corrections.LastOrDefault(c=>c.AttemptId==a.Id);var mappingRelease=correction?.MappingReleaseId??session.ReleaseId;
@@ -199,7 +200,9 @@ public static class Assessment
                 if(!sets.TryGetValue(mapping.Value,out var set))throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","固定映射容器不可用。");
                 question=PublishedMappings.Project(catalog,question,set,itemLookup[set.Id].ToArray());
             }
-            return new AssessmentInput(a,session,question,grades.Last(g=>g.AttemptId==a.Id),catalog.Kcs,tasks[session.TaskId],mappingRelease,correction?.BatchId,mapping);
+            var grade=grades.Last(g=>g.AttemptId==a.Id);var cause=correction?.BatchId;
+            if(grade.CorrectionBatchId is {} gradingBatch && (cause==null || batches[gradingBatch].CreatedAt>batches[cause.Value].CreatedAt))cause=gradingBatch;
+            return new AssessmentInput(a,session,question,grade,catalog.Kcs,tasks[session.TaskId],mappingRelease,cause,mapping,grade.CorrectionBatchId,correction?.BatchId);
         }).ToArray();
         var teaching=tasks.Values.Where(t=>t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null).Select(t=>new TeachingAnchor(t.KCId!.Value,t.CompletedAt!.Value)).OrderBy(t=>t.Time).ThenBy(t=>t.KCId).ToArray();
         return(inputs,teaching);
@@ -212,6 +215,7 @@ public static class Assessment
         var gen=new Generation { FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
         db.Generations.Add(gen);
         var output=Replay(student.FamilyId,student.Id,gen.Id,student.TimeZone,inputs,teaching);
+        await EvidenceRevocations.Apply(db,student,gen,output,ct);
         db.AddRange(output.Contexts);db.Evidence.AddRange(output.Evidence); db.Masteries.AddRange(output.Masteries); db.Reviews.AddRange(output.Reviews);
         if (student.ActiveGenerationId.HasValue)
         {

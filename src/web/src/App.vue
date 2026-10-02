@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { api, apiWithVersion, localDate } from './api';
+import EvidenceRevocations from './components/EvidenceRevocations.vue';
 import AssessmentHistory from './components/AssessmentHistory.vue';
 import ContentEditor from './components/ContentEditor.vue';
 import DraftMappingPreview from './components/DraftMappingPreview.vue';
@@ -155,6 +156,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
         <template v-else-if="page==='assessment'">
           <div class="page-heading"><div><p class="eyebrow">EVIDENCE / 学习依据</p><h1>看见进步，也看见缺口</h1><p class="muted">掌握状态是安排学习的线索；每条贡献都能回溯。</p></div><button @click="run(refresh)" :disabled="busy">刷新后台结果</button></div>
           <p v-if="evidencePending" class="warning" role="status">还有 {{evidencePending}} 条结果正在后台处理，页面会短暂等待并自动刷新；持续未完成时请查看后台或手动刷新。</p><section v-if="detail" class="card"><button class="text-button" @click="detail=null">收起详情</button><h2>证据明细</h2><p>模型估计 {{detail.mastery?(detail.mastery.probability*100).toFixed(1):50}}% · 不代表考试正确率</p><pre>{{detail.mastery?.gaps}}</pre><div v-for="e in detail.evidence" class="evidence-row"><strong>{{e.positive?'正':'负'}}证据 {{e.weight}}</strong><span>{{new Date(e.occurredAt).toLocaleString('zh-CN')}}</span><details><summary>权重与版本</summary><pre>{{JSON.parse(e.factors)}}</pre><p>发布版本 {{e.releaseId}}</p><p>作答 {{e.attemptId}}</p><p>{{e.contextId?'已固定独立评估上下文':'旧证据未记录独立上下文'}}</p><p v-if="e.contextId">规则 {{JSON.parse(e.factors).rule}} · {{e.mappingSetRevisionId?'固定映射版本':'原发布快照'}}</p></details></div></section>
+          <EvidenceRevocations v-if="studentId" :key="studentId+':'+assessmentGeneration+':'+evidencePending" :student-id="studentId" />
           <AssessmentHistory v-if="studentId" :key="studentId+':'+assessmentGeneration+':'+evidencePending" :student-id="studentId" />
           <section class="card"><h2>知识点状态</h2><div v-for="m in masteries" class="content-row"><div><h3>{{catalog?.kcs.find((k:Item)=>k.id===m.kcId)?.name || '历史知识点'}} · {{status[m.status]}} <span v-if="m.needsRecheck" class="tag">需复核</span></h3><p>有效证据 {{m.effectiveEvidence.toFixed(2)}} · {{m.distinctQuestions}} 道不同题 · {{m.confidence}} 覆盖级别</p></div><button @click="run(async()=>{detail=await api(`/students/${studentId}/mastery/${m.kcId}`)})">查看依据</button></div><p v-if="!masteries.length" class="empty">还没有可用证据。完成任务或看资源不会直接改变掌握状态。</p></section>
           <section class="card"><h2>错题与复测</h2><div v-for="r in reviews" class="content-row"><div><h3>{{r.targetType==='WrongQuestion'?'错题复习':'知识点复测'}} · {{r.stage}}</h3><p>到期 {{r.dueDate}} · {{status[r.status]}} · 错误类型 {{r.errorType}}</p></div><span class="tag">{{r.wrongCount}} 次独立错误</span></div><p v-if="!reviews.length" class="empty">目前没有复习日程。</p></section>

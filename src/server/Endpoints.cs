@@ -104,7 +104,7 @@ public static class Endpoints
         KnowledgeChanges.Map(api);
         Operations.Map(api);
         PublishedMappings.Map(api);
-        CoverageEditing.Map(api);AssessmentContexts.Map(api);
+        CoverageEditing.Map(api);AssessmentContexts.Map(api);EvidenceRevocations.Map(api);
         api.MapGet("/content/directory-sources",async(Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");return await db.Sources.Where(s=>s.FamilyId==a.FamilyId).OrderBy(s=>s.Title).Select(s=>new{s.Id,s.Title}).ToArrayAsync();});
         api.MapGet("/content",async (Database db,HttpContext ctx) => { var actor=ctx.Actor();if(!actor.Can("Parent"))actor.Require("ContentEditor");return new { drafts=actor.Can("ContentEditor")?await db.Drafts.Where(d => d.FamilyId==actor.FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync():[],releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
         api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return TypedResults.Ok(draft); });
@@ -284,7 +284,8 @@ public static class Endpoints
                 var expected=Content.Hash(Json.Write(new {attemptId=id,gradingId=oldGrade.Id,generationId=student.ActiveGenerationId,count,mappingReleaseId=context.ReleaseId,input.Result,input.Reason,input.Steps}));
                 if (input.PreviewHash!=expected) throw new ApiError(412,"GRADING_PREVIEW_CHANGED","请先预览更正影响；若新作答到达，请重新预览。");
             }
-            var grade=new Grading { FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=attempt.StudentId,AttemptId=id });return TypedResults.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
+            var batch=new CorrectionBatch{FamilyId=a.FamilyId,StudentId=attempt.StudentId,ReleaseId=context.ReleaseId,Cause="Grading",AffectedAttemptIds=Json.Write(new[]{id}),SourceGradingRevisionId=oldGrade.Id,Reason=input.Reason,ConfirmedBy=a.Id,PreviewHash=input.PreviewHash??Content.Hash(Json.Write(new{attemptId=id,oldGrade.Id,input.Result,input.Reason,input.Steps}))};db.Add(batch);
+            var grade=new Grading {CorrectionBatchId=batch.Id, FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=attempt.StudentId,AttemptId=id });return TypedResults.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
         });
         api.MapGet("/students/{id:guid}/mastery",async (Guid id,Database db,HttpContext ctx) => await Assessment.ReadStatus(db,ctx.Actor(),id,ctx.RequestAborted));
         api.MapGet("/students/{id:guid}/mastery/{kcId:guid}",async (Guid id,Guid kcId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");await using var tx=await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);var s=await a.Student(db,id);var evidence=await db.Evidence.Where(e=>e.StudentId==id && e.GenerationId==s.ActiveGenerationId && e.KCId==kcId).OrderBy(e=>e.OccurredAt).ToListAsync();var result=new{mastery=await db.Masteries.SingleOrDefaultAsync(m=>m.StudentId==id && m.GenerationId==s.ActiveGenerationId && m.KCId==kcId),evidence};await tx.CommitAsync();return result; });

@@ -53,6 +53,9 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Attempt>().HasIndex(x => new { x.SessionId, x.Number }).IsUnique();
         b.Entity<Attempt>().Property(x => x.Sequence).UseIdentityAlwaysColumn();
         b.Entity<Grading>().HasIndex(x => new { x.AttemptId, x.Number }).IsUnique();
+        b.Entity<EvidenceRevocation>().HasIndex(r=>r.EvidenceId).IsUnique();
+        Foreign<Student,EvidenceRevocation>(b,"StudentId");Foreign<Generation,EvidenceRevocation>(b,"ReplacementGenerationId");Foreign<Evidence,EvidenceRevocation>(b,"EvidenceId");Foreign<CorrectionBatch,EvidenceRevocation>(b,"CorrectionBatchId");
+        Foreign<Grading,CorrectionBatch>(b,"SourceGradingRevisionId");Foreign<CorrectionBatch,Grading>(b,"CorrectionBatchId");Foreign<CorrectionBatch,AssessmentContext>(b,"GradingCorrectionBatchId");Foreign<CorrectionBatch,AssessmentContext>(b,"MappingCorrectionBatchId");
         b.Entity<AssessmentContext>().HasIndex(x=>new{x.GenerationId,x.AttemptId,x.GradingRevisionId,x.MappingSetRevisionId,x.EvidenceRuleVersion}).IsUnique();
         // One fixed latest grading per attempt in a complete generation also protects legacy NULL mappings.
         b.Entity<AssessmentContext>().HasIndex(x=>new{x.GenerationId,x.AttemptId}).IsUnique();
