@@ -19,6 +19,8 @@ def verify(c):
         payload=json.loads(candidate['protocolPayload']);assert payload['sourceChunkIds']==[candidate['chunkId']] and payload['supportingQuotes']==[candidate['quote']] and candidate['quote'] in chunks[candidate['chunkId']]['text'] and payload['gradeMin']==1 and payload['gradeMax']==12 and payload['modelScore']==0
     attempts=[x for x in state['attempts'] if x['runId']==run['id']];assert len(attempts)==1
     result=json.loads(attempts[0]['protocolResult']);assert result['calls']==1 and result['repaired'] is False and result['output']['schemaVersion']=='kc-candidate/1'
+    calls=c.request('/builder/calls?runId='+run['id']);assert calls['total']==1;call=calls['calls'][0];assert call['status']=='Returned' and call['billingStatus']=='LocalNoCharge' and call['chargedCost']==0 and call['inputTokens'] is None and call['outputTokens'] is None and call['currency'] is None and call['modelConfigHash']==run['modelConfigHash'] and call['outputHash'] and call['elapsedMilliseconds']>=0
+    c.request('/builder/calls?page=0',expected=422);c.request('/builder/calls?pageSize=51',expected=422)
     assert c.request('/builder/runs',{'sourceId':source['id']})['id']==run['id']
     state=c.request('/builder');assert len([x for x in state['attempts'] if x['runId']==run['id']])==1
     print('PASS real Builder validates and persists complete structured candidates with actual local calls, source pairs and reuse; no invented quality score')

@@ -17,6 +17,7 @@ PURPOSES = {
     "Audits": "操作审计；StudentId 为空的旧摘要不推定学生归属。",
     "AuthSessions": "家长/孩子认证会话；仅存令牌哈希，恢复时清除。",
     "Availabilities": "学生日期学习预算与学校作业预留。",
+    "BuilderCall": "独立提交的逐次调用事实、执行身份、实际用量/费用或未知状态；候选回滚不删除，旧历史不补造。",
     "BuilderAttempt": "建库运行每次处理的状态、错误与重试轮次。",
     "BuilderRuns": "辅助建库运行及冻结的输入、模型和提示版本。",
     "Candidates": "建库候选、片段引用及人工审核决定。",

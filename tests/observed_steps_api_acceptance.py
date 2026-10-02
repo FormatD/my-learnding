@@ -42,8 +42,13 @@ def main():
     print('PASS 历史映射更正后使用有效观察点判分，原始作答保持不变且证据不双计')
     direct_source=c.request('/content/drafts',{'title':'独立映射权限验收','catalog':json.loads(r2['payload'])});q=json.loads(r2['payload'])['questions'][0];kcs=json.loads(r2['payload'])['kcs']
     direct={'sourceDraftId':direct_source['id'],'expectedDraftVersion':direct_source['version'],'libraryReleaseId':r2['id'],'ownerType':'Question','ownerId':q['id'],'ownerRevisionId':q['revisionId'],'evidencePolicy':q['policy'],'reason':'核对家庭权限','items':[{'kcId':m['kcId'],'kcRevisionId':next(k['revisionId'] for k in kcs if k['id']==m['kcId']),'role':m['role'],'coverageWeight':1,'evidenceShare':m['share'],'evidenceMode':m['mode'],'step':m['step'],'sequence':i+1,'modelScore':None,'sourceRefs':[f"draft:{direct_source['id']}/Question:{q['revisionId']}"]} for i,m in enumerate(q['mappings'])]}
-    direct_saved=c.request('/content/mapping-sets',direct,expected=201);other.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=404);other.request('/content/mapping-sets',direct,expected=404);assert not other.request('/content/mapping-sets')['sets']
+    direct_saved=c.request('/content/mapping-sets',direct,expected=201);other.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=404);other.request('/content/mapping-sets',direct,expected=404);assert not other.request('/content/mapping-sets')['sets'];assert not other.request('/builder/calls')['calls']
+    source=c.request('/content/sources',{'title':'调用账本权限验收','text':'仅供隔离调用账本权限验收。'},expected=201);run=c.request('/builder/runs',{'sourceId':source['id']},expected=202);other.request('/builder/calls?runId='+run['id'],expected=404)
+    for _ in range(100):
+        if c.request('/builder/calls?runId='+run['id'])['total']:break
+        time.sleep(.05)
+    else:raise AssertionError('scoped call ledger not visible to owner')
     c.request('/students/'+sid+'/child-sessions',{});c.request('/attempts/'+aid+'/grading-context',expected=403);c.request('/plans/'+rev['id']+'/questions',expected=403);c.request('/students/'+sid+'/assessment-contexts',expected=403);c.request('/students/'+sid+'/evidence-revocations',expected=403)
-    c.request('/content/mapping-sets',expected=403);c.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=403);c.request('/content/mapping-sets',direct,expected=403)
+    c.request('/builder/calls',expected=403);c.request('/content/mapping-sets',expected=403);c.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=403);c.request('/content/mapping-sets',direct,expected=403)
     print('PASS 独立映射真实草稿跨家庭404、列表隔离、孩子拒绝读写；孩子不能获取参考答案与家长观察判分上下文')
 if __name__=='__main__':main()

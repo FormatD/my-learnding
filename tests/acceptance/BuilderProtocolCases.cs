@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 public static class BuilderProtocolCases
 {
     static BuilderFragment[] Fragments()=>[new(Guid.NewGuid(),"先乘除后加减，含括号时先算括号内。")];
-    static string Valid(BuilderFragment[] fragments)=>new MockBuilderCandidateProvider().Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None).GetAwaiter().GetResult();
+    static string Valid(BuilderFragment[] fragments)=>new MockBuilderCandidateProvider().Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None).GetAwaiter().GetResult().Output;
     static void Assert(bool value){if(!value)throw new Exception("Builder protocol invariant failed");}
     static void Reject(Action action,string code){try{action();throw new Exception("expected rejection "+code);}catch(ApiError ex){Assert(ex.Code==code);}}
     public static void Validation()
@@ -52,11 +52,11 @@ public static class BuilderProtocolCases
     sealed class Fake(params string[] outputs):IBuilderCandidateProvider
     {
         public List<BuilderProviderRequest> Requests {get;}=[];
-        public Task<string> Generate(BuilderProviderRequest request,CancellationToken ct){ct.ThrowIfCancellationRequested();Requests.Add(request);return Task.FromResult(outputs[Requests.Count-1]);}
+        public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){ct.ThrowIfCancellationRequested();Requests.Add(request);return Task.FromResult(new BuilderProviderResponse(outputs[Requests.Count-1]));}
     }
     sealed class Slow:IBuilderCandidateProvider
     {
         public int Calls;
-        public async Task<string> Generate(BuilderProviderRequest request,CancellationToken ct){Calls++;await Task.Delay(Timeout.Infinite,ct);return "{}";}
+        public async Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){Calls++;await Task.Delay(Timeout.Infinite,ct);return new("{}");}
     }
 }

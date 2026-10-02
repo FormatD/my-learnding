@@ -9,7 +9,7 @@ public static class Builder
 {
     public static void Map(RouteGroupBuilder api)
     {
-        Provenance.Map(api);
+        Provenance.Map(api);BuilderCallTracking.Map(api);
         api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
         api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
         {
@@ -102,7 +102,7 @@ public static class Builder
         var id=run.Id;await tx.CreateSavepointAsync("builder_work",ct);
         try
         {
-            await ValidateRun(db,run,ct);var protocol=await Execute(db,run,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+            await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
             var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
         }
         catch(Exception ex)when(ex is not OperationCanceledException)
@@ -116,7 +116,7 @@ public static class Builder
         await tx.CommitAsync(ct);
     }
     static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=Json.Write(new{run.SourceId,run.Type,run.LibraryReleaseId,run.InputVersion,run.InputHash,run.Provider,run.Model,run.PromptVersion,run.ModelConfigHash,run.ModelConfigPayload})};
-    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,CancellationToken ct)
+    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct)
     {
         if (run.Type=="ParsePDF")
         {
@@ -139,7 +139,7 @@ public static class Builder
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        var output=await BuilderProtocol.Run(new MockBuilderCandidateProvider(),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
+        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,new MockBuilderCandidateProvider()),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
         foreach (var candidate in output.Output.Candidates)
         {
             var chunk=chunks.Single(c=>c.Id==candidate.SourceChunkIds[0]);

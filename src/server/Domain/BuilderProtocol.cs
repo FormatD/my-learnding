@@ -8,7 +8,7 @@ public record BuilderEnvelope(string SchemaVersion,BuilderCandidateOutput[] Cand
 public record BuilderProviderRequest(BuilderFragment[] Fragments,string Schema,string? InvalidOutput=null,string? ValidationCode=null);
 public interface IBuilderCandidateProvider
 {
-    Task<string> Generate(BuilderProviderRequest request,CancellationToken ct);
+    Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct);
 }
 public record BuilderProtocolResult(BuilderEnvelope Output,int Calls,bool Repaired);
 
@@ -43,6 +43,7 @@ public static class BuilderProtocol
     public static BuilderEnvelope Validate(string output,BuilderFragment[] fragments,BuilderLimits? limits=null)
     {
         limits??=new();ValidateInput(fragments,limits);
+        if(output==null)throw Invalid("BUILDER_SCHEMA_INVALID");
         if(output.Length>limits.MaxOutputCharacters)throw Invalid("BUILDER_OUTPUT_LIMIT");
         try
         {
@@ -84,7 +85,8 @@ public static class BuilderProtocol
             string? invalid=null;string? code=null;
             for(var call=1;call<=1+limits.RepairAttempts;call++)
             {
-                var raw=await provider.Generate(new(fragments.ToArray(),Schema,invalid,code),deadline.Token).WaitAsync(deadline.Token);
+                var response=await provider.Generate(new(fragments.ToArray(),Schema,invalid,code),deadline.Token).WaitAsync(deadline.Token);
+                var raw=response.Output;
                 try{return new(Validate(raw,fragments,limits),call,call==2);}
                 catch(ApiError ex)when(ex.Code is "BUILDER_SCHEMA_INVALID" or "BUILDER_SOURCE_INVALID")
                 {if(call==1+limits.RepairAttempts)throw Invalid("BUILDER_NEEDS_REPAIR");invalid=raw;code=ex.Code;}
@@ -99,13 +101,13 @@ public static class BuilderProtocol
 public sealed class MockBuilderCandidateProvider:IBuilderCandidateProvider
 {
     static string Prefix(string value,int max){var length=Math.Min(max,value.Length);if(length<value.Length && char.IsHighSurrogate(value[length-1]))length--;return value[..length];}
-    public Task<string> Generate(BuilderProviderRequest request,CancellationToken ct)
+    public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         var candidates=request.Fragments.Select(f=>{
             var length=Math.Min(80,f.Text.Length);if(length<f.Text.Length && char.IsHighSurrogate(f.Text[length-1]))length--;var quote=f.Text[..length];
             return new BuilderCandidateOutput(Prefix(quote,24),"MATH","Procedure",1,12,"请审核者补充独立可测行为","请审核者补充排除范围",[f.Id],[quote],0);
         }).ToArray();
-        return Task.FromResult(Json.Write(new BuilderEnvelope("kc-candidate/1",candidates)));
+        return Task.FromResult(new BuilderProviderResponse(Json.Write(new BuilderEnvelope("kc-candidate/1",candidates)),new BuilderUsage(null,null,0,null,"LocalNoCharge")));
     }
 }

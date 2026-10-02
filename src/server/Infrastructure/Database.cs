@@ -118,6 +118,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<ReleaseMappingSet>().HasIndex(s=>new{s.ReleaseId,s.OwnerType,s.OwnerId}).IsUnique();
         Foreign<MappingSetRevision, MappingSetItem>(b,"SetRevisionId"); Foreign<ContentIdentity, MappingSetItem>(b,"KCId"); Foreign<ContentRevision, MappingSetItem>(b,"KCRevisionId");
         b.Entity<MappingSetItem>().HasIndex(i=>new{i.SetRevisionId,i.Sequence}).IsUnique();
+        Foreign<BuilderRun,BuilderCall>(b,"RunId");b.Entity<BuilderCall>().HasIndex(c=>new{c.ExecutionId,c.CallNumber}).IsUnique();b.Entity<BuilderCall>().Property(c=>c.ChargedCost).HasPrecision(16,6);
         Foreign<BuilderRun, BuilderAttempt>(b,"RunId");b.Entity<BuilderAttempt>().HasIndex(a=>new{a.RunId,a.RetryRound,a.Number}).IsUnique();
         Foreign<Release, BuilderRun>(b,"LibraryReleaseId"); Foreign<ContentDraft, Candidate>(b,"CreatedDraftId"); Foreign<BuilderRun, Candidate>(b, "RunId"); Foreign<Chunk, Candidate>(b, "ChunkId");
         b.Entity<ContentIdentity>().HasIndex(x => new {x.FamilyId,x.EntityType,x.Code}).IsUnique();

@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 56 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 57 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -49,6 +49,7 @@
 | 20261002211632_IndependentMappingDrafts | 10.0.4 |
 | 20261002222837_BuilderStructuredProtocol | 10.0.4 |
 | 20261002224110_BuilderFrozenConfiguration | 10.0.4 |
+| 20261002225131_BuilderCallLedger | 10.0.4 |
 
 ## Accounts
 
@@ -322,6 +323,50 @@
 - `CREATE INDEX "IX_BuilderAttempt_FamilyId_RunId" ON public."BuilderAttempt" USING btree ("FamilyId", "RunId")`
 - `CREATE UNIQUE INDEX "IX_BuilderAttempt_RunId_RetryRound_Number" ON public."BuilderAttempt" USING btree ("RunId", "RetryRound", "Number")`
 - `CREATE UNIQUE INDEX "PK_BuilderAttempt" ON public."BuilderAttempt" USING btree ("Id")`
+
+## BuilderCall
+
+独立提交的逐次调用事实、执行身份、实际用量/费用或未知状态；候选回滚不删除，旧历史不补造。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| RunId | uuid | 否 | 无 |
+| ExecutionId | uuid | 否 | 无 |
+| RetryRound | integer | 否 | 无 |
+| AttemptNumber | integer | 否 | 无 |
+| CallNumber | integer | 否 | 无 |
+| Repair | boolean | 否 | 无 |
+| Provider | text | 否 | 无 |
+| Model | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| ModelConfigHash | text | 是 | 无 |
+| Status | text | 否 | 无 |
+| StartedAt | timestamp with time zone | 否 | 无 |
+| FinishedAt | timestamp with time zone | 是 | 无 |
+| ElapsedMilliseconds | bigint | 是 | 无 |
+| InputTokens | bigint | 是 | 无 |
+| OutputTokens | bigint | 是 | 无 |
+| ChargedCost | numeric(16,6) | 是 | 无 |
+| Currency | text | 是 | 无 |
+| BillingStatus | text | 否 | 无 |
+| OutputHash | text | 是 | 无 |
+| ErrorCode | text | 是 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_BuilderCall_BuilderRuns_FamilyId_RunId`：`FOREIGN KEY ("FamilyId", "RunId") REFERENCES "BuilderRuns"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderCall_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderCall`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_BuilderCall_ExecutionId_CallNumber" ON public."BuilderCall" USING btree ("ExecutionId", "CallNumber")`
+- `CREATE INDEX "IX_BuilderCall_FamilyId" ON public."BuilderCall" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderCall_FamilyId_RunId" ON public."BuilderCall" USING btree ("FamilyId", "RunId")`
+- `CREATE UNIQUE INDEX "PK_BuilderCall" ON public."BuilderCall" USING btree ("Id")`
 
 ## BuilderRuns
 
