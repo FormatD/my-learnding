@@ -34,7 +34,7 @@ public static class Files
     {
         api.MapPost("/files",(FileInput input,Database db,HttpContext ctx) =>
         {
-            var a=ctx.Actor();a.Require("Parent");byte[] bytes;
+            var a=ctx.Actor();a.Require(input.MimeType=="application/pdf"?"ContentEditor":"Parent");byte[] bytes;
             try { bytes=Convert.FromBase64String(input.Base64); } catch (FormatException) { throw new ApiError(422,"INVALID_FILE","文件编码无效。"); }
             if (bytes.Length==0 || bytes.Length>10_000_000 || input.Name.Length>200) throw new ApiError(422,"FILE_SIZE","文件大小须在 10 MB 以内。");
             var valid=input.MimeType switch { "application/pdf" => bytes.AsSpan().StartsWith("%PDF-"u8),"image/png" => bytes.AsSpan().StartsWith(new byte[] {137,80,78,71,13,10,26,10}),"image/jpeg" => bytes.Length>3 && bytes[0]==255 && bytes[1]==216 && bytes[2]==255,_ => false };
@@ -44,7 +44,8 @@ public static class Files
         api.MapGet("/files/{id:guid}",async (Guid id,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();if (a.Role=="Child") throw new ApiError(404,"NOT_FOUND","文件不存在。");
-            a.Require("Parent");var file=await db.Set<PrivateFile>().SingleOrDefaultAsync(f => f.Id==id && f.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","文件不存在。");
+            var file=await db.Set<PrivateFile>().SingleOrDefaultAsync(f => f.Id==id && f.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","文件不存在。");
+            if(!a.Can("Parent") && (!a.Can("ContentEditor") || !await db.Sources.AnyAsync(s=>s.FamilyId==a.FamilyId && s.FileId==file.Id)))throw new ApiError(404,"NOT_FOUND","文件不存在。");
             return Results.File(file.Bytes,file.MimeType,file.Name);
         });
         api.MapPost("/content/pdf-sources",async (PDFInput input,Database db,HttpContext ctx) =>

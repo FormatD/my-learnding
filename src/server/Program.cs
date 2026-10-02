@@ -14,6 +14,12 @@ if(!OperatingSystem.IsWindows())
     var privateMode=UnixFileMode.UserRead|UnixFileMode.UserWrite|UnixFileMode.UserExecute;
     File.SetUnixFileMode(privateRoot,privateMode);File.SetUnixFileMode(keyRoot,privateMode);
 }
+builder.Configuration["DeletionLedger"]??=Path.Combine(privateRoot,"deleted-students.txt");
+builder.Configuration["FamilyDeletionLedger"]??=Path.Combine(Path.GetDirectoryName(Path.GetFullPath(builder.Configuration["DeletionLedger"]!))!,"deleted-families.txt");
+builder.Configuration["ExportDirectory"]??=Path.Combine(privateRoot,"exports");
+Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(builder.Configuration["FamilyDeletionLedger"]!))!);
+using(var ledger=new FileStream(builder.Configuration["FamilyDeletionLedger"]!,FileMode.OpenOrCreate,FileAccess.Write,FileShare.Read)){}
+builder.Services.AddHostedService<ExportCleanup>();
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRoot)).SetApplicationName("FamilyLearning");
 builder.Services.AddHostedService<ProjectionWorker>();
 builder.Services.AddRateLimiter(o => o.AddPolicy("auth",ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"local",_ => new() { PermitLimit=10,Window=TimeSpan.FromMinutes(1),QueueLimit=0 })));
@@ -64,15 +70,20 @@ app.Use(async (ctx,next) =>
     var hash=Content.Hash(ctx.Request.Cookies[Security.Cookie]??"");
     var session=await db.AuthSessions.SingleOrDefaultAsync(s => s.TokenHash==hash && !s.Revoked && s.ExpiresAt>DateTimeOffset.UtcNow);
     if (session==null) throw new ApiError(401,"LOGIN_REQUIRED","请先登录。");
-    var roles=session.AccountId==null ? "Child" : (await db.Accounts.SingleAsync(a => a.Id==session.AccountId)).Roles;
+    var roles=session.AccountId==null ? "Child" : (await db.Set<FamilyMembership>().SingleOrDefaultAsync(m=>m.AccountId==session.AccountId && m.FamilyId==session.FamilyId))?.Roles??"";
     var actor=new Actor(session.Id,session.FamilyId,session.AccountId,session.StudentId,session.Role,roles); ctx.Items["actor"]=actor;
     if (ctx.Request.Method is "GET" or "HEAD")
-    { ctx.Response.Headers.ETag=$"\"{(await db.Families.SingleAsync(f => f.Id==actor.FamilyId)).Version}\""; await next(); return; }
+    { var readFamily=await db.Families.SingleOrDefaultAsync(f=>f.Id==actor.FamilyId)??throw new ApiError(401,"LOGIN_REQUIRED","请重新登录。");ctx.Response.Headers.ETag=$"\"{readFamily.Version}\""; await next(); return; }
     var key=ctx.Request.Headers["Idempotency-Key"].ToString();
     if (key.Length<8 || key.Length>100) throw new ApiError(422,"IDEMPOTENCY_REQUIRED","请提供有效的请求标识。");
     ctx.Request.EnableBuffering(); using var reader=new StreamReader(ctx.Request.Body,leaveOpen:true); var body=await reader.ReadToEndAsync(); ctx.Request.Body.Position=0;
     var requestHash=Content.Hash(body); var scopeKey=ctx.Request.Method+ctx.Request.Path;
     await using var tx=await db.Database.BeginTransactionAsync(); await db.Lock(actor.FamilyId);
+    var currentSession=await db.AuthSessions.AsNoTracking().SingleOrDefaultAsync(s=>s.Id==actor.SessionId && !s.Revoked && s.ExpiresAt>DateTimeOffset.UtcNow);
+    if(currentSession==null)throw new ApiError(401,"LOGIN_REQUIRED","权限或登录已变化，请重新登录。");
+    var currentRoles=currentSession.AccountId==null?"Child":(await db.Set<FamilyMembership>().AsNoTracking().SingleOrDefaultAsync(m=>m.AccountId==currentSession.AccountId && m.FamilyId==currentSession.FamilyId))?.Roles??"";
+    actor=actor with {Roles=currentRoles};ctx.Items["actor"]=actor;
+
     var cached=await db.Commands.SingleOrDefaultAsync(c => c.FamilyId==actor.FamilyId && c.ActorId==actor.Id && c.Scope==scopeKey && c.Key==key);
     if (cached!=null)
     {
@@ -88,12 +99,20 @@ app.Use(async (ctx,next) =>
         await next();
         if (ctx.Response.StatusCode<400)
         {
+            if(ctx.Items.ContainsKey("familyDeleted"))
+            {
+                await db.SaveChangesAsync();await tx.CommitAsync();
+            }
+            else
+            {
             family.Version++; await db.SaveChangesAsync();
             buffer.Position=0; var result=await new StreamReader(buffer,leaveOpen:true).ReadToEndAsync();
             var cookie=ctx.Response.Headers.SetCookie.ToString();var cookieCipher=cookie.Length==0 ? null : ctx.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("CommandCookies/1").Protect(cookie);
             db.Commands.Add(new() { FamilyId=actor.FamilyId,ActorId=actor.Id,Scope=scopeKey,Key=key,Hash=requestHash,Response=result,StatusCode=ctx.Response.StatusCode,CookieCipher=cookieCipher });
             db.Audits.Add(new() { FamilyId=actor.FamilyId,ActorId=actor.Id,Action=scopeKey,Details=Content.Hash(body) });
             await db.SaveChangesAsync(); await tx.CommitAsync(); ctx.Response.Headers.ETag=$"\"{family.Version}\"";
+            }
+
         }
         buffer.Position=0; await buffer.CopyToAsync(response);
     }

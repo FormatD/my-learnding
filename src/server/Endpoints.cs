@@ -44,19 +44,22 @@ public static class Endpoints
             if (await db.Accounts.AnyAsync(a => a.UserName==input.UserName.Trim())) throw new ApiError(409,"USERNAME_UNAVAILABLE","用户名不可用。");
             await using var tx=await db.Database.BeginTransactionAsync();
             var family=new Family { Name=input.FamilyName??"我的家庭" }; var account=new Account { FamilyId=family.Id,UserName=input.UserName.Trim(),PasswordHash=Security.Password(input.Password) };
-            db.Families.Add(family); db.Accounts.Add(account); await db.SaveChangesAsync();
+            db.Families.Add(family); db.Accounts.Add(account);db.Add(new FamilyMembership{FamilyId=family.Id,AccountId=account.Id,Roles=account.Roles}); await db.SaveChangesAsync();family.OwnerAccountId=account.Id;
             await Security.CreateSession(db,ctx,family.Id,account.Id,null,"Parent"); await tx.CommitAsync();
             return Results.Created("/api/v1/me",new { familyId=family.Id,role="Parent" });
         }).RequireRateLimiting("auth");
         api.MapPost("/auth/login",async (Credentials input,Database db,HttpContext ctx) =>
         {
-            var account=await db.Accounts.SingleOrDefaultAsync(a => a.UserName==input.UserName.Trim());
-            if (account==null || !Security.Check(input.Password,account.PasswordHash)) throw new ApiError(401,"INVALID_CREDENTIALS","用户名或密码不正确。");
-            await Security.CreateSession(db,ctx,account.FamilyId,account.Id,null,"Parent"); return Results.Ok(new { role="Parent" });
+            var initial=await db.Accounts.AsNoTracking().SingleOrDefaultAsync(a => a.UserName==input.UserName.Trim());
+            if(initial==null)throw new ApiError(401,"INVALID_CREDENTIALS","用户名或密码不正确。");
+            await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(initial.FamilyId);
+            var account=await db.Accounts.SingleOrDefaultAsync(a=>a.Id==initial.Id);
+            if (account==null || !await db.Set<FamilyMembership>().AnyAsync(m=>m.FamilyId==account.FamilyId && m.AccountId==account.Id && m.Roles!="") || !Security.Check(input.Password,account.PasswordHash)) throw new ApiError(401,"INVALID_CREDENTIALS","用户名或密码不正确。");
+            await Security.CreateSession(db,ctx,account.FamilyId,account.Id,null,"Parent");await tx.CommitAsync(); return Results.Ok(new { role="Parent" });
         }).RequireRateLimiting("auth");
         api.MapGet("/me",async (Database db,HttpContext ctx) => new { actor=ctx.Actor(),family=await db.Families.SingleAsync(f => f.Id==ctx.Actor().FamilyId) });
         api.MapPost("/logout",async (Database db,HttpContext ctx) => { (await db.AuthSessions.SingleAsync(s => s.Id==ctx.Actor().SessionId)).Revoked=true; ctx.Response.Cookies.Delete(Security.Cookie); return Results.Ok(new { done=true }); });
-        api.MapGet("/students",async (Database db,HttpContext ctx) => await db.Students.Where(s => s.FamilyId==ctx.Actor().FamilyId && (ctx.Actor().Role!="Child" || s.Id==ctx.Actor().StudentId)).OrderBy(s => s.CreatedAt).ToListAsync());
+        api.MapGet("/students",async (Database db,HttpContext ctx) => ctx.Actor().Role!="Child" && !ctx.Actor().Roles.Split(',').Contains("Parent") ? [] : await db.Students.Where(s => s.FamilyId==ctx.Actor().FamilyId && (ctx.Actor().Role!="Child" || s.Id==ctx.Actor().StudentId)).OrderBy(s => s.CreatedAt).ToListAsync());
         api.MapPost("/students",async (StudentInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor(); a.Require("Parent"); ValidateStudent(input);
@@ -88,7 +91,7 @@ public static class Endpoints
             return Results.Ok(progress);
         });
         Goals.Map(api);
-        api.MapGet("/content",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");return new { drafts=await db.Drafts.Where(d => d.FamilyId==ctx.Actor().FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync(),releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
+        api.MapGet("/content",async (Database db,HttpContext ctx) => { var actor=ctx.Actor();if(!actor.Can("Parent"))actor.Require("ContentEditor");return new { drafts=actor.Can("ContentEditor")?await db.Drafts.Where(d => d.FamilyId==actor.FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync():[],releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
         api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return Results.Ok(draft); });
         api.MapPost("/content/drafts",(DraftInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var d=new ContentDraft { FamilyId=a.FamilyId,Title=input.Title,Payload=Json.Write(input.Catalog) };db.Drafts.Add(d);return Results.Ok(d); });
         api.MapPut("/content/drafts/{id:guid}",async (Guid id,DraftInput input,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","已发布版本不可修改，请创建新草稿。");d.Payload=Json.Write(input.Catalog);d.Title=input.Title;d.Status="Draft";d.ReviewedBy=null;d.Version++;return Results.Ok(d); });
@@ -200,7 +203,10 @@ public static class Endpoints
             if(release.Withdrawn && existing==null)throw new ApiError(422,"WITHDRAWN","内容已撤回，请联系家长。");
             var session=existing??new LearningSession { FamilyId=a.FamilyId,StudentId=task.StudentId,TaskId=id,ReleaseId=release.Id,QuestionId=q.Id };
             if (existing==null) db.Sessions.Add(session);
-            return Results.Ok(new { sessionId=session.Id,q.Stem,q.Type,hintLevel=session.HintLevel,answerShown=session.AnswerShown,releaseId=release.Id });
+            var lastAttempt=await db.Attempts.Where(x=>x.SessionId==session.Id).OrderByDescending(x=>x.Number).FirstOrDefaultAsync();
+            var lastGrade=lastAttempt==null?null:await db.Gradings.Where(g=>g.AttemptId==lastAttempt.Id).OrderByDescending(g=>g.Number).FirstOrDefaultAsync();
+            var canComplete=await (from attempt in db.Attempts join grade in db.Gradings on attempt.Id equals grade.AttemptId where attempt.SessionId==session.Id && grade.Result!="Pending" select grade.Id).AnyAsync();
+            return Results.Ok(new { sessionId=session.Id,q.Stem,q.Type,hintLevel=session.HintLevel,answerShown=session.AnswerShown,releaseId=release.Id,canComplete,lastAttempt=lastAttempt==null?null:new { lastAttempt.Answer,result=lastGrade?.Result } });
         });
         api.MapPost("/sessions/{id:guid}/hints",async (Guid id,HintInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();var s=await Owned<LearningSession>(db,a,id);await a.Student(db,s.StudentId);if (input.Level is <1 or >3) throw new ApiError(422,"INVALID_HINT","提示级别无效。");s.HintLevel=Math.Max(s.HintLevel,input.Level);s.AnswerShown|=input.Level==3;var q=await QuestionFor(db,s);return Results.Ok(new { text=input.Level==3 ? q.Answer+"。"+q.Explanation : q.Hint??"请先在纸上尝试。",level=s.HintLevel }); });
         api.MapPost("/sessions/{id:guid}/attempts",async (Guid id,AnswerInput input,Database db,HttpContext ctx) =>

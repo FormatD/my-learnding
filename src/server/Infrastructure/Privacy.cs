@@ -6,6 +6,7 @@ public static class Privacy
 {
     public static void Map(RouteGroupBuilder api)
     {
+        FamilyData.Map(api);
         api.MapGet("/students/{id:guid}/export",async (Guid id,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);

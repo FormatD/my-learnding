@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Learning;
 
 var tests=new List<(string,Action)>();
@@ -42,6 +43,17 @@ Test("同一遇题的两步错误只算一次独立失败",()=>{var prior=Enumer
 Test("AT15 更正释放同构正证据限额后重算下游",()=>{var group=Guid.NewGuid();var inputs=Enumerable.Range(1,4).Select(n=>{var i=Input(n);return i with {Question=i.Question with {VariantGroupId=group}};}).ToArray();var old=Replay(inputs);Near(old.Evidence[2].Weight,.2m);Near(old.Evidence[3].Weight,0m);inputs[0]=inputs[0] with {Grade=new Grading {Result="Incorrect"}};var corrected=Replay(inputs);Near(corrected.Evidence[2].Weight,.8m);Near(corrected.Evidence[3].Weight,.4m);Near(corrected.Evidence.Where(e=>e.Positive).Sum(e=>e.Weight),2m);Near(corrected.Masteries.Single().Beta,3m);});
 Test("AT23 相同事件重放日程不推进两次",()=>{var id=Guid.NewGuid();var inputs=new[]{Input(1,false,questionId:id),Input(2,day:2,questionId:id,type:"Review")};var a=Replay(inputs);var b=Replay(inputs);Eq(a.Reviews.Single().Stage,"R2");Eq(b.Reviews.Single().Stage,"R2");Eq(a.Reviews.Single().DueDate,b.Reviews.Single().DueDate);Eq(a.Masteries.Single().Alpha,b.Masteries.Single().Alpha);});
 Test("AT34 新拆分能力不继承旧概率",()=>{var original=Input(1);var split=new KC(Guid.NewGuid(),Guid.NewGuid(),"SPLIT","拆分能力","独立回答","新的行为边界");var o=Replay(original with {Kcs=[kc,split]});Eq(o.Masteries.Any(m=>m.KCId==split.Id),false);Eq(o.Evidence.Any(e=>e.KCId==split.Id),false);});
+Test("私有导出清理仅删除过期成品，并按家庭隔离",()=>{
+    var dir=Path.Combine(Path.GetTempPath(),"learning-export-test-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);
+    try{
+        var cfg=new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"ExportDirectory",dir}}).Build();
+        var a=Guid.NewGuid();var b=Guid.NewGuid();var expired=ExportCleanup.NewPath(cfg,a);File.WriteAllText(expired,"old");ExportCleanup.Built(expired);File.SetLastWriteTimeUtc(expired,DateTime.UtcNow.AddMinutes(-20));
+        var building=ExportCleanup.NewPath(cfg,a);File.WriteAllText(building,"active");File.SetLastWriteTimeUtc(building,DateTime.UtcNow.AddMinutes(-20));
+        var fresh=ExportCleanup.NewPath(cfg,b);File.WriteAllText(fresh,"fresh");ExportCleanup.Built(fresh);var unrelated=Path.Combine(dir,"notes.zip");File.WriteAllText(unrelated,"notes");File.SetLastWriteTimeUtc(unrelated,DateTime.UtcNow.AddMinutes(-20));
+        Eq(ExportCleanup.Sweep(dir,DateTime.UtcNow,TimeSpan.FromMinutes(15)),1);Eq(File.Exists(building),true);Eq(File.Exists(fresh),true);Eq(File.Exists(unrelated),true);
+        ExportCleanup.RemoveFamily(dir,a);Eq(File.Exists(building),false);Eq(File.Exists(fresh),true);Eq(File.Exists(unrelated),true);
+    }finally{Directory.Delete(dir,true);}
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

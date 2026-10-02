@@ -17,6 +17,7 @@ public abstract class Row
 }
 public class Family
 {
+    public Guid? OwnerAccountId { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "我的家庭";
     public long Version { get; set; } = 1;
@@ -26,6 +27,11 @@ public class Account : Row
     public string UserName { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public string Roles { get; set; } = "Parent,ContentEditor,Publisher";
+}
+public class FamilyMembership : Row
+{
+    public Guid AccountId { get; set; }
+    public string Roles { get; set; } = "Parent";
 }
 public class AuthSession : Row
 {

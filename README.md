@@ -42,10 +42,13 @@ python3 tests/provenance_api_acceptance.py
 python3 tests/observed_steps_api_acceptance.py
 python3 tests/paper_learning_api_acceptance.py
 python3 tests/goals_api_acceptance.py
+python3 tests/family_api_acceptance.py
 dotnet build tests/persistence
 python3 tests/worker_fault_acceptance.py
 python3 tests/goal_migration_acceptance.py
+python3 tests/family_migration_acceptance.py
 python3 tests/restore_acceptance.py
+python3 tests/family_restore_acceptance.py
 cd src/web && npm run test:e2e
 ```
 
@@ -67,3 +70,5 @@ cd src/web && npm run test:e2e
 - `docs/adr`：实现决策。
 
 V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实平板试用及连续四周家庭观察未被开发测试替代。
+
+家庭设置支持负责人管理成员、全家 ZIP 导出及全家删除回执。编辑/发布角色与学生访问权限分开。恢复加密备份必须同时应用独立学生和家庭删除清单，详见本地运行手册。

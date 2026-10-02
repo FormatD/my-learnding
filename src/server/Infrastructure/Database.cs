@@ -57,6 +57,9 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Review>().HasIndex(x => new { x.GenerationId, x.TargetType, x.TargetId }).IsUnique();
         b.Entity<CommandRecord>().HasIndex(x => new { x.FamilyId, x.ActorId, x.Scope, x.Key }).IsUnique();
         b.Entity<Source>().HasIndex(x => new { x.FamilyId, x.Hash }).IsUnique();
+        Foreign<Account, FamilyMembership>(b,"AccountId");
+        b.Entity<FamilyMembership>().HasIndex(m=>new {m.FamilyId,m.AccountId}).IsUnique();
+        b.Entity<Family>().HasOne<Account>().WithMany().HasForeignKey(f=>new {f.Id,f.OwnerAccountId}).HasPrincipalKey(a=>new {a.FamilyId,a.Id}).OnDelete(DeleteBehavior.Restrict);
         Foreign<Student, Goal>(b, "StudentId"); Foreign<Student, GoalChange>(b,"StudentId"); Foreign<Goal, GoalChange>(b,"GoalId");
         b.Entity<Goal>().Property(g=>g.Subject).HasDefaultValue("Unspecified");
         b.Entity<Goal>().Property(g=>g.GoalType).HasDefaultValue("Activity");

@@ -4,6 +4,8 @@ set -eu
 : "${PGDATABASE:?Set a NEW empty database name}"
 : "${DELETION_LEDGER:?Provide the independent deletion ledger}"
 test -f "$DELETION_LEDGER"
+task_family_ledger=${FAMILY_DELETION_LEDGER:-"$(dirname "$DELETION_LEDGER")/deleted-families.txt"}
+test -f "$task_family_ledger" || { echo "Missing independent family deletion ledger" >&2; exit 1; }
 task_plain=$(mktemp)
 trap 'rm -f "$task_plain"' EXIT INT TERM
 printf '%s' "$BACKUP_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --decrypt --output "$task_plain" "$1"
@@ -14,6 +16,19 @@ psql --set=ON_ERROR_STOP=1 <<'SQL'
 DELETE FROM "AuthSessions";
 DELETE FROM "Commands";
 SQL
+while IFS=, read -r task_deleted_family task_receipt; do
+  case "$task_deleted_family,$task_receipt" in *[!0-9a-f,-]*) echo 'Invalid family deletion ledger' >&2; exit 1;; esac
+  test -n "$task_deleted_family" || continue
+  psql --set=ON_ERROR_STOP=1 --set=family="$task_deleted_family" <<'SQL'
+BEGIN;
+SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='Families' AND column_name='OwnerAccountId') AS family_has_owner \gset
+\if :family_has_owner
+UPDATE "Families" SET "OwnerAccountId"=NULL WHERE "Id"=:'family'::uuid;
+\endif
+DELETE FROM "Families" WHERE "Id"=:'family'::uuid;
+COMMIT;
+SQL
+done < "$task_family_ledger"
 while IFS=, read -r task_family_id task_student_id; do
   case "$task_family_id,$task_student_id" in *[!0-9a-f,-]*) echo 'Invalid deletion ledger' >&2; exit 1;; esac
   test -n "$task_student_id" || continue

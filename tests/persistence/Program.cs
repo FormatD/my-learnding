@@ -16,12 +16,27 @@ if(args[0]=="goal-legacy")
     var family=new Family();var catalog=Content.Fixture();var release=new Release {FamilyId=family.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};var legacyStudent=new Student {FamilyId=family.Id,Name="Legacy goal acceptance",ActiveReleaseId=release.Id};
     var goal=new Goal {FamilyId=family.Id,StudentId=legacyStudent.Id,Title="历史阅读目标",Minutes=9,PaperReference="原始纸质引用",Subject="",GoalType="",Period="",ScheduleRule="",TargetValue=0,Priority=0,Version=0};
     var task=new StudyTask {FamilyId=family.Id,StudentId=legacyStudent.Id,ReleaseId=release.Id,GoalSnapshots="",Status="Completed",CompletedAt=DateTimeOffset.UtcNow};
-    db.AddRange(family,release,legacyStudent,goal,task);await db.SaveChangesAsync();
+    await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"Families\" (\"Id\",\"Name\",\"Version\") VALUES ({family.Id},{family.Name},{family.Version})");
+    db.AddRange(release,legacyStudent,goal,task);await db.SaveChangesAsync();
     await db.GetService<IMigrator>().MigrateAsync();db.ChangeTracker.Clear();goal=await db.Goals.SingleAsync();task=await db.Tasks.SingleAsync();legacyStudent=await db.Students.SingleAsync();
     Assert(goal.Subject=="Unspecified" && goal.GoalType=="Activity" && goal.Period=="Daily" && goal.TargetValue==1 && goal.Priority==3 && goal.Version==1 && Json.Read<int[]>(goal.ScheduleRule).Length==7 && goal.Title=="历史阅读目标" && goal.Minutes==9 && goal.PaperReference=="原始纸质引用","legacy defaults invalid or original goal overwritten");
     Assert(task.GoalSnapshots=="[]" && task.Status=="Completed","unknown old goal relationship was inferred");Console.WriteLine("PASS 旧目标补齐结构默认值，原名称/资源/时长不改；旧任务关联保持未知");
     await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(family.Id);var day=DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(legacyStudent.TimeZone)).DateTime);var revision=await Planning.Generate(db,legacyStudent,day);await db.SaveChangesAsync();await tx.CommitAsync();
     var placement=await db.Placements.SingleAsync(p=>p.RevisionId==revision.Id);var planned=await db.Tasks.SingleAsync(t=>t.Id==placement.TaskId);Assert(Json.Read<GoalSnapshot[]>(planned.GoalSnapshots).Single().Id==goal.Id,"migration did not preserve working plans or guessed old completion quota");Console.WriteLine("PASS 真实旧库升级后计划可生成，不用未记录的旧完成任务虚构目标次数");return;
+}
+if(args[0]=="family-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002014148_GoalLegacyDefaults");
+    var single=new Family();var multiple=new Family();var editorOnly=new Family();
+    foreach(var f in new[]{single,multiple,editorOnly})await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"Families\" (\"Id\",\"Name\",\"Version\") VALUES ({f.Id},{f.Name},{f.Version})");
+    var accounts=new[]{new Account{FamilyId=single.Id,UserName="single",Roles="Parent,Publisher"},new Account{FamilyId=multiple.Id,UserName="multi1",Roles="Parent"},new Account{FamilyId=multiple.Id,UserName="multi2",Roles="Parent"},new Account{FamilyId=editorOnly.Id,UserName="editor",Roles="ContentEditor"}};
+    db.AddRange(accounts);await db.SaveChangesAsync();await db.GetService<IMigrator>().MigrateAsync();db.ChangeTracker.Clear();
+    var memberships=await db.Set<FamilyMembership>().ToListAsync();Assert(memberships.Count==4 && accounts.All(a=>memberships.Any(m=>m.AccountId==a.Id && m.FamilyId==a.FamilyId && m.Roles==a.Roles)),"legacy membership permissions lost");
+    Assert((await db.Families.SingleAsync(f=>f.Id==single.Id)).OwnerAccountId==accounts[0].Id,"single parent owner missing");
+    Assert((await db.Families.SingleAsync(f=>f.Id==multiple.Id)).OwnerAccountId==null && (await db.Families.SingleAsync(f=>f.Id==editorOnly.Id)).OwnerAccountId==null,"ambiguous owner inferred");
+    Console.WriteLine("PASS 旧账号角色准确迁移；单家长账号补齐负责人，多账号和纯编辑不推断");
+    try{await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Families\" SET \"OwnerAccountId\"={accounts[0].Id} WHERE \"Id\"={multiple.Id}");throw new Exception("cross-family owner allowed");}catch(DbException){}
+    Console.WriteLine("PASS 数据库外键拒绝跨家庭负责人关联");return;
 }
 if(args[0]=="seed")
 {
