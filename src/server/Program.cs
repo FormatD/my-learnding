@@ -22,6 +22,9 @@ using(var ledger=new FileStream(builder.Configuration["FamilyDeletionLedger"]!,F
 builder.Services.AddHostedService<ExportCleanup>();
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRoot)).SetApplicationName("FamilyLearning");
 builder.Services.AddHostedService<ProjectionWorker>();
+builder.Services.AddSingleton<RequestMetrics>();
+builder.Services.AddSingleton(new StorageProbe(privateRoot));
+builder.Services.AddHostedService<OperationsMonitor>();
 builder.Services.AddRateLimiter(o => o.AddPolicy("auth",ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"local",_ => new() { PermitLimit=10,Window=TimeSpan.FromMinutes(1),QueueLimit=0 })));
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.PropertyNamingPolicy=System.Text.Json.JsonNamingPolicy.CamelCase);
 var app=builder.Build();
@@ -37,6 +40,10 @@ await using (var scope=app.Services.CreateAsyncScope())
         await transaction.CommitAsync();
     }
 }
+app.Use(async(ctx,next)=>
+{
+    try{await next();}finally{if(ctx.Items["actor"] is Actor actor)ctx.RequestServices.GetRequiredService<RequestMetrics>().Record(actor.FamilyId,ctx.Response.StatusCode);}
+});
 app.Use(async (ctx,next) =>
 {
     try { await next(); }

@@ -6,6 +6,7 @@ import PaperReview from './components/PaperReview.vue';
 import GoalEditor from './components/GoalEditor.vue';
 import FamilySettings from './components/FamilySettings.vue';
 import KnowledgeChanges from './components/KnowledgeChanges.vue';
+import OperationalStatus from './components/OperationalStatus.vue';
 type Item = Record<string, any>;
 const deletionReceipt=ref<Item|null>(null);try{deletionReceipt.value=JSON.parse(sessionStorage.getItem('family-deletion-receipt')||'null')}catch{sessionStorage.removeItem('family-deletion-receipt')}
 function closeReceipt(){deletionReceipt.value=null;sessionStorage.removeItem('family-deletion-receipt')}
@@ -96,6 +97,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
       <section v-if="!me&&deletionReceipt" class="card" aria-label="家庭删除回执"><h2>全家数据已删除</h2><p>回执编号：{{deletionReceipt.receiptId}}</p><button @click="downloadReceipt">下载删除回执</button><button @click="closeReceipt">关闭回执</button></section><div v-if="!me" class="login-card"><div class="brand-mark">步</div><p class="eyebrow">每天一小步</p><h1>让学习有迹可循。</h1><p class="muted">家长安排，孩子专注。把计划、作答与复习连接起来。</p><form @submit.prevent="login"><label>家长用户名<input v-model="credentials.userName" autocomplete="username" required minlength="3"></label><label>家长密码<input v-model="credentials.password" type="password" :autocomplete="registering?'new-password':'current-password'" required :minlength="registering?12:1"></label><label v-if="registering">家庭名称<input v-model="credentials.familyName"></label><button class="primary" :disabled="busy">{{registering?'创建私有家庭':'登录'}}</button></form><button class="text-button" @click="registering=!registering">{{registering?'已有账号？登录':'首次使用？创建家庭'}}</button></div>
       <template v-else>
         <header class="topbar"><span>{{ isChild ? '专注今天，慢慢进步' : '北师大版 · 三年级上册 · 混合运算' }}</span><div><select v-if="students.length" v-model="studentId" aria-label="切换学生" :disabled="busy" @change="changeStudent"><option v-for="s in students" :value="s.id">{{s.name}}</option></select><span class="date-chip">{{date}}</span></div></header>
+        <OperationalStatus v-if="can('Parent')" :detailed="page==='settings'" @details="navigate('settings')" />
         <section v-if="can('Parent') && !students.length && !['content','builder','settings'].includes(page)" class="empty card"><h1>先认识一下小学习者</h1><p>创建学生，再准备内容和今日计划。</p><form class="form-grid" @submit.prevent="createStudent"><label>孩子昵称<input v-model="newStudent.name" required></label><label>年级<input v-model.number="newStudent.grade" type="number" min="1" max="12"></label><label>每天可用分钟<input v-model.number="newStudent.dailyMinutes" type="number" min="0" max="600"></label><button class="primary" :disabled="busy">创建学生</button></form></section>
         <template v-else-if="page==='today'">
           <div class="page-heading"><div><p class="eyebrow">TODAY / 今日学习</p><h1>{{student?.name}}，今天也向前一步</h1><p class="muted">一次专注一个任务，做完就去休息。</p></div><button v-if="!isChild" @click="enterChild" :disabled="busy">进入孩子模式 ↗</button></div>

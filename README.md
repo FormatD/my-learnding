@@ -54,16 +54,19 @@ python3 tests/catalog_migration_acceptance.py
 python3 tests/plan_boundaries_api_acceptance.py
 python3 tests/plan_rule_migration_acceptance.py
 python3 tests/knowledge_changes_api_acceptance.py
+python3 tests/operations_api_acceptance.py
 python3 tests/restore_acceptance.py
 python3 tests/family_restore_acceptance.py
 cd src/web && npm run test:e2e
 ```
 
-常规接口验收需要服务已经启动，只创建验收家庭。计划边界和能力变更验收自行启动隔离服务；能力变更验收另需 GPG 做隔离加密恢复。计划边界、能力变更与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
+常规接口验收需要服务已经启动，只创建验收家庭。计划边界、运行监控和能力变更验收自行启动隔离服务；能力变更验收另需 GPG 做隔离加密恢复。计划边界、运行监控、能力变更与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
 
 ## 运行配置
 
 `ConnectionStrings__Learning` 指定 PostgreSQL 连接。默认仅在本机 55432 端口访问 `learning` 数据库。服务默认监听本机，远程部署需另行配置 HTTPS、受限数据库账号和代理。
+
+家长“家庭设置”可查看后台运行状态、当前家庭待处理结果及原记录重试入口；超过30秒或自动重试停止会提示，独立监控记本地日志。请求统计只覆盖本次服务启动后的分钟窗口，完整备份仍需另行配置。
 
 后台每 500 毫秒读取同库 Outbox，在事务中整学生回放固定事件序列，创建新评估世代后原子切换活动绑定。历史世代保留用于审计，当前计算不双计。更正判分先预览影响，再明确确认。
 
