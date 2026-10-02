@@ -102,6 +102,8 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         Foreign<Source, Chunk>(b, "SourceId"); Foreign<Source, BuilderRun>(b, "SourceId");
         Foreign<ContentDraft, ContentReviewRecord>(b,"DraftId"); Foreign<Account, ContentReviewRecord>(b,"ReviewerId"); Foreign<Release, ContentReviewRecord>(b,"PublishedReleaseId");
         b.Entity<ContentReviewRecord>().HasIndex(r=>new{r.DraftId,r.DraftVersion});
+        Foreign<ContentDraft, IndependentMappingDraft>(b,"SourceDraftId");Foreign<MappingSetRevision, IndependentMappingDraft>(b,"SetRevisionId");Foreign<Release, IndependentMappingDraft>(b,"LibraryReleaseId");Foreign<Account, IndependentMappingDraft>(b,"SubmittedBy");
+        b.Entity<IndependentMappingDraft>().HasIndex(d=>d.SetRevisionId).IsUnique();
         Foreign<ContentDraft, MappingRun>(b,"SourceDraftId"); Foreign<Release, MappingRun>(b,"LibraryReleaseId");
         b.Entity<MappingRun>().HasIndex(r=>new{r.FamilyId,r.InputHash}).IsUnique();
         Foreign<MappingRun, MappingSuggestion>(b,"RunId");
@@ -110,7 +112,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<MappingReviewDecision>().HasIndex(d=>d.SuggestionId).IsUnique();
         Foreign<ContentDraft, MappingSetRevision>(b,"DraftId"); Foreign<MappingReviewDecision, MappingSetRevision>(b,"ReviewDecisionId"); Foreign<ContentReviewRecord, MappingSetRevision>(b,"ContentReviewRecordId");
         b.Entity<MappingSetRevision>().Property(s=>s.CoverageOrigin).HasDefaultValue("HumanReviewed");
-        b.Entity<MappingSetRevision>().ToTable(t=>t.HasCheckConstraint("CK_MappingSetRevision_ReviewSource","(\"ReviewDecisionId\" IS NOT NULL) <> (\"ContentReviewRecordId\" IS NOT NULL)"));
+        b.Entity<MappingSetRevision>().ToTable(t=>t.HasCheckConstraint("CK_MappingSetRevision_ReviewSource","(\"ReviewStatus\" = 'Draft' AND \"ReviewDecisionId\" IS NULL AND \"ContentReviewRecordId\" IS NULL) OR (\"ReviewStatus\" IN ('ReviewedDraft','ReviewedCatalog') AND ((\"ReviewDecisionId\" IS NOT NULL) <> (\"ContentReviewRecordId\" IS NOT NULL)))"));
         b.Entity<MappingSetRevision>().HasIndex(s=>new{s.FamilyId,s.OwnerType,s.OwnerRevisionId});
         Foreign<Release, ReleaseMappingSet>(b,"ReleaseId"); Foreign<MappingSetRevision, ReleaseMappingSet>(b,"SetRevisionId");
         b.Entity<ReleaseMappingSet>().HasIndex(s=>new{s.ReleaseId,s.OwnerType,s.OwnerId}).IsUnique();

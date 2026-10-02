@@ -36,4 +36,4 @@ python3 tests/worker_fault_acceptance.py
 npm run test:e2e --prefix src/web -- assessment-context.spec.ts
 ```
 
-接口/迁移/故障验收使用自动清理的临时数据库，浏览器用专门标记的验收家庭。合成记录、构造更正和临时恢复耗时不代替正式教材审核、实体设备完整一天或四周真实家庭使用。[证据撤销](evidence-revocations.md)已接入同一事务；设计独立映射创建入口、其他旧引用路径和增量/全量比较仍需继续核对开发。
+接口/迁移/故障验收使用自动清理的临时数据库，浏览器用专门标记的验收家庭。合成记录、构造更正和临时恢复耗时不代替正式教材审核、实体设备完整一天或四周真实家庭使用。[证据撤销](evidence-revocations.md)已接入同一事务；[设计独立映射创建入口](independent-mappings.md)已提供待审创建/真实审核发布；其他旧引用路径和增量/全量比较仍需继续核对开发。

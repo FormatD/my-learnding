@@ -104,7 +104,7 @@ public static class Endpoints
         KnowledgeChanges.Map(api);
         Operations.Map(api);
         PublishedMappings.Map(api);
-        CoverageEditing.Map(api);AssessmentContexts.Map(api);EvidenceRevocations.Map(api);
+        CoverageEditing.Map(api);IndependentMappings.Map(api);AssessmentContexts.Map(api);EvidenceRevocations.Map(api);
         api.MapGet("/content/directory-sources",async(Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");return await db.Sources.Where(s=>s.FamilyId==a.FamilyId).OrderBy(s=>s.Title).Select(s=>new{s.Id,s.Title}).ToArrayAsync();});
         api.MapGet("/content",async (Database db,HttpContext ctx) => { var actor=ctx.Actor();if(!actor.Can("Parent"))actor.Require("ContentEditor");return new { drafts=actor.Can("ContentEditor")?await db.Drafts.Where(d => d.FamilyId==actor.FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync():[],releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
         api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return TypedResults.Ok(draft); });

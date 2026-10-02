@@ -34,6 +34,7 @@ public static class ContentReviews
         await CoverageEditing.ValidateSources(db,actor.FamilyId,Json.Read<Catalog>(draft.Payload));
         await CatalogDirectory.ValidateSources(db,actor.FamilyId,Json.Read<Catalog>(draft.Payload));var errors=Content.Validate(Json.Read<Catalog>(draft.Payload));
         if(errors.Length>0)throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));
+        await IndependentMappings.Review(db,review,Json.Read<Catalog>(draft.Payload));
         db.Add(review);draft.Status="Approved";draft.ReviewedBy=actor.Id;
         db.Audits.Add(new(){FamilyId=actor.FamilyId,ActorId=actor.Id,Action="ContentSnapshotReviewed",Details=Json.Write(new{review.Id,review.DraftId,review.DraftVersion,review.PayloadHash,review.Scope,review.Reason,review.ReasonSource})});
         return draft;

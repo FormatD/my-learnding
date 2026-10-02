@@ -116,6 +116,10 @@
     {
       "id": "20261002204255_EvidenceRevocations",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002211632_IndependentMappingDrafts",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -4519,6 +4523,209 @@
       ]
     },
     {
+      "name": "IndependentMappingDraft",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SetRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceDraftId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceDraftVersion",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourcePayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SubmittedBy",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Provider",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_IndependentMappingDraft_Accounts_FamilyId_SubmittedBy",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SubmittedBy\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_IndependentMappingDraft_Drafts_FamilyId_SourceDraftId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SourceDraftId\") REFERENCES \"Drafts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_IndependentMappingDraft_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_IndependentMappingDraft_MappingSetRevision_FamilyId_SetRevi~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_IndependentMappingDraft_Releases_FamilyId_LibraryReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LibraryReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_IndependentMappingDraft",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_IndependentMappingDraft_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_IndependentMappingDraft_FamilyId\" ON public.\"IndependentMappingDraft\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_IndependentMappingDraft_FamilyId_LibraryReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_IndependentMappingDraft_FamilyId_LibraryReleaseId\" ON public.\"IndependentMappingDraft\" USING btree (\"FamilyId\", \"LibraryReleaseId\")"
+        },
+        {
+          "name": "IX_IndependentMappingDraft_FamilyId_SetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_IndependentMappingDraft_FamilyId_SetRevisionId\" ON public.\"IndependentMappingDraft\" USING btree (\"FamilyId\", \"SetRevisionId\")"
+        },
+        {
+          "name": "IX_IndependentMappingDraft_FamilyId_SourceDraftId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_IndependentMappingDraft_FamilyId_SourceDraftId\" ON public.\"IndependentMappingDraft\" USING btree (\"FamilyId\", \"SourceDraftId\")"
+        },
+        {
+          "name": "IX_IndependentMappingDraft_FamilyId_SubmittedBy",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_IndependentMappingDraft_FamilyId_SubmittedBy\" ON public.\"IndependentMappingDraft\" USING btree (\"FamilyId\", \"SubmittedBy\")"
+        },
+        {
+          "name": "IX_IndependentMappingDraft_SetRevisionId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_IndependentMappingDraft_SetRevisionId\" ON public.\"IndependentMappingDraft\" USING btree (\"SetRevisionId\")"
+        },
+        {
+          "name": "PK_IndependentMappingDraft",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_IndependentMappingDraft\" ON public.\"IndependentMappingDraft\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
       "name": "KCChangeProposal",
       "columns": [
         {
@@ -5951,7 +6158,7 @@
         {
           "name": "CK_MappingSetRevision_ReviewSource",
           "kind": "c",
-          "definition": "CHECK ((\"ReviewDecisionId\" IS NOT NULL) <> (\"ContentReviewRecordId\" IS NOT NULL))",
+          "definition": "CHECK (\"ReviewStatus\" = 'Draft'::text AND \"ReviewDecisionId\" IS NULL AND \"ContentReviewRecordId\" IS NULL OR (\"ReviewStatus\" = ANY (ARRAY['ReviewedDraft'::text, 'ReviewedCatalog'::text])) AND (\"ReviewDecisionId\" IS NOT NULL) <> (\"ContentReviewRecordId\" IS NOT NULL))",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false

@@ -48,7 +48,7 @@ public static class PublishedMappings
         foreach(var selection in Owners(c))
         {
             var owner=MappingSuggestions.Owner(c,selection);var definitionHash=Content.Hash(MappingSuggestions.Definition(c,owner.OwnerType,owner.Id));
-            var candidates=await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==release.FamilyId && s.OwnerType==owner.OwnerType && s.OwnerId==owner.Id && s.OwnerRevisionId==owner.RevisionId).OrderByDescending(s=>s.ReviewDecisionId!=null).ThenByDescending(s=>s.RevisionNo).ToArrayAsync();
+            var candidates=await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==release.FamilyId && s.OwnerType==owner.OwnerType && s.OwnerId==owner.Id && s.OwnerRevisionId==owner.RevisionId && s.ReviewStatus!="Draft").OrderByDescending(s=>s.ReviewDecisionId!=null).ThenByDescending(s=>s.RevisionNo).ToArrayAsync();
             MappingSetRevision? chosen=null;
             foreach(var set in candidates)
             {
@@ -57,6 +57,7 @@ public static class PublishedMappings
                 if(Matches(c,owner,set,items) && (!(c.MappingCoverage??[]).Any(r=>r.OwnerType==owner.OwnerType && r.OwnerId==owner.Id) || Projection(c,owner).Select((m,i)=>CoverageEditing.Weight(c,owner,m)==items.OrderBy(x=>x.Sequence).ElementAt(i).CoverageWeight).All(v=>v))){chosen=set;break;}
                 if(set.ReviewDecisionId!=null && !Matches(c,owner,set,items,includeCoverage:false))throw new ApiError(422,"MAPPING_LIBRARY_REVISION_CHANGED","逐项审核映射必须保留原能力版本和完整归因。");
             }
+            if(chosen!=null)await IndependentMappings.ValidateForPublish(db,chosen);
             if(chosen==null)
             {
                 var projection=Projection(c,owner);

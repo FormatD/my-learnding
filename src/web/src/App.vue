@@ -12,6 +12,7 @@ import KnowledgeChanges from './components/KnowledgeChanges.vue';
 import OperationalStatus from './components/OperationalStatus.vue';
 import BuilderRuns from './components/BuilderRuns.vue';
 import MappingWorkbench from './components/MappingWorkbench.vue';
+import IndependentMappingEditor from './components/IndependentMappingEditor.vue';
 import ContentReviewHistory from './components/ContentReviewHistory.vue';
 import PublishedMappingView from './components/PublishedMappingView.vue';
 const mappingReleaseId=ref(''),coverageDraftId=ref(''),draftVersion=ref('');
@@ -151,6 +152,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
           <section class="card"><h2>已发布版本</h2><div v-for="r in content.releases" class="content-row"><div><h3>内容版本 {{r.number}}</h3><p>内容指纹 {{r.hash.slice(0,12)}} · 发布后保持不变</p><details><summary>教材与课程目录</summary><p v-for="b in JSON.parse(r.payload).textbooks||[]">{{b.publisher}} · {{b.grade}} 年级{{b.semester}} · {{b.edition}}</p><p v-for="u in JSON.parse(r.payload).units||[]">第 {{u.sequence}} 单元 · {{u.title}}</p><p v-for="c in JSON.parse(r.payload).courses||[]">{{c.title}} · {{c.provider}}</p></details><details><summary>能力定义与来源</summary><div v-for="k in JSON.parse(r.payload).kcs" class="content-editor-row"><p>{{k.name}}</p><button v-if="can('ContentEditor')" @click="showProvenance(k.id)" :disabled="busy">查看能力来源</button></div></details></div><button v-if="can('ContentEditor')" :disabled="busy" @click="mappingReleaseId=r.id">查看发布映射</button><button v-if="can('Parent')" :disabled="busy||!studentId" @click="bindContent(r.id)">{{student?.activeReleaseId===r.id?'当前学生已绑定':'绑定当前学生'}}</button></div></section>
           <PublishedMappingView v-if="mappingReleaseId&&can('ContentEditor')" :key="mappingReleaseId" :release="content.releases.find((r:Item)=>r.id===mappingReleaseId)!" />
           <KnowledgeChanges v-if="can('ContentEditor')" :releases="content.releases" :publisher="can('Publisher')" :disabled="busy" />
+          <IndependentMappingEditor v-if="can('ContentEditor')" :drafts="content.drafts" :releases="content.releases" :disabled="busy||!!draftId" @refresh="run(refresh)" @edit-draft="id=>{const d=content.drafts.find((d:Item)=>d.id===id);if(d)editDraft(d)}" />
           <MappingWorkbench v-if="can('ContentEditor')" :drafts="content.drafts" :releases="content.releases" :disabled="busy||!!draftId" @refresh="run(refresh)" @edit-draft="id=>{const d=content.drafts.find((d:Item)=>d.id===id);if(d)editDraft(d)}" />
         </template>
         <template v-else-if="page==='assessment'">

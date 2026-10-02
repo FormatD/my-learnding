@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 55 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 56 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -46,6 +46,7 @@
 | 20261002191928_LearningMappingReferences | 10.0.4 |
 | 20261002201644_AssessmentContexts | 10.0.4 |
 | 20261002204255_EvidenceRevocations | 10.0.4 |
+| 20261002211632_IndependentMappingDrafts | 10.0.4 |
 
 ## Accounts
 
@@ -953,6 +954,45 @@
 - `CREATE INDEX "IX_Gradings_FamilyId_CorrectionBatchId" ON public."Gradings" USING btree ("FamilyId", "CorrectionBatchId")`
 - `CREATE UNIQUE INDEX "PK_Gradings" ON public."Gradings" USING btree ("Id")`
 
+## IndependentMappingDraft
+
+独立映射草稿的固定来源、能力库、提交人及维护原因；创建不代表审核。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| SetRevisionId | uuid | 否 | 无 |
+| SourceDraftId | uuid | 否 | 无 |
+| SourceDraftVersion | bigint | 否 | 无 |
+| SourcePayload | text | 否 | 无 |
+| SourceHash | text | 否 | 无 |
+| LibraryReleaseId | uuid | 否 | 无 |
+| LibraryHash | text | 否 | 无 |
+| SubmittedBy | uuid | 否 | 无 |
+| Provider | text | 否 | 无 |
+| Reason | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_IndependentMappingDraft_Accounts_FamilyId_SubmittedBy`：`FOREIGN KEY ("FamilyId", "SubmittedBy") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_IndependentMappingDraft_Drafts_FamilyId_SourceDraftId`：`FOREIGN KEY ("FamilyId", "SourceDraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_IndependentMappingDraft_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_IndependentMappingDraft_MappingSetRevision_FamilyId_SetRevi~`：`FOREIGN KEY ("FamilyId", "SetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_IndependentMappingDraft_Releases_FamilyId_LibraryReleaseId`：`FOREIGN KEY ("FamilyId", "LibraryReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_IndependentMappingDraft`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_IndependentMappingDraft_FamilyId" ON public."IndependentMappingDraft" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_IndependentMappingDraft_FamilyId_LibraryReleaseId" ON public."IndependentMappingDraft" USING btree ("FamilyId", "LibraryReleaseId")`
+- `CREATE INDEX "IX_IndependentMappingDraft_FamilyId_SetRevisionId" ON public."IndependentMappingDraft" USING btree ("FamilyId", "SetRevisionId")`
+- `CREATE INDEX "IX_IndependentMappingDraft_FamilyId_SourceDraftId" ON public."IndependentMappingDraft" USING btree ("FamilyId", "SourceDraftId")`
+- `CREATE INDEX "IX_IndependentMappingDraft_FamilyId_SubmittedBy" ON public."IndependentMappingDraft" USING btree ("FamilyId", "SubmittedBy")`
+- `CREATE UNIQUE INDEX "IX_IndependentMappingDraft_SetRevisionId" ON public."IndependentMappingDraft" USING btree ("SetRevisionId")`
+- `CREATE UNIQUE INDEX "PK_IndependentMappingDraft" ON public."IndependentMappingDraft" USING btree ("Id")`
+
 ## KCChangeProposal
 
 能力拆分/合并/替换的人工提案。
@@ -1211,7 +1251,7 @@
 
 ## MappingSetRevision
 
-统一映射修订；人工逐项或整份内容审核来源二选一，固定对象及能力修订。
+统一映射修订；待审草稿无审核来源，已审来源二选一，固定对象及能力修订。
 
 | 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
 |---|---|---|---|
@@ -1234,7 +1274,7 @@
 约束：
 
 - `AK_MappingSetRevision_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
-- `CK_MappingSetRevision_ReviewSource`：`CHECK (("ReviewDecisionId" IS NOT NULL) <> ("ContentReviewRecordId" IS NOT NULL))`
+- `CK_MappingSetRevision_ReviewSource`：`CHECK ("ReviewStatus" = 'Draft'::text AND "ReviewDecisionId" IS NULL AND "ContentReviewRecordId" IS NULL OR ("ReviewStatus" = ANY (ARRAY['ReviewedDraft'::text, 'ReviewedCatalog'::text])) AND ("ReviewDecisionId" IS NOT NULL) <> ("ContentReviewRecordId" IS NOT NULL))`
 - `FK_MappingSetRevision_ContentReviewRecord_FamilyId_ContentRevi~`：`FOREIGN KEY ("FamilyId", "ContentReviewRecordId") REFERENCES "ContentReviewRecord"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_MappingSetRevision_Drafts_FamilyId_DraftId`：`FOREIGN KEY ("FamilyId", "DraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_MappingSetRevision_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`

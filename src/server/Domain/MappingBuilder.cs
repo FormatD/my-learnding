@@ -12,7 +12,7 @@ public record MappingRunDetail(MappingRun Run,MappingSuggestion[] Suggestions,Ma
 
 public static class MappingBuilder
 {
-    static void Shape(Catalog source)
+    public static void Shape(Catalog source)
     {
         if(source.Kcs==null || source.Questions==null || source.Resources==null || source.Lessons==null || source.Relations==null || source.Kcs.Any(k=>k==null) || source.Questions.Any(q=>q==null || q.Mappings==null || q.Mappings.Any(m=>m==null)) || source.Resources.Any(r=>r==null || r.KCIds==null) || source.Lessons.Any(l=>l==null || l.KCIds==null) || source.Relations.Any(r=>r==null) || (source.Textbooks??[]).Any(b=>b==null) || (source.Units??[]).Any(u=>u==null) || (source.Courses??[]).Any(c=>c==null))
             throw new ApiError(422,"MAPPING_SOURCE_INVALID","草稿结构不完整，请先在内容编辑器核对并保存。");
