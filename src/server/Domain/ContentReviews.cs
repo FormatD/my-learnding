@@ -14,6 +14,7 @@ public class ContentReviewRecord : Row
     public string Reason { get; set; } = "";
     public string ReasonSource { get; set; } = "CommandConfirmation";
     public Guid? PublishedReleaseId { get; set; }
+    public string? PublishedMappingVersion { get; set; }
 }
 public record ContentReviewInput(long ExpectedDraftVersion,string? Reason=null);
 public static class ContentReviews

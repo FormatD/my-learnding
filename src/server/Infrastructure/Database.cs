@@ -94,8 +94,12 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<MappingSuggestion>().HasIndex(s=>new{s.RunId,s.OwnerType,s.OwnerId}).IsUnique();
         Foreign<MappingSuggestion, MappingReviewDecision>(b,"SuggestionId"); Foreign<Account, MappingReviewDecision>(b,"ReviewerId"); Foreign<ContentDraft, MappingReviewDecision>(b,"CreatedDraftId");
         b.Entity<MappingReviewDecision>().HasIndex(d=>d.SuggestionId).IsUnique();
-        Foreign<ContentDraft, MappingSetRevision>(b,"DraftId"); Foreign<MappingReviewDecision, MappingSetRevision>(b,"ReviewDecisionId");
-        b.Entity<MappingSetRevision>().HasIndex(s=>new{s.FamilyId,s.OwnerType,s.OwnerRevisionId}).IsUnique();
+        Foreign<ContentDraft, MappingSetRevision>(b,"DraftId"); Foreign<MappingReviewDecision, MappingSetRevision>(b,"ReviewDecisionId"); Foreign<ContentReviewRecord, MappingSetRevision>(b,"ContentReviewRecordId");
+        b.Entity<MappingSetRevision>().Property(s=>s.CoverageOrigin).HasDefaultValue("HumanReviewed");
+        b.Entity<MappingSetRevision>().ToTable(t=>t.HasCheckConstraint("CK_MappingSetRevision_ReviewSource","(\"ReviewDecisionId\" IS NOT NULL) <> (\"ContentReviewRecordId\" IS NOT NULL)"));
+        b.Entity<MappingSetRevision>().HasIndex(s=>new{s.FamilyId,s.OwnerType,s.OwnerRevisionId});
+        Foreign<Release, ReleaseMappingSet>(b,"ReleaseId"); Foreign<MappingSetRevision, ReleaseMappingSet>(b,"SetRevisionId");
+        b.Entity<ReleaseMappingSet>().HasIndex(s=>new{s.ReleaseId,s.OwnerType,s.OwnerId}).IsUnique();
         Foreign<MappingSetRevision, MappingSetItem>(b,"SetRevisionId"); Foreign<ContentIdentity, MappingSetItem>(b,"KCId"); Foreign<ContentRevision, MappingSetItem>(b,"KCRevisionId");
         b.Entity<MappingSetItem>().HasIndex(i=>new{i.SetRevisionId,i.Sequence}).IsUnique();
         Foreign<BuilderRun, BuilderAttempt>(b,"RunId");b.Entity<BuilderAttempt>().HasIndex(a=>new{a.RunId,a.RetryRound,a.Number}).IsUnique();

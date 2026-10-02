@@ -45,7 +45,9 @@ public class MappingReviewDecision : Row
 public class MappingSetRevision : Row
 {
     public Guid DraftId { get; set; }
-    public Guid ReviewDecisionId { get; set; }
+    public Guid? ReviewDecisionId { get; set; }
+    public Guid? ContentReviewRecordId { get; set; }
+    public string CoverageOrigin { get; set; } = "HumanReviewed";
     public string OwnerType { get; set; } = "Question";
     public Guid OwnerId { get; set; }
     public Guid OwnerRevisionId { get; set; }

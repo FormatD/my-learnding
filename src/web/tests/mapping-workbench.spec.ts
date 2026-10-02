@@ -79,5 +79,11 @@ for(const provider of ['Mock','Manual'])test(provider+' 映射批量审核保留
   await history.getByText('核对审核时的题目与映射',{exact:true}).click();await expect(history.getByText(JSON.parse(generated.payload).questions[0].stem,{exact:true})).toBeVisible();
   expect(await page.evaluate(()=>(window as any).__mappingUnsafe)).toBeUndefined();
   const releases=(await call('/content')).releases;expect(releases).toHaveLength(2);expect(releases.find((r:any)=>r.id===original.id).payload).toBe(original.payload);
+  const latest=releases.find((r:any)=>r.id!==original.id);const mappings=await call('/content/releases/'+latest.id+'/mapping-sets');
+  expect(mappings.status).toBe('Bound');expect(mappings.bindings).toHaveLength(JSON.parse(latest.payload).questions.length+JSON.parse(latest.payload).lessons.length+JSON.parse(latest.payload).resources.length);
+  const humanResource=mappings.sets.find((s:any)=>s.ownerType==='Resource'&&s.ownerId===catalog.resources[0].id);expect(humanResource.reviewDecisionId).toBeTruthy();expect(mappings.items.find((i:any)=>i.setRevisionId===humanResource.id).coverageWeight).toBe(.8);
+  const published=page.locator('.content-row').filter({has:page.getByRole('heading',{name:'内容版本 '+latest.number,exact:true})});await published.getByRole('button',{name:'查看发布映射',exact:true}).click();
+  const mappingView=page.getByRole('region',{name:'发布映射版本'});await expect(mappingView.getByText(/版本关联完整/)).toBeVisible();await mappingView.getByLabel('查看对象类型').selectOption('Resource');
+  await expect(mappingView.getByText(/教学覆盖：0.8/).first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   expect((await call('/students')).find((s:any)=>s.id===student.id).activeReleaseId).toBe(original.id);
 });

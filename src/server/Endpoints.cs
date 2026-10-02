@@ -94,6 +94,7 @@ public static class Endpoints
         Goals.Map(api);
         KnowledgeChanges.Map(api);
         Operations.Map(api);
+        PublishedMappings.Map(api);
         api.MapGet("/content/directory-sources",async(Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");return await db.Sources.Where(s=>s.FamilyId==a.FamilyId).OrderBy(s=>s.Title).Select(s=>new{s.Id,s.Title}).ToArrayAsync();});
         api.MapGet("/content",async (Database db,HttpContext ctx) => { var actor=ctx.Actor();if(!actor.Can("Parent"))actor.Require("ContentEditor");return new { drafts=actor.Can("ContentEditor")?await db.Drafts.Where(d => d.FamilyId==actor.FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync():[],releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
         api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return TypedResults.Ok(draft); });
@@ -121,7 +122,7 @@ public static class Endpoints
             if (Content.Hash(d.Payload+":"+d.Version)!=input.PreviewHash) throw new ApiError(412,"PREVIEW_CHANGED","草稿已变化，请重新预览。");
             var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));
             var review=await ContentReviews.ForPublish(db,d);
-            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release);review.PublishedReleaseId=release.Id;d.Status="Published";return TypedResults.Ok(release);
+            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release,review);review.PublishedReleaseId=release.Id;review.PublishedMappingVersion="mapping-container/1";d.Status="Published";return TypedResults.Ok(release);
         });
         api.MapPost("/students/{id:guid}/content/{releaseId:guid}:bind",async (Guid id,Guid releaseId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var r=await Owned<Release>(db,a,releaseId);if (r.Withdrawn) throw new ApiError(422,"WITHDRAWN","该发布版本已撤回。");s.ActiveReleaseId=releaseId;return TypedResults.Ok(s); });
         api.MapPost("/content/releases/{id:guid}:withdraw",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Publisher");var release=await Owned<Release>(db,a,id);if(string.IsNullOrWhiteSpace(input.Reason))throw new ApiError(422,"REASON_REQUIRED","撤回需要原因。");release.Withdrawn=true;db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="ReleaseWithdrawal",Details=Json.Write(new {releaseId=id,input.Reason})});return TypedResults.Ok(new {release.Id,release.Withdrawn,notice="阻止新会话；已领取会话与历史证据保留。"});});

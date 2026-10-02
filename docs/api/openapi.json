@@ -995,6 +995,12 @@
           "payloadHash": {
             "type": "string"
           },
+          "publishedMappingVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "publishedReleaseId": {
             "format": "uuid",
             "type": [
@@ -2780,6 +2786,76 @@
         },
         "type": "object"
       },
+      "MappingSetRecord": {
+        "properties": {
+          "contentReviewRecordId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "coverageOrigin": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "draftId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "evidencePolicy": {
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "originalOwnerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerDefinitionHash": {
+            "type": "string"
+          },
+          "ownerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerType": {
+            "type": "string"
+          },
+          "reviewDecisionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewStatus": {
+            "type": "string"
+          },
+          "revisionNo": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "MappingSetRevision": {
         "properties": {
           "createdAt": {
@@ -4014,6 +4090,50 @@
         ],
         "type": "object"
       },
+      "PublishedMappingDetail": {
+        "properties": {
+          "bindings": {
+            "items": {
+              "$ref": "#/components/schemas/ReleaseMappingSet"
+            },
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MappingSetItem"
+            },
+            "type": "array"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/MappingSetRecord"
+            },
+            "type": "array"
+          },
+          "status": {
+            "type": "string"
+          },
+          "unversionedOwners": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "releaseId",
+          "status",
+          "bindings",
+          "sets",
+          "items",
+          "unversionedOwners"
+        ],
+        "type": "object"
+      },
       "Question": {
         "properties": {
           "answer": {
@@ -4145,6 +4265,42 @@
           },
           "withdrawn": {
             "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ReleaseMappingSet": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "familyId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerRevisionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "ownerType": {
+            "type": "string"
+          },
+          "releaseId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "setRevisionId": {
+            "format": "uuid",
+            "type": "string"
           }
         },
         "type": "object"
@@ -11482,6 +11638,137 @@
             }
           },
           "412": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/content/releases/{id}/mapping-sets": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishedMappingDetail"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
             "content": {
               "application/problem+json": {
                 "schema": {

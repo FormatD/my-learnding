@@ -9,7 +9,7 @@ public static class OpenApiResponses
     {
         var defaultReferenceId=options.CreateSchemaReferenceId;
         // Equal anonymous property types do not imply equal JSON field names.
-        options.CreateSchemaReferenceId=info=>info.Type.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute),false) && info.Type.Name.Contains("AnonymousType",StringComparison.Ordinal) ? null : defaultReferenceId(info);
+        options.CreateSchemaReferenceId=info=>info.Type==typeof(MappingReviewedSetDto)?"MappingSetRevision":info.Type==typeof(MappingSetRevision)?"MappingSetRecord":info.Type.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute),false) && info.Type.Name.Contains("AnonymousType",StringComparison.Ordinal) ? null : defaultReferenceId(info);
         options.AddOperationTransformer(async(operation,context,ct)=>
         {
             var metadata=context.Description.ActionDescriptor.EndpointMetadata;

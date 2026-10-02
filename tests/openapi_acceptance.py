@@ -26,6 +26,7 @@ from budget_reporting_acceptance import verify as verify_budget
 from resource_revision_acceptance import verify as verify_resources
 from mapping_suggestion_acceptance import verify as verify_mappings
 from content_review_acceptance import verify as verify_content_reviews
+from published_mapping_acceptance import verify as verify_published_mappings
 
 
 def main():
@@ -91,6 +92,7 @@ def main():
                 verify_resources(document,client)
                 verify_mappings(document,client)
                 verify_content_reviews(document,client)
+                verify_published_mappings(document,client)
                 encoded = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
                 if args.export:
                     args.export.parent.mkdir(parents=True, exist_ok=True)

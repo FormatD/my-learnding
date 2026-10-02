@@ -8,7 +8,7 @@ public record MappingBatchInput(MappingDecisionInput[] Decisions);
 public record MappingBatchResult(Guid RunId,Guid? DraftId,Guid[] DecisionIds,int Pending,string[] DraftValidationWarnings);
 public record MappingQuality(int Suggested,int Pending,int Accepted,int Rejected,int Corrected,int Unchanged,string EvaluationStatus,string Note);
 public record MappingRunSummary(Guid Id,Guid SourceDraftId,long SourceDraftVersion,string SourceTitle,Guid LibraryReleaseId,string Provider,string Model,string Status,DateTimeOffset CreatedAt);
-public record MappingRunDetail(MappingRun Run,MappingSuggestion[] Suggestions,MappingReviewDecision[] Decisions,MappingSetRevision[] Sets,MappingSetItem[] Items,KC[] Library,MappingQuality Quality);
+public record MappingRunDetail(MappingRun Run,MappingSuggestion[] Suggestions,MappingReviewDecision[] Decisions,MappingReviewedSetDto[] Sets,MappingSetItem[] Items,KC[] Library,MappingQuality Quality);
 
 public static class MappingBuilder
 {
@@ -41,7 +41,7 @@ public static class MappingBuilder
             var a=ctx.Actor();a.Require("ContentEditor");var run=await Owned(db,a,id);var library=await Library(db,run);
             var suggestions=await db.Set<MappingSuggestion>().Where(s=>s.RunId==id && s.FamilyId==a.FamilyId).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync();var ids=suggestions.Select(s=>s.Id).ToArray();
             var decisions=await db.Set<MappingReviewDecision>().Where(d=>d.FamilyId==a.FamilyId && ids.Contains(d.SuggestionId)).OrderBy(d=>d.CreatedAt).ThenBy(d=>d.Id).ToArrayAsync();var dids=decisions.Select(d=>d.Id).ToArray();
-            var sets=await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==a.FamilyId && dids.Contains(s.ReviewDecisionId)).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync();var sids=sets.Select(s=>s.Id).ToArray();
+            var sets=await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==a.FamilyId && s.ReviewDecisionId!=null && dids.Contains(s.ReviewDecisionId.Value)).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync();var sids=sets.Select(s=>s.Id).ToArray();
             var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==a.FamilyId && sids.Contains(i.SetRevisionId)).OrderBy(i=>i.SetRevisionId).ThenBy(i=>i.Sequence).ToArrayAsync();
             var accepted=decisions.Where(d=>d.Decision=="Accept").ToArray();var corrected=accepted.Count(d=>
             {
@@ -49,7 +49,7 @@ public static class MappingBuilder
                 return !MappingSuggestions.SameMapping(new(original.EvidencePolicy,Json.Read<SuggestedMappingItem[]>(original.SuggestedItems)),Json.Read<MappingProposal>(d.CorrectedPayload));
             });
             var quality=new MappingQuality(suggestions.Length,suggestions.Count(s=>s.Status=="Pending"),accepted.Length,decisions.Count(d=>d.Decision=="Reject"),corrected,accepted.Length-corrected,"NotEvaluated","仅统计人工处理与校正次数；处理次数、模拟排序和接受率不代表映射正确率，没有正式金标准质量评测。");
-            return new MappingRunDetail(run,suggestions,decisions,sets,items,library.Kcs,quality);
+            return new MappingRunDetail(run,suggestions,decisions,sets.Select(MappingReviewedSetDto.From).ToArray(),items,library.Kcs,quality);
         });
         api.MapPost("/builder/mapping-runs",async Task<Results<Ok<MappingRun>,Created<MappingRun>>>(MappingRunInput input,Database db,HttpContext ctx)=>
         {

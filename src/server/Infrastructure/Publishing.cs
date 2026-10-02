@@ -23,7 +23,7 @@ public class ReleaseItem : Row
 }
 public static class Publishing
 {
-    public static async Task Register(Database db,Release release)
+    public static async Task Register(Database db,Release release,ContentReviewRecord? review=null)
     {
         var c=Json.Read<Catalog>(release.Payload);await CatalogDirectory.ValidateSources(db,release.FamilyId,c);
         var owners=c.Questions.Select(q=>new MappingOwnerSelection("Question",q.Id,q.RevisionId)).Concat(c.Lessons.Where(l=>l.RevisionId!=null).Select(l=>new MappingOwnerSelection("Lesson",l.Id,l.RevisionId!.Value))).Concat(c.Resources.Where(r=>r.RevisionId!=null).Select(r=>new MappingOwnerSelection("Resource",r.Id,r.RevisionId!.Value))).ToArray();
@@ -32,9 +32,9 @@ public static class Publishing
         foreach(var set in mappingSets)
         {
             if(!owners.Any(o=>o.OwnerType==set.OwnerType && o.OwnerId==set.OwnerId && o.OwnerRevisionId==set.OwnerRevisionId) || Content.Hash(MappingSuggestions.Definition(c,set.OwnerType,set.OwnerId))!=set.OwnerDefinitionHash)
-                throw new ApiError(422,"MAPPING_REVISION_IMMUTABLE","人工接受的映射修订内容已变，请保存新的对象修订并重新审核。");
+                throw new ApiError(422,set.ReviewDecisionId!=null?"MAPPING_REVISION_IMMUTABLE":"REVISION_IMMUTABLE","映射对应的对象修订内容已变，请保存新的对象修订并重新审核。");
             var setItems=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==release.FamilyId && i.SetRevisionId==set.Id).ToArrayAsync();
-            if(setItems.Any(i=>!c.Kcs.Any(k=>k.Id==i.KCId && k.RevisionId==i.KCRevisionId)))throw new ApiError(422,"MAPPING_LIBRARY_REVISION_CHANGED","此映射修订固定的能力版本已变，请创建新的对象映射修订并重新审核。");
+            if(set.ReviewDecisionId!=null && setItems.Any(i=>!c.Kcs.Any(k=>k.Id==i.KCId && k.RevisionId==i.KCRevisionId)))throw new ApiError(422,"MAPPING_LIBRARY_REVISION_CHANGED","此映射修订固定的能力版本已变，请创建新的对象映射修订并重新审核。");
         }
         async Task Add(Guid identity,Guid revision,string type,string code,object definition)
         {
@@ -64,5 +64,6 @@ public static class Publishing
         foreach(var lesson in c.Lessons.Where(l=>l.RevisionId!=null))await Add(lesson.Id,lesson.RevisionId!.Value,"Lesson",lesson.Id.ToString(),lesson);
         foreach (var k in c.Kcs) await Add(k.Id,k.RevisionId,"KC",k.Code,k);
         foreach (var q in c.Questions) await Add(q.Id,q.RevisionId,"Question",q.Id.ToString(),q);
+        if(review!=null)await PublishedMappings.Bind(db,release,c,review);
     }
 }

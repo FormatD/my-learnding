@@ -115,3 +115,5 @@ macOS登录启动配置：`python3 scripts/install_backup_agent.py --config <私
 全量恢复演练：`python3 scripts/restore_drill.py --config <私有配置路径>`。将最近成功的真实加密快照恢复到一次性空库，应用最新删除清单，按归档列顺序逐列核对全部应保留记录和附件字节，最后清理临时库。私有演练记录只认可同一归档，负责人页面可查看核对时间；本机同盘演练不等于灾难切换或持续RPO/RTO。隔离核对测试：`python3 tests/restore_drill_acceptance.py`。
 
 内容草稿现保留完整审核快照；“查看审核记录”可核对当时内容、备注或确认记录和实际发布关联。页面审核会检查草稿版本，保存修改后须重新审核。旧缺失记录不补造。见[内容维护手册](docs/runbooks/content-maintenance.md)。
+
+新发布的题目、课时和资源关联固定映射容器，可在“查看发布映射”读取权重和审核来源。完整内容审核形成的覆盖权重默认1并明确标注；已有逐项审核容器保留人工权重。编辑保存后的权重继承及历史引用统一仍在开发，详见[内容维护手册](docs/runbooks/content-maintenance.md)。

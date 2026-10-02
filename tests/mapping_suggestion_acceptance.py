@@ -108,7 +108,11 @@ def verify(document,c):
     with c.http.open(api_acceptance.BASE+'/family/export') as response:
         manifest=json.loads(zipfile.ZipFile(io.BytesIO(response.read())).read('manifest.json'))
     exported=manifest['data']
-    assert len(exported['MappingRun'])==1 and len(exported['MappingSuggestion'])==4 and len(exported['MappingReviewDecision'])==4 and len(exported['MappingSetRevision'])==3 and len(exported['MappingSetItem'])==4
+    assert len(exported['MappingRun'])==1 and len(exported['MappingSuggestion'])==4 and len(exported['MappingReviewDecision'])==4
+    assert all(any(x['id']==s['id'] for x in exported['MappingSetRevision']) for s in reviewed['sets'])
+    assert all(any(x['id']==i['id'] for x in exported['MappingSetItem']) for i in reviewed['items'])
+    assert any(x['releaseId']==released['id'] for x in exported['ReleaseMappingSet'])
+    other.request('/content/releases/'+released['id']+'/mapping-sets',expected=404);child.request('/content/releases/'+released['id']+'/mapping-sets',expected=403)
     print('PASS all mapping routes isolate families and reject children; full private export includes frozen inputs, original proposals, human decisions and normalized sets/items')
 
     member_input={'userName':'mapping-editor-'+uuid.uuid4().hex[:12],'password':'mapping-private-'+uuid.uuid4().hex,'roles':['ContentEditor']}

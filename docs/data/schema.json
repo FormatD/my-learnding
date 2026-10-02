@@ -100,6 +100,10 @@
     {
       "id": "20261002184306_ContentReviewSnapshots",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002190022_PublishedMappingContainers",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1935,9 +1939,25 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "PublishedMappingVersion",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "AK_ContentReviewRecord_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "FK_ContentReviewRecord_Accounts_FamilyId_ReviewerId",
           "kind": "f",
@@ -1980,6 +2000,12 @@
         }
       ],
       "indexes": [
+        {
+          "name": "AK_ContentReviewRecord_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_ContentReviewRecord_FamilyId_Id\" ON public.\"ContentReviewRecord\" USING btree (\"FamilyId\", \"Id\")"
+        },
         {
           "name": "IX_ContentReviewRecord_DraftId_DraftVersion",
           "unique": false,
@@ -5047,7 +5073,7 @@
         {
           "name": "ReviewDecisionId",
           "type": "uuid",
-          "nullable": false,
+          "nullable": true,
           "identity": "",
           "generated": "",
           "default": null
@@ -5131,6 +5157,22 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "ContentReviewRecordId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CoverageOrigin",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": "'HumanReviewed'::text"
         }
       ],
       "constraints": [
@@ -5138,6 +5180,22 @@
           "name": "AK_MappingSetRevision_FamilyId_Id",
           "kind": "u",
           "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_MappingSetRevision_ReviewSource",
+          "kind": "c",
+          "definition": "CHECK ((\"ReviewDecisionId\" IS NOT NULL) <> (\"ContentReviewRecordId\" IS NOT NULL))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingSetRevision_ContentReviewRecord_FamilyId_ContentRevi~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ContentReviewRecordId\") REFERENCES \"ContentReviewRecord\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -5189,6 +5247,12 @@
           "definition": "CREATE INDEX \"IX_MappingSetRevision_FamilyId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\")"
         },
         {
+          "name": "IX_MappingSetRevision_FamilyId_ContentReviewRecordId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingSetRevision_FamilyId_ContentReviewRecordId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"ContentReviewRecordId\")"
+        },
+        {
           "name": "IX_MappingSetRevision_FamilyId_DraftId",
           "unique": false,
           "valid": true,
@@ -5196,9 +5260,9 @@
         },
         {
           "name": "IX_MappingSetRevision_FamilyId_OwnerType_OwnerRevisionId",
-          "unique": true,
+          "unique": false,
           "valid": true,
-          "definition": "CREATE UNIQUE INDEX \"IX_MappingSetRevision_FamilyId_OwnerType_OwnerRevisionId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"OwnerType\", \"OwnerRevisionId\")"
+          "definition": "CREATE INDEX \"IX_MappingSetRevision_FamilyId_OwnerType_OwnerRevisionId\" ON public.\"MappingSetRevision\" USING btree (\"FamilyId\", \"OwnerType\", \"OwnerRevisionId\")"
         },
         {
           "name": "IX_MappingSetRevision_FamilyId_ReviewDecisionId",
@@ -7109,6 +7173,141 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_ReleaseItem\" ON public.\"ReleaseItem\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "ReleaseMappingSet",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SetRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerType",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_ReleaseMappingSet_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReleaseMappingSet_MappingSetRevision_FamilyId_SetRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReleaseMappingSet_Releases_FamilyId_ReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_ReleaseMappingSet",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_ReleaseMappingSet_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReleaseMappingSet_FamilyId\" ON public.\"ReleaseMappingSet\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ReleaseMappingSet_FamilyId_ReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReleaseMappingSet_FamilyId_ReleaseId\" ON public.\"ReleaseMappingSet\" USING btree (\"FamilyId\", \"ReleaseId\")"
+        },
+        {
+          "name": "IX_ReleaseMappingSet_FamilyId_SetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReleaseMappingSet_FamilyId_SetRevisionId\" ON public.\"ReleaseMappingSet\" USING btree (\"FamilyId\", \"SetRevisionId\")"
+        },
+        {
+          "name": "IX_ReleaseMappingSet_ReleaseId_OwnerType_OwnerId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_ReleaseMappingSet_ReleaseId_OwnerType_OwnerId\" ON public.\"ReleaseMappingSet\" USING btree (\"ReleaseId\", \"OwnerType\", \"OwnerId\")"
+        },
+        {
+          "name": "PK_ReleaseMappingSet",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_ReleaseMappingSet\" ON public.\"ReleaseMappingSet\" USING btree (\"Id\")"
         }
       ]
     },
