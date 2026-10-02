@@ -218,8 +218,26 @@ public class Generation : Row
     public string RuleVersion { get; set; } = "evidence/1";
     public long Cursor { get; set; }
 }
+public class AssessmentContext : Row
+{
+    public Guid StudentId { get; set; }
+    public Guid GenerationId { get; set; }
+    public Guid AttemptId { get; set; }
+    public Guid GradingRevisionId { get; set; }
+    public Guid? MappingSetRevisionId { get; set; }
+    public Guid QuestionRevisionId { get; set; }
+    public Guid ContentReleaseId { get; set; }
+    public Guid MappingReleaseId { get; set; }
+    public Guid? CorrectionBatchId { get; set; }
+    public string EvidenceRuleVersion { get; set; } = "";
+    public string ActivationStatus { get; set; } = "Shadow";
+    public string MappingSource { get; set; } = "";
+    public string EvidencePolicy { get; set; } = "";
+    public string AdmissionStatus { get; set; } = "";
+}
 public class Evidence : Row
 {
+    public Guid? ContextId { get; set; }
     public Guid? MappingSetRevisionId { get; set; }
     public Guid? MappingReleaseId { get; set; }
     public Guid? CorrectionBatchId { get; set; }

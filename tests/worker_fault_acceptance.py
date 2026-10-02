@@ -30,6 +30,7 @@ def main():
         else:raise AssertionError('worker did not reach commit barrier')
         # Independent reader observes no half-written active generation before the process is killed.
         assert sql('SELECT COUNT(*) FROM "Evidence"')=='0'
+        assert sql('SELECT COUNT(*) FROM "AssessmentContext"')=='0'
         assert sql('SELECT COUNT(*) FROM "Students" WHERE "ActiveGenerationId" IS NOT NULL')=='0'
         child.kill();child.wait(timeout=10)
         subprocess.run(command+['recover'],env=env,check=True)

@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
 public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null,Guid? MappingSetRevisionId=null);
-public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory,List<MasteryEvent> MasteryHistory);
+public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory,List<MasteryEvent> MasteryHistory,List<AssessmentContext> Contexts);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
 public static class Assessment
@@ -34,7 +34,7 @@ public static class Assessment
     }
     public static AssessmentOutput Replay(Guid family, Guid student, Guid generation, string zone, IEnumerable<AssessmentInput> inputs,IEnumerable<TeachingAnchor>? teaching=null,bool collectReviewHistory=false,bool collectMasteryHistory=false)
     {
-        var evidence = new List<Evidence>();
+        var evidence = new List<Evidence>();var contexts=new List<AssessmentContext>();
         var stats = new Dictionary<Guid, Stats>();
         var reviews = new Dictionary<(string, Guid), Review>();
         var timeline=collectReviewHistory?new ReviewTimeline():null;
@@ -54,6 +54,7 @@ public static class Assessment
         foreach (var input in inputs.OrderBy(x => x.Attempt.Sequence).ThenBy(x => x.Attempt.Id))
         {
             var a=input.Attempt; var q=input.Question; var g=input.Grade; var s=input.Session;
+            var context=new AssessmentContext{FamilyId=family,StudentId=student,GenerationId=generation,AttemptId=a.Id,GradingRevisionId=g.Id,MappingSetRevisionId=input.MappingSetRevisionId,QuestionRevisionId=q.RevisionId,ContentReleaseId=s.ReleaseId,MappingReleaseId=input.MappingReleaseId??s.ReleaseId,CorrectionBatchId=input.CorrectionBatchId,EvidenceRuleVersion=EvidenceRuleVersion,MappingSource=input.MappingSetRevisionId!=null?"FixedContainer":"LegacySnapshot",EvidencePolicy=q.Policy,AdmissionStatus=a.Number!=1?"RetryExcluded":g.Result is not "Correct" and not "Incorrect" and not "Partial"?"Pending":q.Policy=="NoEvidence"?"NoEvidence":q.Policy=="ObservedSteps"?"ObservedSteps":"Eligible"};contexts.Add(context);
             if (a.Number != 1) continue; // Never substitute a later retry for an ungraded first answer.
             var time=a.CreatedAt; var day=Local(time);
             // Execution is a submitted first answer, even if pending or assisted; it is not a pass.
@@ -111,7 +112,7 @@ public static class Assessment
                     if (weight<raw && !duplicate) suppressed="VARIANT_DAILY_CAP";
                     dailyPositive[(group,day)]=used+weight;
                 }
-                evidence.Add(new Evidence { FamilyId=family, StudentId=student, GenerationId=generation, AttemptId=a.Id, GradingId=g.Id, ReleaseId=s.ReleaseId, MappingReleaseId=input.MappingReleaseId??s.ReleaseId,MappingSetRevisionId=input.MappingSetRevisionId,CorrectionBatchId=input.CorrectionBatchId, KCId=kc.Id, KCRevisionId=kc.RevisionId, Part=m.Step??"WholeItem", Positive=positive, RawWeight=raw, Weight=weight, OccurredAt=time, Factors=Json.Write(new { share=m.Share, quality=1, difficulty, independence, delayDays=delay, delayFactor, novelty, suppressed, suppressedWeight=raw-weight, rule=EvidenceRuleVersion }) });
+                evidence.Add(new Evidence { FamilyId=family, StudentId=student, GenerationId=generation,ContextId=context.Id, AttemptId=a.Id, GradingId=g.Id, ReleaseId=s.ReleaseId, MappingReleaseId=input.MappingReleaseId??s.ReleaseId,MappingSetRevisionId=input.MappingSetRevisionId,CorrectionBatchId=input.CorrectionBatchId, KCId=kc.Id, KCRevisionId=kc.RevisionId, Part=m.Step??"WholeItem", Positive=positive, RawWeight=raw, Weight=weight, OccurredAt=time, Factors=Json.Write(new { share=m.Share, quality=1, difficulty, independence, delayDays=delay, delayFactor, novelty, suppressed, suppressedWeight=raw-weight, rule=EvidenceRuleVersion }) });
                 if (weight<=0) continue;
                 var v=state.Value; if (positive) v.Alpha+=weight; else v.Beta+=weight;
                 v.EffectiveEvidence=v.Alpha+v.Beta-4; v.Probability=v.Alpha/(v.Alpha+v.Beta);
@@ -165,7 +166,7 @@ public static class Assessment
                     masteryHistory.Add(new(a.Id,time,new(id,kc.RevisionId,kc.Name,v.Status,v.NeedsRecheck,v.Probability,v.Confidence,v.EffectiveEvidence,v.DistinctQuestions,(kc.RequiredCoverage??["Basic"]).Order().ToArray(),state.Coverage.Order().ToArray(),state.Delay2,state.Delay7,state.Delay30,v.Reason)));
                 }
         }
-        return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList(),timeline?.Items??[],masteryHistory);
+        return new(evidence, stats.Values.Select(x => x.Value).ToList(),reviews.Values.ToList(),timeline?.Items??[],masteryHistory,contexts);
     }
     public static async Task<(AssessmentInput[] Inputs,TeachingAnchor[] Teaching)> LoadInputs(Database db,Student student,CancellationToken ct=default)
     {
@@ -206,13 +207,18 @@ public static class Assessment
     public static async Task Rebuild(Database db, Student student, CancellationToken ct=default)
     {
         var (inputs,teaching)=await LoadInputs(db,student,ct);
-        var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="mapping-context/1",rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
+        var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="assessment-context/1",rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
         if (student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash,ct)) return;
         var gen=new Generation { FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
         db.Generations.Add(gen);
         var output=Replay(student.FamilyId,student.Id,gen.Id,student.TimeZone,inputs,teaching);
-        db.Evidence.AddRange(output.Evidence); db.Masteries.AddRange(output.Masteries); db.Reviews.AddRange(output.Reviews);
-        if (student.ActiveGenerationId.HasValue) (await db.Generations.SingleAsync(g => g.Id==student.ActiveGenerationId,ct)).Status="Retired";
+        db.AddRange(output.Contexts);db.Evidence.AddRange(output.Evidence); db.Masteries.AddRange(output.Masteries); db.Reviews.AddRange(output.Reviews);
+        if (student.ActiveGenerationId.HasValue)
+        {
+            (await db.Generations.SingleAsync(g=>g.Id==student.ActiveGenerationId,ct)).Status="Retired";
+            foreach(var old in await db.Set<AssessmentContext>().Where(c=>c.FamilyId==student.FamilyId && c.GenerationId==student.ActiveGenerationId).ToArrayAsync(ct))old.ActivationStatus="Retired";
+        }
+        foreach(var context in output.Contexts)context.ActivationStatus="Active";
         gen.Status="Active"; student.ActiveGenerationId=gen.Id;
         await db.SaveChangesAsync(ct); // Binding and all projections are committed by the outer family transaction.
     }

@@ -10,6 +10,23 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="assessment-context-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002191928_LearningMappingReferences");
+    var f=new Family();var catalog=Content.Fixture();var q=catalog.Questions[0];var r=new Release{FamilyId=f.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};var s=new Student{FamilyId=f.Id,ActiveReleaseId=r.Id};var t=new StudyTask{FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,QuestionId=q.Id};var session=new LearningSession{FamilyId=f.Id,StudentId=s.Id,TaskId=t.Id,ReleaseId=r.Id,QuestionId=q.Id};var a=new Attempt{FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var g=new Grading{FamilyId=f.Id,AttemptId=a.Id,Number=1,Result="Incorrect"};var gen=new Generation{FamilyId=f.Id,StudentId=s.Id,Status="Active",InputHash="legacy-evaluation"};
+    db.AddRange(f,r,s,t,session,a,g,gen);await db.SaveChangesAsync();await Publishing.Register(db,r);s.ActiveGenerationId=gen.Id;await db.SaveChangesAsync();
+    var eid=Guid.NewGuid();var when=DateTimeOffset.UtcNow;var kc=q.Mappings[0].KCId;var revision=catalog.Kcs.Single(k=>k.Id==kc).RevisionId;
+    await db.Database.ExecuteSqlInterpolatedAsync($"""INSERT INTO "Evidence" ("Id","FamilyId","StudentId","GenerationId","AttemptId","GradingId","ReleaseId","KCId","KCRevisionId","Part","Positive","RawWeight","Weight","Factors","OccurredAt","CreatedAt") VALUES ({eid},{f.Id},{s.Id},{gen.Id},{a.Id},{g.Id},{r.Id},{kc},{revision},'WholeItem',false,1,1,'legacy factor',{when},{when})""");
+    async Task<string> OldBytes(){await db.Database.OpenConnectionAsync();using var cmd=db.Database.GetDbConnection().CreateCommand();cmd.CommandText=$"SELECT (to_jsonb(e)-'ContextId')::text FROM \"Evidence\" e WHERE \"Id\"='{eid}'";return (string)(await cmd.ExecuteScalarAsync())!;}
+    var old=await OldBytes();await db.Database.MigrateAsync();db.ChangeTracker.Clear();Assert(await OldBytes()==old && (await db.Evidence.SingleAsync()).ContextId==null && !await db.Set<AssessmentContext>().AnyAsync(),"upgrade changed old evidence or invented a context");
+    await using(var tx=await db.Database.BeginTransactionAsync()){await db.Lock(f.Id);await Assessment.Rebuild(db,await db.Students.SingleAsync());await tx.CommitAsync();}
+    var context=await db.Set<AssessmentContext>().SingleAsync();Assert(context.MappingSource=="LegacySnapshot" && context.MappingSetRevisionId==null && context.ActivationStatus=="Active" && context.QuestionRevisionId==q.RevisionId,"new replay guessed a legacy mapping or missed its actual question");
+    Assert(await OldBytes()==old && (await db.Evidence.SingleAsync(e=>e.Id==eid)).ContextId==null && (await db.Evidence.SingleAsync(e=>e.GenerationId==context.GenerationId)).ContextId==context.Id,"new replay rewrote old evidence or left new evidence without context");
+    Console.WriteLine("PASS 旧库迁移不改原证据/不补上下文；新重放明确LegacySnapshot并固定实际题目和新上下文，旧证据保持NULL");
+    try{await db.Database.ExecuteSqlInterpolatedAsync($"""UPDATE "Evidence" SET "ContextId"={context.Id},"Part"='ForeignContext' WHERE "Id"={eid}""");throw new Exception("context from another generation accepted");}catch(Npgsql.PostgresException ex) when(ex.SqlState=="23503"){}
+    var duplicate=Guid.NewGuid();try{await db.Database.ExecuteSqlInterpolatedAsync($"""INSERT INTO "AssessmentContext" SELECT (jsonb_populate_record(NULL::"AssessmentContext",to_jsonb(c)||jsonb_build_object('Id',{duplicate}))).* FROM "AssessmentContext" c WHERE "Id"={context.Id}""");throw new Exception("legacy NULL mapping allowed a duplicate context");}catch(Npgsql.PostgresException ex) when(ex.SqlState=="23505"){}
+    await db.Students.Where(x=>x.Id==s.Id).ExecuteDeleteAsync();Assert(!await db.Set<AssessmentContext>().AnyAsync() && !await db.Evidence.AnyAsync(),"student deletion retained context or evidence");Console.WriteLine("PASS 数据库拒绝跨世代上下文；学生删除清除独立上下文与新旧证据");return;
+}
 if(args[0]=="student-audit-legacy")
 {
     await db.GetService<IMigrator>().MigrateAsync("20261002095324_ParentBurdenRecords");var f=new Family();var s=new Student{FamilyId=f.Id,Name="有实际来源的学生"};var p=new Plan{FamilyId=f.Id,StudentId=s.Id,Date=new DateOnly(2026,10,2)};db.AddRange(f,s,p);await db.SaveChangesAsync();
@@ -32,7 +49,7 @@ if(args[0]=="parent-burden-legacy")
 }
 if(args[0]=="mastery-snapshot")
 {
-    await db.Database.MigrateAsync();var family=new Family();var catalog=Content.Fixture();var q=catalog.Questions[0];var release=new Release{FamilyId=family.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};db.AddRange(family,release);await db.SaveChangesAsync();
+    await db.Database.MigrateAsync();var family=new Family();var catalog=Content.Fixture();var q=catalog.Questions[0];var release=new Release{FamilyId=family.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};db.AddRange(family,release);await db.SaveChangesAsync();await Publishing.Register(db,release);await db.SaveChangesAsync();
     async Task<(Student Student,Outbox Job)> Seed()
     {
         var s=new Student{FamilyId=family.Id,ActiveReleaseId=release.Id};var task=new StudyTask{FamilyId=family.Id,StudentId=s.Id,ReleaseId=release.Id,QuestionId=q.Id,Status="InProgress"};var session=new LearningSession{FamilyId=family.Id,StudentId=s.Id,TaskId=task.Id,ReleaseId=release.Id,QuestionId=q.Id};var attempt=new Attempt{FamilyId=family.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var grade=new Grading{FamilyId=family.Id,AttemptId=attempt.Id,Number=1,Result="Incorrect"};var job=new Outbox{FamilyId=family.Id,StudentId=s.Id,AttemptId=attempt.Id};db.AddRange(s,task,session,attempt,grade,job);await db.SaveChangesAsync();return(s,job);
@@ -123,7 +140,7 @@ if(args[0]=="seed")
 {
     await db.Database.MigrateAsync();var f=new Family();var c=Content.Fixture();var q=c.Questions[0];var r=new Release {FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c))};var s=new Student {FamilyId=f.Id,ActiveReleaseId=r.Id,Name="Fault acceptance"};
     var t=new StudyTask {FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,QuestionId=q.Id,Status="InProgress"};var session=new LearningSession {FamilyId=f.Id,StudentId=s.Id,TaskId=t.Id,ReleaseId=r.Id,QuestionId=q.Id};var a=new Attempt {FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var g=new Grading {FamilyId=f.Id,AttemptId=a.Id,Number=1,Result="Incorrect"};var job=new Outbox {FamilyId=f.Id,StudentId=s.Id,AttemptId=a.Id};
-    db.AddRange(f,r,s,t,session,a,g,job);await db.SaveChangesAsync();Console.WriteLine("SEEDED");return;
+    db.AddRange(f,r,s,t,session,a,g,job);await db.SaveChangesAsync();await Publishing.Register(db,r);await db.SaveChangesAsync();Console.WriteLine("SEEDED");return;
 }
 if(args[0]=="crash")
 {
@@ -189,6 +206,7 @@ var results=await Task.WhenAll(ProjectionWorker.Consume(first,p1),ProjectionWork
 Assert(results.Count(r=>r)==1,"two consumers both processed the selected event");
 db.ChangeTracker.Clear();student=await db.Students.SingleAsync();
 Assert(student.ActiveGenerationId!=null && await db.Generations.CountAsync()==1 && await db.Evidence.CountAsync()==1 && await db.Reviews.CountAsync()==1 && (await db.Masteries.SingleAsync()).Beta==3 && (await db.Outbox.SingleAsync()).ProcessedAt!=null,"retry did not converge exactly once");
+Assert(await db.Set<AssessmentContext>().CountAsync()==1 && (await db.Set<AssessmentContext>().SingleAsync()).ActivationStatus=="Active" && (await db.Evidence.SingleAsync()).ContextId==(await db.Set<AssessmentContext>().SingleAsync()).Id,"contexts did not converge atomically");
 Console.WriteLine("PASS AT23 双消费者重复领取：一个有效处理，一组证据和一个R1日程");
 await using var again=Open();Assert(!await ProjectionWorker.Consume(again,await again.Outbox.SingleAsync()),"processed event handled again");Assert(await again.Generations.CountAsync()==1,"duplicate replay created generation");
 Console.WriteLine("PASS 崩溃后重试及重复消费不增加评估世代或错误次数");

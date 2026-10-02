@@ -41,6 +41,10 @@ def main():
         raise AssertionError('projection did not settle')
     m=wait();assert m['masteries'][0]['kcId']==oldkc
     assert c.request('/students/'+sid+'/mastery/'+oldkc)['evidence'][0]['mappingSetRevisionId']==binding1['setRevisionId']
+    initial_context=c.request('/students/'+sid+'/assessment-contexts');ctx1=initial_context['contexts'][0]
+    assert ctx1['mappingSetRevisionId']==binding1['setRevisionId'] and ctx1['gradingRevisionId']==a['grading']['id'] and ctx1['evidenceRuleVersion']=='evidence/1.1' and ctx1['activationStatus']=='Active'
+    assert ctx1['mappingSource']=='FixedContainer' and ctx1['questionRevisionId']==q1['revisionId'] and ctx1['contentReleaseId']==r1['id'] and ctx1['mappingReleaseId']==r1['id']
+    assert c.request('/students/'+sid+'/mastery/'+oldkc)['evidence'][0]['contextId']==ctx1['id']
     print('PASS AT09 切换发布版本后，当前会话仍按领取内容归因')
     correction={'releaseId':r2['id'],'attemptIds':[a['attempt']['id']],'reason':'人工确认原映射错误'}
     p=c.request('/students/'+sid+'/mapping-corrections:preview',correction)
@@ -57,7 +61,16 @@ def main():
     assert correction_row['mappingSetRevisionId']==binding2['setRevisionId'] and correction_row['questionRevisionId']==q['revisionId']
     export=c.request('/students/'+sid+'/export');assert {binding1['setRevisionId'],binding2['setRevisionId']}.issubset({x['id'] for x in export['mappingSets']})
     assert export['sessions'][0]['mappingSetRevisionId']==binding1['setRevisionId'] and {binding1['setRevisionId'],binding2['setRevisionId']}.issubset({x['setRevisionId'] for x in export['mappingBindings']})
-    print('PASS AT10 映射更正新世代重放，旧 KC 不双计')
+    current=c.request('/students/'+sid+'/assessment-contexts');ctx2=current['contexts'][0]
+    assert ctx2['id']!=ctx1['id'] and ctx2['mappingSetRevisionId']==binding2['setRevisionId'] and ctx2['correctionBatchId']==correction_row['batchId'] and ctx2['gradingRevisionId']==ctx1['gradingRevisionId']
+    assert ctx2['activationStatus']=='Active' and detail['evidence'][0]['contextId']==ctx2['id']
+    retired=c.request('/students/'+sid+'/assessment-contexts?generation='+initial_context['generation']['id']);assert retired['contexts'][0]=={**ctx1,'activationStatus':'Retired'} and retired['generation']['status']=='Retired'
+    assert {ctx1['id'],ctx2['id']}.issubset({x['id'] for x in export['assessmentContexts']}) and {ctx1['id'],ctx2['id']}.issubset({x['id'] for x in data['AssessmentContext']})
+    # Explicit repeated rebuild reuses the fixed generation and context IDs.
+    c.request('/students/'+sid+':rebuild',{})
+    assert wait()['generation']==current['generation']['id'] and c.request('/students/'+sid+'/assessment-contexts')['contexts']==current['contexts']
+    c.request('/students/'+sid+'/assessment-contexts?offset=-1',expected=422);c.request('/students/'+sid+'/assessment-contexts?generation='+str(uuid.uuid4()),expected=404)
+    print('PASS AT10 映射更正新世代重放，旧 KC 不双计；上下文固定新旧归因、退休状态、导出和重复重建不双计')
     for text,status in [('First multiply then add.','Completed'),('','NeedsOCR')]:
         f=c.request('/files',{'name':'fixture.pdf','mimeType':'application/pdf','base64':base64.b64encode(pdf(text)).decode()},expected=201)
         job=c.request('/content/pdf-sources',{'fileId':f['id'],'title':'PDF 验收'},expected=202)['job']

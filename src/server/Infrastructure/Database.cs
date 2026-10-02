@@ -53,6 +53,13 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Attempt>().HasIndex(x => new { x.SessionId, x.Number }).IsUnique();
         b.Entity<Attempt>().Property(x => x.Sequence).UseIdentityAlwaysColumn();
         b.Entity<Grading>().HasIndex(x => new { x.AttemptId, x.Number }).IsUnique();
+        b.Entity<AssessmentContext>().HasIndex(x=>new{x.GenerationId,x.AttemptId,x.GradingRevisionId,x.MappingSetRevisionId,x.EvidenceRuleVersion}).IsUnique();
+        // One fixed latest grading per attempt in a complete generation also protects legacy NULL mappings.
+        b.Entity<AssessmentContext>().HasIndex(x=>new{x.GenerationId,x.AttemptId}).IsUnique();
+        b.Entity<AssessmentContext>().HasAlternateKey(x=>new{x.FamilyId,x.Id,x.GenerationId,x.StudentId,x.AttemptId,x.GradingRevisionId});
+        b.Entity<Evidence>().HasOne<AssessmentContext>().WithMany().HasForeignKey("FamilyId","ContextId","GenerationId","StudentId","AttemptId","GradingId").HasPrincipalKey(x=>new{x.FamilyId,x.Id,x.GenerationId,x.StudentId,x.AttemptId,x.GradingRevisionId}).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<Evidence>().HasIndex(x=>new{x.ContextId,x.KCId,x.Part,x.Positive}).IsUnique();
+        Foreign<Student,AssessmentContext>(b,"StudentId");Foreign<Generation,AssessmentContext>(b,"GenerationId");Foreign<Attempt,AssessmentContext>(b,"AttemptId");Foreign<Grading,AssessmentContext>(b,"GradingRevisionId");Foreign<MappingSetRevision,AssessmentContext>(b,"MappingSetRevisionId");Foreign<ContentRevision,AssessmentContext>(b,"QuestionRevisionId");Foreign<Release,AssessmentContext>(b,"ContentReleaseId");Foreign<Release,AssessmentContext>(b,"MappingReleaseId");Foreign<CorrectionBatch,AssessmentContext>(b,"CorrectionBatchId");
         b.Entity<Evidence>().HasIndex(x => new { x.GenerationId, x.AttemptId, x.KCId, x.Part }).IsUnique();
         b.Entity<Mastery>().HasIndex(x => new { x.GenerationId, x.KCId }).IsUnique();
         b.Entity<Review>().HasIndex(x => new { x.GenerationId, x.TargetType, x.TargetId }).IsUnique();

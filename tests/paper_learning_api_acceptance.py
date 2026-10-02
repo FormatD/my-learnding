@@ -39,6 +39,9 @@ def main():
     binding=next(b for b in c.request('/content/releases/'+r2['id']+'/mapping-sets')['bindings'] if b['ownerType']=='Question' and b['ownerId']==draft['questionId'])
     assert attempts[0]['mappingSetRevisionId']==binding['setRevisionId'] and attempts[0]['questionRevisionId']==next(q['revisionId'] for q in json.loads(r2['payload'])['questions'] if q['id']==draft['questionId'])
     assert c.request('/students/'+sid+'/mastery/'+m['masteries'][0]['kcId'])['evidence'][0]['mappingSetRevisionId']==binding['setRevisionId']
+    before_context=c.request('/students/'+sid+'/assessment-contexts')['contexts'][0]
+    assert before_context['attemptId']==attempts[0]['id'] and before_context['mappingSetRevisionId']==binding['setRevisionId'] and before_context['admissionStatus']=='Eligible'
+    assert c.request('/students/'+sid+'/mastery/'+m['masteries'][0]['kcId'])['evidence'][0]['contextId']==before_context['id']
     assert confirmed['confirmedBy'] and confirmed['confirmedAt'] and confirmed['releaseId']==r2['id']
     print('PASS 原题明确确认、失效预览拒绝、幂等重试不双计；一条可信首次作答及原题R1日程')
     aid=confirmed['attemptId'];grade={'result':'Correct','reason':'重新核对纸质答案，录入误判'};p=c.request('/attempts/'+aid+'/grading-preview',grade);c.request('/attempts/'+aid+'/grading-revisions',{**grade,'previewHash':p['previewHash']},expected=202);m=settle();assert m['masteries'][0]['beta']==2 and m['masteries'][0]['alpha']==3
@@ -46,7 +49,11 @@ def main():
     export=c.request('/students/'+sid+'/export');assert export['paperWrongs'][0]['attemptId']==aid and export['attempts'][0]['answer']=='45' and len(export['gradings'])==2
     assert export['sessions'][0]['mappingSetRevisionId']==binding['setRevisionId'] and any(x['id']==binding['setRevisionId'] for x in export['mappingSets'])
     assert any(x['setRevisionId']==binding['setRevisionId'] for x in export['mappingItems'])
-    print('PASS 纸质代录支持判分更正与世代重放，原始答案和审核记录导出完整')
+    after_context=c.request('/students/'+sid+'/assessment-contexts')['contexts'][0]
+    assert after_context['mappingSetRevisionId']==before_context['mappingSetRevisionId'] and after_context['gradingRevisionId']!=before_context['gradingRevisionId'] and after_context['id']!=before_context['id']
+    assert len(export['assessmentContexts'])==2 and next(x for x in export['assessmentContexts'] if x['id']==before_context['id'])['activationStatus']=='Retired'
+    assert export['attempts'][0]==attempts[0] and c.request('/students/'+sid+'/mastery/'+m['masteries'][0]['kcId'])['evidence'][0]['contextId']==after_context['id']
+    print('PASS 纸质代录判分更正固定新上下文/原映射、保留退休记录与原作答，审核及上下文导出完整')
     c.request('/students/'+sid+'/child-sessions',{});c.request('/paper-wrongs/'+wid+'/preview',inp,expected=403);c.request('/students/'+sid+'/paper-wrongs',expected=403)
     print('PASS 孩子不能读取私有纸质记录或代录结果')
 if __name__=='__main__':main()

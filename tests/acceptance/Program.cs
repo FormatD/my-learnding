@@ -166,6 +166,14 @@ Test("资源旧快照未记录修订保持合法，新样例具有独立修订",
 Test("映射建议校验分开教学覆盖与证据预算，限制原版本与来源",MappingSuggestionCases.Policy);
 Test("模拟分步建议保留独立观察点，不推断额外能力或虚构题型",MappingSuggestionCases.ObservedSteps);
 Test("接受映射创建新对象修订并固定能力库，不覆盖输入快照",MappingSuggestionCases.FrozenApply);
+Test("评估上下文包含未准入与重试，证据固定同一上下文与实际更正版本",()=>{
+    var first=Input(1,result:"Pending");var retry=Input(2,attemptNo:2);var no=Input(3) with{Question=Input(3).Question with{Policy="NoEvidence"}};
+    var o=Replay(first,retry,no);Eq(o.Contexts.Count,3);Eq(o.Contexts[0].AdmissionStatus,"Pending");Eq(o.Contexts[1].AdmissionStatus,"RetryExcluded");Eq(o.Contexts[2].AdmissionStatus,"NoEvidence");Eq(o.Evidence.Count,0);
+    var c=Content.MultiplicationFixture();var q=c.Questions[16];var mapping=Guid.NewGuid();var correction=Guid.NewGuid();var release=Guid.NewGuid();
+    var input=Input(4) with{Question=q,Kcs=c.Kcs,MappingSetRevisionId=mapping,MappingReleaseId=release,CorrectionBatchId=correction,Grade=new Grading{Result="Partial",Steps=Json.Write(new[]{new ObservedStep("model1","Correct"),new ObservedStep("model2","Incorrect")})}};
+    o=Replay(input);var context=o.Contexts.Single();Eq(context.MappingSource,"FixedContainer");Eq(context.MappingSetRevisionId,mapping);Eq(context.QuestionRevisionId,q.RevisionId);Eq(context.MappingReleaseId,release);Eq(context.CorrectionBatchId,correction);Eq(context.GradingRevisionId,input.Grade.Id);Eq(context.EvidenceRuleVersion,Assessment.EvidenceRuleVersion);Eq(o.Evidence.Count,2);Eq(o.Evidence.All(e=>e.ContextId==context.Id && e.MappingSetRevisionId==mapping && e.GradingId==context.GradingRevisionId),true);
+    Eq(Replay(first).Contexts.Single().MappingSource,"LegacySnapshot");
+});
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

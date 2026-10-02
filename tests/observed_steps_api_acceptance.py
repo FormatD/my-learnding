@@ -12,7 +12,7 @@ def main():
         d=c.request('/content/drafts',{'title':'步骤测量','catalog':catalog});c.request('/content/drafts/'+d['id']+':review',{});p=c.request('/content/drafts/'+d['id']+'/preview');return c.request('/content/drafts/'+d['id']+':publish',{'previewHash':p['hash']})
     r1=publish(cat);c.request('/students/'+sid+'/content/'+r1['id']+':bind',{})
     rev=c.request('/students/'+sid+'/plans/'+TODAY+':generate',{});assert c.request('/plans/'+rev['id']+'/questions')[0]['id']==qid
-    other.request('/plans/'+rev['id']+'/questions',expected=404)
+    other.request('/plans/'+rev['id']+'/questions',expected=404);other.request('/students/'+sid+'/assessment-contexts',expected=404)
     inp={'title':'家长观察两步过程','minutes':5,'resourceRef':'在纸上列式与计算，家长观察后确认','type':'Practice','questionId':qid}
     c.request('/plans/'+rev['id']+'/tasks',{**inp,'questionId':str(uuid.uuid4())},expected=422)
     task=c.request('/plans/'+rev['id']+'/tasks',inp);assert task['questionId']==qid and task['releaseId']==r1['id'] and task['locked']
@@ -40,6 +40,6 @@ def main():
     c.request('/attempts/'+aid+'/grading-preview',grade,expected=422)
     grade['steps'][0]['step']='列出算式';p=c.request('/attempts/'+aid+'/grading-preview',grade);c.request('/attempts/'+aid+'/grading-revisions',{**grade,'previewHash':p['previewHash']},expected=202);settled();assert len(c.request('/students/'+sid+'/mastery/'+a)['evidence'])==1
     print('PASS 历史映射更正后使用有效观察点判分，原始作答保持不变且证据不双计')
-    c.request('/students/'+sid+'/child-sessions',{});c.request('/attempts/'+aid+'/grading-context',expected=403);c.request('/plans/'+rev['id']+'/questions',expected=403)
+    c.request('/students/'+sid+'/child-sessions',{});c.request('/attempts/'+aid+'/grading-context',expected=403);c.request('/plans/'+rev['id']+'/questions',expected=403);c.request('/students/'+sid+'/assessment-contexts',expected=403)
     print('PASS 孩子不能获取参考答案与家长观察判分上下文')
 if __name__=='__main__':main()

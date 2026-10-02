@@ -108,6 +108,10 @@
     {
       "id": "20261002191928_LearningMappingReferences",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002201644_AssessmentContexts",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -342,6 +346,331 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Alias\" ON public.\"Alias\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "AssessmentContext",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "GenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AttemptId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "GradingRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MappingSetRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "QuestionRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ContentReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MappingReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CorrectionBatchId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidenceRuleVersion",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ActivationStatus",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MappingSource",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EvidencePolicy",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AdmissionStatus",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_AssessmentContext_FamilyId_Id_GenerationId_StudentId_Attemp~",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingRevisionId\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Attempts_FamilyId_AttemptId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"AttemptId\") REFERENCES \"Attempts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_ContentRevision_FamilyId_QuestionRevision~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"QuestionRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_CorrectionBatch_FamilyId_CorrectionBatchId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CorrectionBatchId\") REFERENCES \"CorrectionBatch\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Generations_FamilyId_GenerationId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"GenerationId\") REFERENCES \"Generations\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Gradings_FamilyId_GradingRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"GradingRevisionId\") REFERENCES \"Gradings\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_MappingSetRevision_FamilyId_MappingSetRev~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingSetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Releases_FamilyId_ContentReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ContentReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Releases_FamilyId_MappingReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentContext_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_AssessmentContext",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_AssessmentContext_FamilyId_Id_GenerationId_StudentId_Attemp~",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_AssessmentContext_FamilyId_Id_GenerationId_StudentId_Attemp~\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"Id\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingRevisionId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_AttemptId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_AttemptId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"AttemptId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_ContentReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_ContentReleaseId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"ContentReleaseId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_CorrectionBatchId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_CorrectionBatchId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"CorrectionBatchId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_GenerationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_GenerationId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"GenerationId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_GradingRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_GradingRevisionId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"GradingRevisionId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_MappingReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_MappingReleaseId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"MappingReleaseId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_MappingSetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_MappingSetRevisionId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"MappingSetRevisionId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_QuestionRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_QuestionRevisionId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"QuestionRevisionId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentContext_FamilyId_StudentId\" ON public.\"AssessmentContext\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_GenerationId_AttemptId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentContext_GenerationId_AttemptId\" ON public.\"AssessmentContext\" USING btree (\"GenerationId\", \"AttemptId\")"
+        },
+        {
+          "name": "IX_AssessmentContext_GenerationId_AttemptId_GradingRevisionId_~",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentContext_GenerationId_AttemptId_GradingRevisionId_~\" ON public.\"AssessmentContext\" USING btree (\"GenerationId\", \"AttemptId\", \"GradingRevisionId\", \"MappingSetRevisionId\", \"EvidenceRuleVersion\")"
+        },
+        {
+          "name": "PK_AssessmentContext",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_AssessmentContext\" ON public.\"AssessmentContext\" USING btree (\"Id\")"
         }
       ]
     },
@@ -2933,9 +3262,25 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "ContextId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "FK_Evidence_AssessmentContext_FamilyId_ContextId_GenerationId_~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ContextId\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingId\") REFERENCES \"AssessmentContext\"(\"FamilyId\", \"Id\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingRevisionId\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "FK_Evidence_Attempts_FamilyId_AttemptId",
           "kind": "f",
@@ -2995,6 +3340,12 @@
       ],
       "indexes": [
         {
+          "name": "IX_Evidence_ContextId_KCId_Part_Positive",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_Evidence_ContextId_KCId_Part_Positive\" ON public.\"Evidence\" USING btree (\"ContextId\", \"KCId\", \"Part\", \"Positive\")"
+        },
+        {
           "name": "IX_Evidence_FamilyId",
           "unique": false,
           "valid": true,
@@ -3005,6 +3356,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Evidence_FamilyId_AttemptId\" ON public.\"Evidence\" USING btree (\"FamilyId\", \"AttemptId\")"
+        },
+        {
+          "name": "IX_Evidence_FamilyId_ContextId_GenerationId_StudentId_AttemptI~",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Evidence_FamilyId_ContextId_GenerationId_StudentId_AttemptI~\" ON public.\"Evidence\" USING btree (\"FamilyId\", \"ContextId\", \"GenerationId\", \"StudentId\", \"AttemptId\", \"GradingId\")"
         },
         {
           "name": "IX_Evidence_FamilyId_GenerationId",

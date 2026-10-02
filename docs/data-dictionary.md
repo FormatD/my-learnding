@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 53 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 54 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -44,6 +44,7 @@
 | 20261002184306_ContentReviewSnapshots | 10.0.4 |
 | 20261002190022_PublishedMappingContainers | 10.0.4 |
 | 20261002191928_LearningMappingReferences | 10.0.4 |
+| 20261002201644_AssessmentContexts | 10.0.4 |
 
 ## Accounts
 
@@ -99,6 +100,62 @@
 - `CREATE INDEX "IX_Alias_FamilyId_CandidateId" ON public."Alias" USING btree ("FamilyId", "CandidateId")`
 - `CREATE UNIQUE INDEX "IX_Alias_FamilyId_KCId_Normalized" ON public."Alias" USING btree ("FamilyId", "KCId", "Normalized")`
 - `CREATE UNIQUE INDEX "PK_Alias" ON public."Alias" USING btree ("Id")`
+
+## AssessmentContext
+
+每世代每作答的固定判分、映射、规则和准入状态；历史缺失不回填。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 否 | 无 |
+| GenerationId | uuid | 否 | 无 |
+| AttemptId | uuid | 否 | 无 |
+| GradingRevisionId | uuid | 否 | 无 |
+| MappingSetRevisionId | uuid | 是 | 无 |
+| QuestionRevisionId | uuid | 否 | 无 |
+| ContentReleaseId | uuid | 否 | 无 |
+| MappingReleaseId | uuid | 否 | 无 |
+| CorrectionBatchId | uuid | 是 | 无 |
+| EvidenceRuleVersion | text | 否 | 无 |
+| ActivationStatus | text | 否 | 无 |
+| MappingSource | text | 否 | 无 |
+| EvidencePolicy | text | 否 | 无 |
+| AdmissionStatus | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_AssessmentContext_FamilyId_Id_GenerationId_StudentId_Attemp~`：`UNIQUE ("FamilyId", "Id", "GenerationId", "StudentId", "AttemptId", "GradingRevisionId")`
+- `FK_AssessmentContext_Attempts_FamilyId_AttemptId`：`FOREIGN KEY ("FamilyId", "AttemptId") REFERENCES "Attempts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_ContentRevision_FamilyId_QuestionRevision~`：`FOREIGN KEY ("FamilyId", "QuestionRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_CorrectionBatch_FamilyId_CorrectionBatchId`：`FOREIGN KEY ("FamilyId", "CorrectionBatchId") REFERENCES "CorrectionBatch"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_Generations_FamilyId_GenerationId`：`FOREIGN KEY ("FamilyId", "GenerationId") REFERENCES "Generations"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_Gradings_FamilyId_GradingRevisionId`：`FOREIGN KEY ("FamilyId", "GradingRevisionId") REFERENCES "Gradings"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_MappingSetRevision_FamilyId_MappingSetRev~`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_Releases_FamilyId_ContentReleaseId`：`FOREIGN KEY ("FamilyId", "ContentReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_Releases_FamilyId_MappingReleaseId`：`FOREIGN KEY ("FamilyId", "MappingReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentContext_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_AssessmentContext`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_AssessmentContext_FamilyId_Id_GenerationId_StudentId_Attemp~" ON public."AssessmentContext" USING btree ("FamilyId", "Id", "GenerationId", "StudentId", "AttemptId", "GradingRevisionId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId" ON public."AssessmentContext" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_AttemptId" ON public."AssessmentContext" USING btree ("FamilyId", "AttemptId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_ContentReleaseId" ON public."AssessmentContext" USING btree ("FamilyId", "ContentReleaseId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_CorrectionBatchId" ON public."AssessmentContext" USING btree ("FamilyId", "CorrectionBatchId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_GenerationId" ON public."AssessmentContext" USING btree ("FamilyId", "GenerationId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_GradingRevisionId" ON public."AssessmentContext" USING btree ("FamilyId", "GradingRevisionId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_MappingReleaseId" ON public."AssessmentContext" USING btree ("FamilyId", "MappingReleaseId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_MappingSetRevisionId" ON public."AssessmentContext" USING btree ("FamilyId", "MappingSetRevisionId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_QuestionRevisionId" ON public."AssessmentContext" USING btree ("FamilyId", "QuestionRevisionId")`
+- `CREATE INDEX "IX_AssessmentContext_FamilyId_StudentId" ON public."AssessmentContext" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentContext_GenerationId_AttemptId" ON public."AssessmentContext" USING btree ("GenerationId", "AttemptId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentContext_GenerationId_AttemptId_GradingRevisionId_~" ON public."AssessmentContext" USING btree ("GenerationId", "AttemptId", "GradingRevisionId", "MappingSetRevisionId", "EvidenceRuleVersion")`
+- `CREATE UNIQUE INDEX "PK_AssessmentContext" ON public."AssessmentContext" USING btree ("Id")`
 
 ## Attempts
 
@@ -638,9 +695,11 @@
 | CorrectionBatchId | uuid | 是 | 无 |
 | MappingReleaseId | uuid | 是 | 无 |
 | MappingSetRevisionId | uuid | 是 | 无 |
+| ContextId | uuid | 是 | 无 |
 
 约束：
 
+- `FK_Evidence_AssessmentContext_FamilyId_ContextId_GenerationId_~`：`FOREIGN KEY ("FamilyId", "ContextId", "GenerationId", "StudentId", "AttemptId", "GradingId") REFERENCES "AssessmentContext"("FamilyId", "Id", "GenerationId", "StudentId", "AttemptId", "GradingRevisionId") ON DELETE CASCADE`
 - `FK_Evidence_Attempts_FamilyId_AttemptId`：`FOREIGN KEY ("FamilyId", "AttemptId") REFERENCES "Attempts"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Evidence_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Evidence_Generations_FamilyId_GenerationId`：`FOREIGN KEY ("FamilyId", "GenerationId") REFERENCES "Generations"("FamilyId", "Id") ON DELETE CASCADE`
@@ -651,8 +710,10 @@
 
 索引（包含约束自动创建的索引）：
 
+- `CREATE UNIQUE INDEX "IX_Evidence_ContextId_KCId_Part_Positive" ON public."Evidence" USING btree ("ContextId", "KCId", "Part", "Positive")`
 - `CREATE INDEX "IX_Evidence_FamilyId" ON public."Evidence" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_AttemptId" ON public."Evidence" USING btree ("FamilyId", "AttemptId")`
+- `CREATE INDEX "IX_Evidence_FamilyId_ContextId_GenerationId_StudentId_AttemptI~" ON public."Evidence" USING btree ("FamilyId", "ContextId", "GenerationId", "StudentId", "AttemptId", "GradingId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_GenerationId" ON public."Evidence" USING btree ("FamilyId", "GenerationId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_GradingId" ON public."Evidence" USING btree ("FamilyId", "GradingId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_MappingSetRevisionId" ON public."Evidence" USING btree ("FamilyId", "MappingSetRevisionId")`
