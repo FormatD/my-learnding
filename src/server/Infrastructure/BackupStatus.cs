@@ -5,7 +5,11 @@ using System.Text.RegularExpressions;
 using Npgsql;
 
 namespace Learning;
-public record BackupStatus(bool Configured,bool Available,bool Verified,string Status,bool ArchiveVerified,bool RestoreVerified,bool IndependentDisk,bool SchedulerActive,DateTimeOffset? LastSnapshotAt,double? SnapshotAgeHours,DateTimeOffset? NextDueAt,string? ErrorCode,string Notice);
+public record BackupStatus(bool Configured,bool Available,bool Verified,string Status,bool ArchiveVerified,bool RestoreVerified,bool IndependentDisk,bool SchedulerActive,DateTimeOffset? LastSnapshotAt,double? SnapshotAgeHours,DateTimeOffset? NextDueAt,string? ErrorCode,string Notice)
+{
+    public DateTimeOffset? RestoreCheckedAt {get;init;}
+    public double? RestoreDrillSeconds {get;init;}
+}
 public sealed class BackupProbe(string? configPath,string runnerPath,string connection)
 {
     static string ReadPrivate(string path)
@@ -59,8 +63,21 @@ public sealed class BackupProbe(string? configPath,string runnerPath,string conn
             }
             var code=state.TryGetProperty("errorCode",out var error)&&error.ValueKind==JsonValueKind.String?error.GetString():null;
             if(code!=null && !Regex.IsMatch(code,@"\A[A-Z0-9_]{1,80}\z"))code="BACKUP_EXECUTION_FAILED";
+            var restoreVerified=false;DateTimeOffset? restoreChecked=null;double? restoreSeconds=null;
+            var receiptPath=Path.ChangeExtension(statePath,".restore-drill.json");
+            if(verified && File.Exists(receiptPath))
+            {
+                try
+                {
+                    using var receiptDoc=JsonDocument.Parse(ReadPrivate(receiptPath));var receipt=receiptDoc.RootElement;
+                    var lastProof=state.GetProperty("lastSuccess");var checkedAt=receipt.GetProperty("checkedAt").GetDateTimeOffset();
+                    if(Text(receipt,"format")=="learning-restore-drill/1" && Text(receipt,"status")=="Passed" && Text(receipt,"archiveSha256")==Text(lastProof,"sha256") && Text(receipt,"archive")==Text(lastProof,"archive") && Text(receipt,"snapshotStartedAt")==Text(lastProof,"snapshotStartedAt") && checkedAt<=now.AddMinutes(1) && checkedAt>=snapshot && receipt.GetProperty("allRetainedColumnsEqual").GetBoolean() && receipt.GetProperty("constraintsValidated").GetBoolean() && receipt.GetProperty("latestDeletionLedgersApplied").GetBoolean() && receipt.GetProperty("sessionsAndCachesCleared").GetBoolean() && receipt.GetProperty("tableCount").GetInt32()==lastProof.GetProperty("tableCount").GetInt32())
+                    {var elapsed=receipt.GetProperty("seconds").GetDouble();if(!double.IsFinite(elapsed)||elapsed<0)throw new JsonException();restoreVerified=true;restoreChecked=checkedAt;restoreSeconds=elapsed;}
+                }
+                catch(Exception ex)when(ex is IOException or UnauthorizedAccessException or JsonException or FormatException or KeyNotFoundException or InvalidOperationException){/* A bad drill receipt cannot erase a separately verified archive. */}
+            }
             // A readable archive and a live process do not prove physical independence or sustained RPO.
-            return new(true,true,false,status,verified,false,false,active,snapshot,age,next,code,"本机归档检查与实际恢复分开记录；独立物理磁盘、持续24小时恢复点及4小时恢复仍未验收。关机或睡眠期间调度不能执行。");
+            return new(true,true,false,status,verified,restoreVerified,false,active,snapshot,age,next,code,"本机归档检查与临时库恢复演练分开记录；演练不是正式灾难切换。独立物理磁盘、持续24小时恢复点及4小时恢复仍未验收。关机或睡眠期间调度不能执行。"){RestoreCheckedAt=restoreChecked,RestoreDrillSeconds=restoreSeconds};
         }
         catch(Exception ex)when(ex is IOException or UnauthorizedAccessException or JsonException or FormatException or InvalidOperationException or KeyNotFoundException or ArgumentException or System.ComponentModel.Win32Exception)
         {return new(true,false,false,"Unavailable",false,false,false,false,null,null,null,"BACKUP_STATUS_UNAVAILABLE","无法核对备份配置、归档或实际调度进程。请检查本机备份服务，不能据此认定备份正常。");}

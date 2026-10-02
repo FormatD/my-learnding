@@ -97,3 +97,5 @@ V1 目标仍在进行中。真实教材核对、K1 模型质量评测、真实�
 到期备份工具：`python3 <脚本绝对路径> --config <私有配置绝对路径> --watch`。独立进程每分钟检查23小时到期条件，成功后执行30天受管保留；失败保留上次成功归档，口令不写入日志。使用 `python3 tests/daily_backup_acceptance.py` 验证真实加密、保留与新空库恢复（先构建 `tests/persistence`）；`RUN_BACKUP_BROWSER=1` 同时运行负责人浏览器，需要 `CHROMIUM_PATH`。本机同盘开发备份已运行，负责人状态与自动告警已接入，独立磁盘、实际整机重启及持续指标仍待验。服务用 `BackupConfigFile` 指定私有配置，`scripts/dev.sh` 会启用已有本机配置；详细说明见 `docs/runbooks/local.md`。
 
 macOS登录启动配置：`python3 scripts/install_backup_agent.py --config <私有配置路径>` 先生成可检查的项目专属plist；加 `--install` 安装到当前用户LaunchAgents。本机已安装并确认系统管理的调度实际运行；每次该用户登录会启动，退出后会重新拉起，不能据此声称已测试实际整机重启或登录前运行。`python3 tests/backup_agent_acceptance.py` 用临时服务和隔离库验证载入、真实备份、持锁不打断及进程终止后重启，结束后清理临时服务。
+
+全量恢复演练：`python3 scripts/restore_drill.py --config <私有配置路径>`。将最近成功的真实加密快照恢复到一次性空库，应用最新删除清单，按归档列顺序逐列核对全部应保留记录和附件字节，最后清理临时库。私有演练记录只认可同一归档，负责人页面可查看核对时间；本机同盘演练不等于灾难切换或持续RPO/RTO。隔离核对测试：`python3 tests/restore_drill_acceptance.py`。

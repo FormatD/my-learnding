@@ -8,6 +8,7 @@ import os
 import secrets
 import shutil
 import socket
+import sys
 import subprocess
 import tempfile
 import time
@@ -117,6 +118,16 @@ def main():
                         if os.environ.get('RUN_BACKUP_BROWSER')=='1':
                             browser_env=api_env|{'LEARNING_TEST_URL':f'http://127.0.0.1:{port}','BACKUP_TEST_USER':credentials['userName'],'BACKUP_TEST_PASSWORD':credentials['password']}
                             subprocess.run(['npm','run','test:e2e','--','tests/backup_status.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env,check=True)
+                        sys.path.insert(0,str(root/'scripts'));import restore_drill
+                        restore_drill.execute(configfile)
+                        exercised=client.request('/operations')['backup'];assert exercised['restoreVerified'] and exercised['restoreCheckedAt'] and exercised['restoreDrillSeconds']>=0 and not exercised['verified']
+                        if os.environ.get('RUN_BACKUP_BROWSER')=='1':
+                            subprocess.run(['npm','run','test:e2e','--','tests/backup_status.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env|{'BACKUP_TEST_RESTORED':'1'},check=True)
+                        receipt_path=Path(config['stateFile']).with_suffix('.restore-drill.json');receipt=json.loads(receipt_path.read_text());wrong=copy.deepcopy(receipt);wrong['archiveSha256']='0'*64;job.write_json(receipt_path,wrong)
+                        mismatched=client.request('/operations')['backup'];assert not mismatched['restoreVerified'] and mismatched['archiveVerified']
+                        wrong=copy.deepcopy(receipt);wrong['seconds']='invalid';job.write_json(receipt_path,wrong)
+                        malformed_receipt=client.request('/operations')['backup'];assert not malformed_receipt['restoreVerified'] and malformed_receipt['archiveVerified']
+                        job.write_json(receipt_path,receipt)
                         client.request('/family/members',{'userName':'backup-parent-'+suffix,'password':secret,'roles':['Parent']},expected=201)
                         parent=Client();parent.request('/auth/login',{'userName':'backup-parent-'+suffix,'password':secret});parent.request('/me')
                         assert parent.request('/operations')['backup'] is None
