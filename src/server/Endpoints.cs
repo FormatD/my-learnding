@@ -5,7 +5,7 @@ namespace Learning;
 public record Credentials(string UserName,string Password,string? FamilyName=null);
 public record StudentInput(string Name,int Grade=3,int DailyMinutes=30,string TimeZone="Asia/Shanghai");
 public record BudgetInput(int Minutes,int Reserved);
-public record GoalInput(string Title,int Minutes,string PaperReference,bool Active=true);
+public record GoalInput(string Title,int Minutes,string PaperReference,bool Active=true,string? Subject=null,string? GoalType=null,Guid? KCId=null,string? Period=null,int? TargetValue=null,int[]? Days=null,int? Priority=null,DateOnly? StartDate=null,DateOnly? EndDate=null,string Reason="家长调整目标");
 public record DraftInput(string Title,Catalog Catalog);
 public record PublishInput(string PreviewHash,bool ConfirmWarnings=false);
 public record TransitionInput(string Status,string Reason="",int? ActualMinutes=null);
@@ -87,10 +87,7 @@ public static class Endpoints
             }
             return Results.Ok(progress);
         });
-        api.MapGet("/students/{id:guid}/goals",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");await ctx.Actor().Student(db,id);return await db.Goals.Where(g => g.StudentId==id).ToListAsync(); });
-        api.MapPost("/students/{id:guid}/goals",async (Guid id,GoalInput input,Database db,HttpContext ctx) =>
-        { var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);if (input.Minutes<3 || input.Minutes>60 || string.IsNullOrWhiteSpace(input.PaperReference)) throw new ApiError(422,"INVALID_GOAL","目标需要 3～60 分钟及可执行的资源说明。");var g=new Goal { FamilyId=a.FamilyId,StudentId=id,Title=input.Title,Minutes=input.Minutes,PaperReference=input.PaperReference,Active=input.Active };db.Goals.Add(g);return Results.Ok(g); });
-        api.MapPut("/goals/{id:guid}",async(Guid id,GoalInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");var g=await Owned<Goal>(db,a,id);if(input.Minutes is <3 or >60 || string.IsNullOrWhiteSpace(input.Title) || string.IsNullOrWhiteSpace(input.PaperReference))throw new ApiError(422,"INVALID_GOAL","目标需名称、时长及可执行说明。");g.Title=input.Title;g.Minutes=input.Minutes;g.PaperReference=input.PaperReference;g.Active=input.Active;return Results.Ok(g);});
+        Goals.Map(api);
         api.MapGet("/content",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");return new { drafts=await db.Drafts.Where(d => d.FamilyId==ctx.Actor().FamilyId).OrderByDescending(d => d.CreatedAt).ToListAsync(),releases=await db.Releases.Where(r => r.FamilyId==ctx.Actor().FamilyId).OrderByDescending(r => r.Number).ToListAsync() }; });
         api.MapPost("/content/fixture",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft { FamilyId=a.FamilyId,Title="原创样例 · 三年级第一单元混合运算（20 题）",Payload=Json.Write(Content.Fixture()) };db.Drafts.Add(draft);return Results.Ok(draft); });
         api.MapPost("/content/drafts",(DraftInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var d=new ContentDraft { FamilyId=a.FamilyId,Title=input.Title,Payload=Json.Write(input.Catalog) };db.Drafts.Add(d);return Results.Ok(d); });

@@ -57,7 +57,16 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Review>().HasIndex(x => new { x.GenerationId, x.TargetType, x.TargetId }).IsUnique();
         b.Entity<CommandRecord>().HasIndex(x => new { x.FamilyId, x.ActorId, x.Scope, x.Key }).IsUnique();
         b.Entity<Source>().HasIndex(x => new { x.FamilyId, x.Hash }).IsUnique();
-        Foreign<Student, Goal>(b, "StudentId"); Foreign<Student, Availability>(b, "StudentId");
+        Foreign<Student, Goal>(b, "StudentId"); Foreign<Student, GoalChange>(b,"StudentId"); Foreign<Goal, GoalChange>(b,"GoalId");
+        b.Entity<Goal>().Property(g=>g.Subject).HasDefaultValue("Unspecified");
+        b.Entity<Goal>().Property(g=>g.GoalType).HasDefaultValue("Activity");
+        b.Entity<Goal>().Property(g=>g.Period).HasDefaultValue("Daily");
+        b.Entity<Goal>().Property(g=>g.ScheduleRule).HasDefaultValue("[1,2,3,4,5,6,0]");
+        b.Entity<Goal>().Property(g=>g.TargetValue).HasDefaultValue(1);
+        b.Entity<Goal>().Property(g=>g.Priority).HasDefaultValue(3);
+        b.Entity<Goal>().Property(g=>g.Version).HasDefaultValue(1L);
+        b.Entity<StudyTask>().Property(t=>t.GoalSnapshots).HasDefaultValue("[]");
+        b.Entity<GoalChange>().HasIndex(x=>new{x.GoalId,x.Version}).IsUnique(); Foreign<Student, Availability>(b, "StudentId");
         Foreign<Student, Progress>(b, "StudentId"); Foreign<Release, Progress>(b,"ReleaseId"); Foreign<Student, ProgressChange>(b,"StudentId"); Foreign<Student, Plan>(b, "StudentId");
         Foreign<Student, StudyTask>(b, "StudentId"); Foreign<Student, LearningSession>(b, "StudentId");
         Foreign<Plan, PlanRevision>(b, "PlanId"); Foreign<PlanRevision, Placement>(b, "RevisionId");

@@ -35,7 +35,15 @@ public static class Planning
         var budget=availability?.Minutes??s.DailyMinutes; var reserved=availability?.Reserved??0;
         if (reserved>0 && fixedTasks.Any(t => t.Type=="Schoolwork")) throw new ApiError(422,"SCHOOLWORK_DOUBLE_COUNT","学校作业已是任务，请将预留作业时间设为 0。");
         var progress=await db.Progresses.Where(p => p.StudentId==s.Id && p.Status=="Confirmed" && p.Date<=date && p.Date>=date.AddDays(-7)).ToListAsync();
-        var goals=await db.Goals.Where(g => g.StudentId==s.Id && g.Active).ToListAsync();
+        var allGoals=await db.Goals.Where(g => g.StudentId==s.Id && g.Active).ToListAsync();
+        var quotaStart=allGoals.Any(g=>g.Period=="Weekly")?date.AddDays(-((int)date.DayOfWeek+6)%7):date;
+        var zone=TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone);
+        var quotaFrom=new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(quotaStart.ToDateTime(TimeOnly.MinValue),zone));
+        var quotaUntil=new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(date.AddDays(1).ToDateTime(TimeOnly.MinValue),zone));
+        var completedGoalTasks=await db.Tasks.Where(t=>t.StudentId==s.Id && t.Status=="Completed" && t.CompletedAt>=quotaFrom && t.CompletedAt<quotaUntil && t.GoalSnapshots!="[]").ToListAsync();
+        var quotaTaskIds=completedGoalTasks.Select(t=>t.Id).ToArray();
+        var answeredTaskIds=await (from attempt in db.Attempts join session in db.Sessions on attempt.SessionId equals session.Id where attempt.StudentId==s.Id && attempt.Number==1 && quotaTaskIds.Contains(session.TaskId) select session.TaskId).Distinct().ToArrayAsync();
+        var goals=allGoals.Where(g=>Goals.Scheduled(g,date) && Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)<g.TargetValue && Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds,true)==0).ToArray();
         var mastery=await db.Masteries.Where(m => m.StudentId==s.Id && m.GenerationId==s.ActiveGenerationId).ToListAsync();
         var reviews=await db.Reviews.Where(r => r.StudentId==s.Id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=date).ToListAsync();
         var history=await (from a in db.Attempts join session in db.Sessions on a.SessionId equals session.Id where a.StudentId==s.Id && a.Number==1 select new {session.QuestionId,a.CreatedAt}).ToListAsync();
@@ -43,7 +51,18 @@ public static class Planning
         var options=new List<PlanOption>(); var warnings=new List<string>();
         var pending=await db.Outbox.CountAsync(o=>o.StudentId==s.Id && o.ProcessedAt==null);
         if(pending>0)warnings.Add($"PROJECTION_PENDING: {pending} 个结果尚未处理，可等待后台追平后重新生成");
-        foreach (var goal in goals) options.Add(new($"goal:{goal.Id}",goal.Title,"Resource",goal.Minutes,false,15,"LONG_TERM_GOAL","今天的固定学习目标",ResourceRef:goal.PaperReference));
+        var goalOptions=new List<(Goal Goal,string Key)>();
+        foreach(var goal in goals)
+        {
+            Question? q=null;
+            if(goal.GoalType=="Practice")
+            {
+                q=content.Questions.Where(q=>q.Policy=="SingleKC" && q.Mappings.Any(m=>m.KCId==goal.KCId && m.Mode=="WholeItem")).OrderBy(q=>history.Count(h=>h.QuestionId==q.Id)).ThenBy(q=>q.Id).FirstOrDefault();
+                if(q==null){warnings.Add($"MISSING_CONTENT: 目标 {goal.Title} 缺少可测正式题目");continue;}
+            }
+            var key=q==null?$"goal:{goal.Id}":$"question:{q.Id}";goalOptions.Add((goal,key));
+            options.Add(new(key,goal.Title,q==null?"Resource":"Practice",goal.Minutes,false,15+goal.Priority-3,"LONG_TERM_GOAL",$"按目标周期安排（{(goal.Period=="Weekly"?"每周":"每天")} {goal.TargetValue} 次）",goal.KCId,q?.Id,ResourceRef:goal.PaperReference));
+        }
         foreach (var r in reviews)
         {
             var q=r.TargetType=="WrongQuestion" ? content.Questions.FirstOrDefault(q => q.Id==r.TargetId) : content.Questions.OrderBy(q => q.Id).FirstOrDefault(q => q.Policy=="SingleKC" && q.Mappings.Any(m => m.KCId==r.KCId && m.Mode=="WholeItem"));
@@ -77,10 +96,17 @@ public static class Planning
                 if(diagnostic!=null)options.Add(new($"question:{diagnostic.Id}","前置能力小诊断","Practice",5,false,20,"PREREQUISITE_CHECK","当前和前置能力都有弱证据，独立测一道题再决定",pre.From,diagnostic.Id));
             }
         }
-        var remainingOptions=options.Where(o => !fixedTasks.Any(t => t.QuestionId!=null && t.QuestionId==o.QuestionId || t.ReviewTargetId!=null && t.ReviewTargetId==o.ReviewTargetId)).ToArray();
-        var hash=Content.Hash(Json.Write(new { date,release.Id,budget,reserved,progress,goals,mastery,reviews,fixedTasks,options=remainingOptions,rule="plan/1" }));
+        foreach(var goal in allGoals.Where(g=>g.Period=="Weekly" && (!g.StartDate.HasValue || date>=g.StartDate) && (!g.EndDate.HasValue || date<=g.EndDate)))
+        {
+            var count=Goals.Completed(goal,date,s.TimeZone,completedGoalTasks,answeredTaskIds);var weekEnd=Goals.PeriodStart(goal,date).AddDays(6);
+            var possible=Enumerable.Range(0,weekEnd.DayNumber-date.DayNumber+1).Select(n=>date.AddDays(n)).Count(day=>Goals.Scheduled(goal,day) && Goals.Completed(goal,day,s.TimeZone,completedGoalTasks,answeredTaskIds,true)==0);
+            if(count+possible<goal.TargetValue)warnings.Add($"GOAL_QUOTA_GAP: 目标 {goal.Title} 本周期还差 {goal.TargetValue-count} 次，可安排日期不足；不自动超出预算补齐");
+        }
+        var remainingOptions=options.Where(o => !fixedTasks.Any(t => t.QuestionId!=null && t.QuestionId==o.QuestionId || t.ReviewTargetId!=null && t.ReviewTargetId==o.ReviewTargetId || Json.Read<GoalSnapshot[]>(t.GoalSnapshots).Any(snapshot=>goalOptions.Any(g=>g.Key==o.Key && g.Goal.Id==snapshot.Id && Goals.Snapshot(g.Goal).Scope==snapshot.Scope)))).ToArray();
+        var hash=Content.Hash(Json.Write(new { date,release.Id,budget,reserved,progress,allGoals,goalCounts=allGoals.Select(g=>new{g.Id,count=Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)}).ToArray(),goals,mastery,reviews,fixedTasks,options=remainingOptions,rule="plan/1" }));
         var same=revisions.LastOrDefault(r => r.InputHash==hash); if (same!=null) return same;
         var selection=Fit(remainingOptions,Math.Max(0,budget-reserved),fixedTasks.Sum(Charge),fixedTasks.Count);
+        foreach(var goal in goalOptions.Where(g=>!selection.Selected.Any(o=>o.Key==g.Key) && !fixedTasks.Any(t=>Json.Read<GoalSnapshot[]>(t.GoalSnapshots).Any(snapshot=>snapshot.Id==g.Goal.Id))))warnings.Add($"GOAL_QUOTA_GAP: 目标 {goal.Goal.Title} 未能进入本次计划，请调整预算或优先级");
         if (selection.Overflow>0) warnings.Add($"MANDATORY_OVERFLOW: 必做/已执行任务超出预算 {selection.Overflow} 分钟");
         var rev=new PlanRevision { FamilyId=s.FamilyId,PlanId=plan.Id,ReleaseId=release.Id,Number=(revisions.LastOrDefault()?.Number??0)+1,Budget=budget,Reserved=reserved,Overflow=selection.Overflow,InputHash=hash,Candidates=Json.Write(selection.Rejected),Warnings=Json.Write(warnings) };
         db.PlanRevisions.Add(rev);
@@ -88,7 +114,7 @@ public static class Planning
         foreach (var t in fixedTasks.OrderBy(t => old.FindIndex(p => p.TaskId==t.Id))) db.Placements.Add(new() { FamilyId=s.FamilyId,RevisionId=rev.Id,TaskId=t.Id,Sequence=index++ });
         foreach (var o in selection.Selected)
         {
-            var task=new StudyTask { FamilyId=s.FamilyId,StudentId=s.Id,ReleaseId=release.Id,Title=o.Title,Type=o.Type,Minutes=o.Minutes,Mandatory=o.Mandatory,KCId=o.KCId,QuestionId=o.QuestionId,ReviewTargetId=o.ReviewTargetId,ReasonCode=o.ReasonCode,Reason=o.Reason,ResourceRef=o.ResourceRef,ResourceUrl=o.ResourceUrl };
+            var task=new StudyTask { GoalSnapshots=Json.Write(goalOptions.Where(g=>g.Key==o.Key).Select(g=>Goals.Snapshot(g.Goal)).ToArray()),FamilyId=s.FamilyId,StudentId=s.Id,ReleaseId=release.Id,Title=o.Title,Type=o.Type,Minutes=o.Minutes,Mandatory=o.Mandatory,KCId=o.KCId,QuestionId=o.QuestionId,ReviewTargetId=o.ReviewTargetId,ReasonCode=o.ReasonCode,Reason=o.Reason,ResourceRef=o.ResourceRef,ResourceUrl=o.ResourceUrl };
             db.Tasks.Add(task); db.Placements.Add(new() { FamilyId=s.FamilyId,RevisionId=rev.Id,TaskId=task.Id,Sequence=index++ });
         }
         return rev; // Generating a draft does not replace the currently executable plan.

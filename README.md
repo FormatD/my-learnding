@@ -24,6 +24,8 @@ sh scripts/dev.sh
 
 纸质错题可先保存图片和待校正正文，在“证据与复习”补齐并审核归因。原题未入库时可创建原题草稿，人工审核发布并绑定新内容版本；核对同一道原题、原始答案和判分依据后预览确认，才代录首次作答。使用本次确认时间，不推测历史练习间隔。已确认记录保留，后续通过判分更正修订。
 
+目标可用阅读、听力和能力练习模板，设置指定星期、起止日期、每周次数与优先级。完成次数按学生当地实际完成日期统计；能力练习必须提交作答，阅读与听力只记录行为。目标编辑、暂停、恢复保留设置及修订历史；新计划采用新设置，旧任务保留生成时的目标快照。
+
 生成草稿不会影响已经发布的计划。重生成保留已完成、进行中、锁定和必做任务。所有写入有幂等标识，家庭隔离由服务端与复合外键执行。未审核内容不能进入正式作答。
 
 ## 验证
@@ -39,8 +41,10 @@ python3 tests/content_authoring_api_acceptance.py
 python3 tests/provenance_api_acceptance.py
 python3 tests/observed_steps_api_acceptance.py
 python3 tests/paper_learning_api_acceptance.py
+python3 tests/goals_api_acceptance.py
 dotnet build tests/persistence
 python3 tests/worker_fault_acceptance.py
+python3 tests/goal_migration_acceptance.py
 python3 tests/restore_acceptance.py
 cd src/web && npm run test:e2e
 ```

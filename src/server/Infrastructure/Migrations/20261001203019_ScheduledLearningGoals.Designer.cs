@@ -3,6 +3,7 @@ using System;
 using Learning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Learning.Api.Infrastructure.Migrations
 {
     [DbContext(typeof(Database))]
-    partial class DatabaseModelSnapshot : ModelSnapshot
+    [Migration("20261001203019_ScheduledLearningGoals")]
+    partial class ScheduledLearningGoals
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -895,9 +898,7 @@ namespace Learning.Api.Infrastructure.Migrations
 
                     b.Property<string>("GoalType")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Activity");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("KCId")
                         .HasColumnType("uuid");
@@ -911,20 +912,14 @@ namespace Learning.Api.Infrastructure.Migrations
 
                     b.Property<string>("Period")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Daily");
+                        .HasColumnType("text");
 
                     b.Property<int>("Priority")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(3);
+                        .HasColumnType("integer");
 
                     b.Property<string>("ScheduleRule")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("[1,2,3,4,5,6,0]");
+                        .HasColumnType("text");
 
                     b.Property<DateOnly?>("StartDate")
                         .HasColumnType("date");
@@ -934,23 +929,17 @@ namespace Learning.Api.Infrastructure.Migrations
 
                     b.Property<string>("Subject")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Unspecified");
+                        .HasColumnType("text");
 
                     b.Property<int>("TargetValue")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<long>("Version")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasDefaultValue(1L);
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -1794,9 +1783,7 @@ namespace Learning.Api.Infrastructure.Migrations
 
                     b.Property<string>("GoalSnapshots")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("[]");
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("KCId")
                         .HasColumnType("uuid");

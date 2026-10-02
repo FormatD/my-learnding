@@ -1,6 +1,8 @@
 using Learning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using System.Data.Common;
 
 var connection=Environment.GetEnvironmentVariable("PERSISTENCE_TEST_CONNECTION")??throw new Exception("Supply isolated test database connection");
@@ -8,6 +10,19 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="goal-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261001203019_ScheduledLearningGoals");
+    var family=new Family();var catalog=Content.Fixture();var release=new Release {FamilyId=family.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};var legacyStudent=new Student {FamilyId=family.Id,Name="Legacy goal acceptance",ActiveReleaseId=release.Id};
+    var goal=new Goal {FamilyId=family.Id,StudentId=legacyStudent.Id,Title="历史阅读目标",Minutes=9,PaperReference="原始纸质引用",Subject="",GoalType="",Period="",ScheduleRule="",TargetValue=0,Priority=0,Version=0};
+    var task=new StudyTask {FamilyId=family.Id,StudentId=legacyStudent.Id,ReleaseId=release.Id,GoalSnapshots="",Status="Completed",CompletedAt=DateTimeOffset.UtcNow};
+    db.AddRange(family,release,legacyStudent,goal,task);await db.SaveChangesAsync();
+    await db.GetService<IMigrator>().MigrateAsync();db.ChangeTracker.Clear();goal=await db.Goals.SingleAsync();task=await db.Tasks.SingleAsync();legacyStudent=await db.Students.SingleAsync();
+    Assert(goal.Subject=="Unspecified" && goal.GoalType=="Activity" && goal.Period=="Daily" && goal.TargetValue==1 && goal.Priority==3 && goal.Version==1 && Json.Read<int[]>(goal.ScheduleRule).Length==7 && goal.Title=="历史阅读目标" && goal.Minutes==9 && goal.PaperReference=="原始纸质引用","legacy defaults invalid or original goal overwritten");
+    Assert(task.GoalSnapshots=="[]" && task.Status=="Completed","unknown old goal relationship was inferred");Console.WriteLine("PASS 旧目标补齐结构默认值，原名称/资源/时长不改；旧任务关联保持未知");
+    await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(family.Id);var day=DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(legacyStudent.TimeZone)).DateTime);var revision=await Planning.Generate(db,legacyStudent,day);await db.SaveChangesAsync();await tx.CommitAsync();
+    var placement=await db.Placements.SingleAsync(p=>p.RevisionId==revision.Id);var planned=await db.Tasks.SingleAsync(t=>t.Id==placement.TaskId);Assert(Json.Read<GoalSnapshot[]>(planned.GoalSnapshots).Single().Id==goal.Id,"migration did not preserve working plans or guessed old completion quota");Console.WriteLine("PASS 真实旧库升级后计划可生成，不用未记录的旧完成任务虚构目标次数");return;
+}
 if(args[0]=="seed")
 {
     await db.Database.MigrateAsync();var f=new Family();var c=Content.Fixture();var q=c.Questions[0];var r=new Release {FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c))};var s=new Student {FamilyId=f.Id,ActiveReleaseId=r.Id,Name="Fault acceptance"};

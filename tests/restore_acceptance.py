@@ -7,7 +7,7 @@ import secrets
 import subprocess
 import time
 import uuid
-from api_acceptance import Client
+from api_acceptance import Client,TODAY
 
 def main():
     start=time.monotonic()
@@ -27,6 +27,10 @@ def main():
     deleted_paper=confirm(s['id'],wrong)
     survivor=c.request('/students',{'name':'纸质链路恢复验收'},expected=201)
     kept_wrong=c.request('/students/'+survivor['id']+'/paper-wrongs',{'stem':question['stem'],'answer':'999'},expected=201);kept_paper=confirm(survivor['id'],kept_wrong)
+    c.request('/students/'+survivor['id']+'/content/'+r['id']+':bind',{})
+    goal_input={'title':'恢复目标','minutes':5,'paperReference':'恢复后的纸质资源','subject':'Reading','goalType':'Reading','period':'Weekly','targetValue':2,'days':list(range(7)),'priority':4,'startDate':TODAY}
+    goal=c.request('/students/'+survivor['id']+'/goals',goal_input);goal=c.request('/goals/'+goal['id'],{**goal_input,'title':'修订后的恢复目标','reason':'恢复验收的真实目标修订'},method='PUT')
+    revision=c.request('/students/'+survivor['id']+'/plans/'+TODAY+':generate',{});planned=c.request('/students/'+survivor['id']+'/plans/'+TODAY)['tasks'];goal_task=next(t for t in planned if any(g['id']==goal['id'] for g in json.loads(t['goalSnapshots'])))
     for _ in range(100):
         if all(c.request('/students/'+sid+'/mastery')['pending']==0 for sid in [s['id'],survivor['id']]):break
         time.sleep(.1)
@@ -53,7 +57,10 @@ def main():
         assert sql(f'''SELECT "AttemptId" FROM "PaperWrong" WHERE "Id"='{kept_wrong['id']}' ''')==kept_paper['attemptId']
         assert sql(f'''SELECT "AnswerSource" FROM "Attempts" WHERE "Id"='{kept_paper['attemptId']}' ''')=='ParentPaperConfirmed'
         assert sql(f'''SELECT COUNT(*) FROM "Gradings" WHERE "AttemptId"='{kept_paper['attemptId']}' AND "Result"='Incorrect' ''')=='1'
-        report={'case':'AT40','status':'passed','checks':['删除学生不会复活','关联私有图片已删除','纸质错题已删除','旧响应缓存已清理','家庭发布内容保持完整','已删除学生的纸质代录作答不复活','保留学生的原题作答链路完整','保留学生的人工判分完整'],'seconds':round(time.monotonic()-start,2),'method':'PostgreSQL custom-format + GPG AES256 + independent deletion ledger'}
+        assert sql(f'''SELECT "Version" FROM "Goals" WHERE "Id"='{goal['id']}' ''')=='2'
+        assert sql(f'''SELECT COUNT(*) FROM "GoalChange" WHERE "GoalId"='{goal['id']}' ''')=='2'
+        assert sql(f'''SELECT "GoalSnapshots" FROM "Tasks" WHERE "Id"='{goal_task['id']}' ''')==goal_task['goalSnapshots']
+        report={'case':'AT40','status':'passed','checks':['删除学生不会复活','关联私有图片已删除','纸质错题已删除','旧响应缓存已清理','家庭发布内容保持完整','已删除学生的纸质代录作答不复活','保留学生的原题作答链路完整','保留学生的人工判分完整','目标版本与修订历史完整','任务目标快照完整'],'seconds':round(time.monotonic()-start,2),'method':'PostgreSQL custom-format + GPG AES256 + independent deletion ledger'}
         (root/'.local/restore-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
         print(json.dumps(report,ensure_ascii=False))
     finally:

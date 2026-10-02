@@ -63,6 +63,16 @@ public class Progress : Row
 }
 public class Goal : Row
 {
+    public string Subject { get; set; } = "Unspecified";
+    public string GoalType { get; set; } = "Activity";
+    public Guid? KCId { get; set; }
+    public string Period { get; set; } = "Daily";
+    public int TargetValue { get; set; } = 1;
+    public string ScheduleRule { get; set; } = "[1,2,3,4,5,6,0]";
+    public int Priority { get; set; } = 3;
+    public DateOnly? StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
+    public long Version { get; set; } = 1;
     public Guid StudentId { get; set; }
     public string Title { get; set; } = "每天阅读";
     public int Minutes { get; set; } = 10;
@@ -114,6 +124,7 @@ public class PlanRevision : Row
 }
 public class StudyTask : Row
 {
+    public string GoalSnapshots { get; set; } = "[]";
     public int TrackedSeconds { get; set; }
     public DateTimeOffset? StartedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
