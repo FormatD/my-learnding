@@ -10,6 +10,15 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="parent-burden-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002050245_BuilderRetryAttempts");var f=new Family();var s=new Student{FamilyId=f.Id,Name="原始学生"};db.AddRange(f,s);await db.SaveChangesAsync();
+    await db.Database.MigrateAsync();db.ChangeTracker.Clear();Assert((await db.Students.SingleAsync()).Name=="原始学生" && !await db.Set<ParentBurdenRecord>().AnyAsync(),"migration inferred parent effort or changed student");
+    var a=new ParentBurdenRecord{FamilyId=f.Id,StudentId=s.Id,RecordedBy=Guid.NewGuid(),Date=new DateOnly(2026,10,1),Minutes=5};var b=new ParentBurdenRecord{FamilyId=f.Id,StudentId=s.Id,RecordedBy=Guid.NewGuid(),Date=new DateOnly(2026,10,2),Minutes=3,SupersedesId=a.Id,CorrectionReason="原始记录多算"};db.AddRange(a,b);await db.SaveChangesAsync();
+    var another=new Family();db.Add(another);await db.SaveChangesAsync();db.Add(new ParentBurdenRecord{FamilyId=another.Id,StudentId=s.Id,RecordedBy=Guid.NewGuid(),Minutes=3});try{await db.SaveChangesAsync();throw new Exception("cross-family student accepted");}catch(DbUpdateException){}db.ChangeTracker.Clear();
+    Assert(await db.Set<ParentBurdenRecord>().CountAsync()==2,"invalid record persisted");await db.Students.Where(x=>x.Id==s.Id).ExecuteDeleteAsync();Assert(!await db.Set<ParentBurdenRecord>().AnyAsync(),"student deletion retained burden records");
+    Console.WriteLine("PASS 旧库升级不推算家长投入；数据库拒绝跨家庭学生；学生删除清除原记录与更正链");return;
+}
 if(args[0]=="mastery-snapshot")
 {
     await db.Database.MigrateAsync();var family=new Family();var catalog=Content.Fixture();var q=catalog.Questions[0];var release=new Release{FamilyId=family.Id,Number=1,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog))};db.AddRange(family,release);await db.SaveChangesAsync();

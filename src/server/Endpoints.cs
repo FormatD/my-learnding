@@ -266,11 +266,13 @@ public static class Endpoints
             var originalIds=revisions.GroupBy(r => r.PlanId).Select(g => g.First().Id).ToArray();var currentIds=plans.Select(p => p.ActiveRevisionId).ToArray();
             var placements=await db.Placements.Where(p => originalIds.Contains(p.RevisionId) || currentIds.Contains(p.RevisionId)).ToListAsync();var tids=placements.Select(p => p.TaskId).ToArray();var tasks=await db.Tasks.Where(t => tids.Contains(t.Id)).ToListAsync();
             var original=placements.Where(p => originalIds.Contains(p.RevisionId)).Select(p => p.TaskId).Distinct().ToArray();var current=placements.Where(p => currentIds.Contains(p.RevisionId)).Select(p => p.TaskId).Distinct().ToArray();
-            return new { start,end=today,original=new { total=original.Length,completed=tasks.Count(t => original.Contains(t.Id) && t.Status=="Completed") },adjusted=new { total=current.Length,completed=tasks.Count(t => current.Contains(t.Id) && t.Status=="Completed") },actualMinutes=tasks.Sum(t => t.ActualMinutes??0),dueReviews=await db.Reviews.CountAsync(r => r.StudentId==id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=today),pending=await db.Outbox.CountAsync(o => o.StudentId==id && o.ProcessedAt==null) };
+            var parentBurden=await ParentBurden.Summary(db,id,start,today);
+            return new { start,end=today,parentBurden,original=new { total=original.Length,completed=tasks.Count(t => original.Contains(t.Id) && t.Status=="Completed") },adjusted=new { total=current.Length,completed=tasks.Count(t => current.Contains(t.Id) && t.Status=="Completed") },actualMinutes=tasks.Sum(t => t.ActualMinutes??0),dueReviews=await db.Reviews.CountAsync(r => r.StudentId==id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=today),pending=await db.Outbox.CountAsync(o => o.StudentId==id && o.ProcessedAt==null) };
         });
         api.MapGet("/audit",async (Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");return await db.Audits.Where(a => a.FamilyId==ctx.Actor().FamilyId).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(); });
         api.MapGet("/jobs",async (Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");return await db.Outbox.Where(j=>j.FamilyId==ctx.Actor().FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).Take(100).ToListAsync();});
         api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);if(job.ProcessedAt!=null)throw new ApiError(409,"JOB_COMPLETED","结果已经处理，不需要再次重试。");job.Retries=0;job.NextAttemptAt=null;job.Error=null;return Results.Accepted("/api/v1/jobs",job);});
+        ParentBurden.Map(api);
         ProgressCorrections.Map(api);
         Builder.Map(api);
         Privacy.Map(api);
