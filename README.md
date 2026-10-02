@@ -49,12 +49,14 @@ python3 tests/worker_fault_acceptance.py
 python3 tests/goal_migration_acceptance.py
 python3 tests/family_migration_acceptance.py
 python3 tests/catalog_migration_acceptance.py
+python3 tests/plan_boundaries_api_acceptance.py
+python3 tests/plan_rule_migration_acceptance.py
 python3 tests/restore_acceptance.py
 python3 tests/family_restore_acceptance.py
 cd src/web && npm run test:e2e
 ```
 
-接口验收需要服务已经启动，只创建验收家庭。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
+常规接口验收需要服务已经启动，只创建验收家庭。计划边界验收自行启动隔离服务；计划边界与迁移验收均需先构建 `tests/persistence`，使用一次性数据库并在结束后删除。恢复验收需要 PostgreSQL 客户端和 GPG，备份后恢复到单独的新库并在检查后移除该验收库。建议依次运行，避免认证限流影响并行测试。浏览器测试默认使用 Playwright 浏览器，可通过 `CHROMIUM_PATH` 指定已有 Chromium。
 
 ## 运行配置
 

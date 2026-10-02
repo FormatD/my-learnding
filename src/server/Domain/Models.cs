@@ -122,6 +122,7 @@ public class Plan : Row
 }
 public class PlanRevision : Row
 {
+    public string RuleVersion { get; set; } = "legacy/unknown";
     public Guid PlanId { get; set; }
     public Guid ReleaseId { get; set; }
     public int Number { get; set; }

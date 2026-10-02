@@ -46,6 +46,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Availability>().HasIndex(x => new { x.StudentId, x.Date }).IsUnique();
         b.Entity<Progress>().HasIndex(x => new { x.StudentId, x.Date, x.LessonId }).IsUnique();
         b.Entity<Plan>().HasIndex(x => new { x.StudentId, x.Date }).IsUnique();
+        b.Entity<PlanRevision>().Property(x=>x.RuleVersion).HasDefaultValue("legacy/unknown");
         b.Entity<PlanRevision>().HasIndex(x => new { x.PlanId, x.Number }).IsUnique();
         b.Entity<Placement>().HasIndex(x => new { x.RevisionId, x.TaskId }).IsUnique();
         b.Entity<Attempt>().HasIndex(x => new { x.StudentId, x.ClientSubmissionId }).IsUnique();

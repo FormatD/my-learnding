@@ -53,6 +53,23 @@ if(args[0]=="catalog-goal-legacy")
     await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(f.Id);var plan=await Planning.Generate(db,s,day);await db.SaveChangesAsync();await tx.CommitAsync();Assert(!await db.Placements.AnyAsync(p=>p.RevisionId==plan.Id),"already fulfilled old goal repeated after migration");
     Console.WriteLine("PASS 旧目录保持未记录，旧任务快照原文不改；新增空范围不破坏已完成配额和计划");return;
 }
+if(args[0]=="plan-boundary-seed")
+{
+    await db.Database.MigrateAsync();var f=new Family();var account=new Account{FamilyId=f.Id,UserName=Environment.GetEnvironmentVariable("PLAN_TEST_USERNAME")!,PasswordHash=Security.Password(Environment.GetEnvironmentVariable("PLAN_TEST_PASSWORD")!)};var member=new FamilyMembership{FamilyId=f.Id,AccountId=account.Id,Roles=account.Roles};db.AddRange(f,account,member);await db.SaveChangesAsync();f.OwnerAccountId=account.Id;
+    var c=Content.Fixture();var q=c.Questions[0];var r=new Release{FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c)),PublishedBy=account.Id};var s=new Student{FamilyId=f.Id,ActiveReleaseId=r.Id,Name="Due review fixture"};
+    var past=DateTimeOffset.UtcNow.AddDays(-2);var oldPlan=new Plan{FamilyId=f.Id,StudentId=s.Id,Date=DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(past,TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone)).DateTime),Status="Completed"};var revision=new PlanRevision{FamilyId=f.Id,PlanId=oldPlan.Id,ReleaseId=r.Id,Number=1,Status="Published",Budget=30,InputHash="past-fixture"};
+    var task=new StudyTask{FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,QuestionId=q.Id,KCId=q.Mappings[0].KCId,Title="原始错题",Status="Completed",CreatedAt=past,CompletedAt=past.AddMinutes(3),TrackedSeconds=180,ActualMinutes=3};var session=new LearningSession{FamilyId=f.Id,StudentId=s.Id,TaskId=task.Id,ReleaseId=r.Id,QuestionId=q.Id,StartedAt=past,CreatedAt=past};var attempt=new Attempt{FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999",CreatedAt=past.AddMinutes(2)};var grade=new Grading{FamilyId=f.Id,AttemptId=attempt.Id,Number=1,Result="Incorrect",CreatedAt=attempt.CreatedAt};var job=new Outbox{FamilyId=f.Id,StudentId=s.Id,AttemptId=attempt.Id};
+    db.AddRange(r,s,oldPlan,revision,task,session,attempt,grade,job,new Placement{FamilyId=f.Id,RevisionId=revision.Id,TaskId=task.Id,Sequence=0});await Publishing.Register(db,r);await db.SaveChangesAsync();oldPlan.ActiveRevisionId=revision.Id;await db.SaveChangesAsync();await ProjectionWorker.Consume(db,job);
+    Console.WriteLine(Json.Write(new{familyId=f.Id,studentId=s.Id,releaseId=r.Id,questionId=q.Id,kcId=task.KCId}));return;
+}
+if(args[0]=="plan-rule-legacy")
+{
+    await db.GetService<IMigrator>().MigrateAsync("20261002025728_CatalogGoalScopes");var f=new Family();var c=Content.MultiplicationFixture();var r=new Release{FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c))};var s=new Student{FamilyId=f.Id,ActiveReleaseId=r.Id};var day=DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone)).DateTime);var plan=new Plan{FamilyId=f.Id,StudentId=s.Id,Date=day};db.AddRange(f,r,s,plan);await db.SaveChangesAsync();
+    var id=Guid.NewGuid();var stamp=DateTimeOffset.UtcNow;
+    await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"PlanRevisions\" (\"Id\",\"FamilyId\",\"CreatedAt\",\"PlanId\",\"ReleaseId\",\"Number\",\"Budget\",\"Reserved\",\"Overflow\",\"Status\",\"InputHash\",\"Candidates\",\"Warnings\") VALUES ({id},{f.Id},{stamp},{plan.Id},{r.Id},1,13,2,0,'Published','legacy-rule-fixture','[]','[]')");
+    await db.Database.MigrateAsync();db.ChangeTracker.Clear();var old=await db.PlanRevisions.SingleAsync();Assert(old.RuleVersion=="legacy/unknown" && old.InputHash=="legacy-rule-fixture" && old.Budget==13 && old.Reserved==2 && old.Status=="Published","old plan rule inferred or original snapshot overwritten");
+    await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(f.Id);var current=await Planning.Generate(db,await db.Students.SingleAsync(),day);await db.SaveChangesAsync();await tx.CommitAsync();Assert(current.RuleVersion==Planning.RuleVersion && current.RuleVersion=="plan/2" && current.Number==2,"new plan rule version not persisted");Console.WriteLine("PASS 历史计划规则保持未记录且原快照不改；新计划持久化 plan/2");return;
+}
 if(args[0]=="seed")
 {
     await db.Database.MigrateAsync();var f=new Family();var c=Content.Fixture();var q=c.Questions[0];var r=new Release {FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c))};var s=new Student {FamilyId=f.Id,ActiveReleaseId=r.Id,Name="Fault acceptance"};

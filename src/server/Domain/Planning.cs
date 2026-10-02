@@ -5,6 +5,7 @@ public record PlanOption(string Key, string Title, string Type, int Minutes, boo
 public record PlanSelection(PlanOption[] Selected, object[] Rejected, int Overflow);
 public static class Planning
 {
+    public const string RuleVersion="plan/2";
     public static int Charge(StudyTask t) => t.Status=="Completed" ? t.ActualMinutes??t.Minutes : t.Status=="InProgress" ? Math.Max(t.Minutes,t.ActualMinutes??0) : t.Minutes;
     public static PlanSelection Fit(IEnumerable<PlanOption> options, int budget, int fixedCharge, int fixedCount)
     {
@@ -29,7 +30,8 @@ public static class Planning
         var revisions=await db.PlanRevisions.Where(r => r.PlanId==plan.Id).OrderBy(r => r.Number).ToListAsync();
         var old=plan.ActiveRevisionId==null ? [] : await db.Placements.Where(p => p.RevisionId==plan.ActiveRevisionId).OrderBy(p => p.Sequence).ToListAsync();
         var taskIds=old.Select(p => p.TaskId).ToArray();
-        var fixedTasks=await db.Tasks.Where(t => taskIds.Contains(t.Id) && (t.Locked || t.Mandatory || t.Status=="Completed" || t.Status=="InProgress")).ToListAsync();
+        var fixedTasks=await db.Tasks.Where(t => taskIds.Contains(t.Id) && (t.Locked || t.Mandatory || t.Status=="Completed" || t.Status=="InProgress")).OrderBy(t=>t.Id).ToListAsync();
+        var retiredTasks=await db.Tasks.Where(t=>taskIds.Contains(t.Id) && (t.Status=="Skipped" || t.Status=="Abandoned")).OrderBy(t=>t.Id).Select(t=>new{t.Id,t.Status}).ToArrayAsync();
         foreach(var task in fixedTasks.Where(t=>t.Status=="InProgress" && t.StartedAt!=null))task.ActualMinutes=Math.Max(1,(int)Math.Ceiling((task.TrackedSeconds+(DateTimeOffset.UtcNow-task.StartedAt!.Value).TotalSeconds)/60d));
         var availability=await db.Availabilities.SingleOrDefaultAsync(a => a.StudentId==s.Id && a.Date==date);
         var budget=availability?.Minutes??s.DailyMinutes; var reserved=availability?.Reserved??0;
@@ -104,12 +106,12 @@ public static class Planning
             if(count+possible<goal.TargetValue)warnings.Add($"GOAL_QUOTA_GAP: 目标 {goal.Title} 本周期还差 {goal.TargetValue-count} 次，可安排日期不足；不自动超出预算补齐");
         }
         var remainingOptions=options.Where(o => !fixedTasks.Any(t => t.QuestionId!=null && t.QuestionId==o.QuestionId || t.ReviewTargetId!=null && t.ReviewTargetId==o.ReviewTargetId || Json.Read<GoalSnapshot[]>(t.GoalSnapshots).Any(snapshot=>goalOptions.Any(g=>g.Key==o.Key && g.Goal.Id==snapshot.Id && Goals.Snapshot(g.Goal).Scope==snapshot.Scope)))).ToArray();
-        var hash=Content.Hash(Json.Write(new { date,release.Id,budget,reserved,progress,allGoals,goalCounts=allGoals.Select(g=>new{g.Id,count=Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)}).ToArray(),goals,mastery,reviews,fixedTasks,options=remainingOptions,rule="plan/1" }));
-        var same=revisions.LastOrDefault(r => r.InputHash==hash); if (same!=null) return same;
+        var hash=Content.Hash(Json.Write(new { date,release.Id,budget,reserved,progress,allGoals,goalCounts=allGoals.Select(g=>new{g.Id,count=Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)}).ToArray(),goals,mastery,reviews,fixedTasks,retiredTasks,options=remainingOptions,rule=RuleVersion }));
+        var same=revisions.LastOrDefault(r => r.InputHash==hash && (r.Status=="Draft" || r.Id==plan.ActiveRevisionId)); if (same!=null) return same;
         var selection=Fit(remainingOptions,Math.Max(0,budget-reserved),fixedTasks.Sum(Charge),fixedTasks.Count);
         foreach(var goal in goalOptions.Where(g=>!selection.Selected.Any(o=>o.Key==g.Key) && !fixedTasks.Any(t=>Json.Read<GoalSnapshot[]>(t.GoalSnapshots).Any(snapshot=>snapshot.Id==g.Goal.Id))))warnings.Add($"GOAL_QUOTA_GAP: 目标 {goal.Goal.Title} 未能进入本次计划，请调整预算或优先级");
         if (selection.Overflow>0) warnings.Add($"MANDATORY_OVERFLOW: 必做/已执行任务超出预算 {selection.Overflow} 分钟");
-        var rev=new PlanRevision { FamilyId=s.FamilyId,PlanId=plan.Id,ReleaseId=release.Id,Number=(revisions.LastOrDefault()?.Number??0)+1,Budget=budget,Reserved=reserved,Overflow=selection.Overflow,InputHash=hash,Candidates=Json.Write(selection.Rejected),Warnings=Json.Write(warnings) };
+        var rev=new PlanRevision { RuleVersion=RuleVersion,FamilyId=s.FamilyId,PlanId=plan.Id,ReleaseId=release.Id,Number=(revisions.LastOrDefault()?.Number??0)+1,Budget=budget,Reserved=reserved,Overflow=selection.Overflow,InputHash=hash,Candidates=Json.Write(selection.Rejected),Warnings=Json.Write(warnings) };
         db.PlanRevisions.Add(rev);
         var index=0;
         foreach (var t in fixedTasks.OrderBy(t => old.FindIndex(p => p.TaskId==t.Id))) db.Placements.Add(new() { FamilyId=s.FamilyId,RevisionId=rev.Id,TaskId=t.Id,Sequence=index++ });
