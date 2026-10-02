@@ -174,6 +174,8 @@ Test("评估上下文包含未准入与重试，证据固定同一上下文与�
     o=Replay(input);var context=o.Contexts.Single();Eq(context.MappingSource,"FixedContainer");Eq(context.MappingSetRevisionId,mapping);Eq(context.QuestionRevisionId,q.RevisionId);Eq(context.MappingReleaseId,release);Eq(context.CorrectionBatchId,correction);Eq(context.GradingRevisionId,input.Grade.Id);Eq(context.EvidenceRuleVersion,Assessment.EvidenceRuleVersion);Eq(o.Evidence.Count,2);Eq(o.Evidence.All(e=>e.ContextId==context.Id && e.MappingSetRevisionId==mapping && e.GradingId==context.GradingRevisionId),true);
     Eq(Replay(first).Contexts.Single().MappingSource,"LegacySnapshot");
 });
+Test("Builder 严格结构、真实引文与未知字段拒绝",BuilderProtocolCases.Validation);
+Test("Builder 一次受控修复、超时取消与输入上限",BuilderProtocolCases.Control);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

@@ -108,6 +108,8 @@ def main():
         time.sleep(.2)
     check('候选来源可追溯',bool(candidates) and candidates[0]['quote'] in source['text'])
     c=candidates[0]
+    payload=json.loads(c['protocolPayload']);assert payload['subject']=='MATH' and payload['gradeMin']==1 and payload['gradeMax']==12 and payload['sourceChunkIds']==[c['chunkId']] and payload['supportingQuotes']==[c['quote']]
+    protocol=json.loads(next(x for x in builder['attempts'] if x['runId']==run['id'])['protocolResult']);assert protocol['calls']==1 and protocol['repaired'] is False
     a.request('/builder/candidates/'+c['id']+':decide',{'decision':'Reject','reason':'验收审核'})
     a.request('/builder/candidates/'+c['id']+':decide',{'decision':'Reject','reason':'重复审核'},expected=409)
     check('AT31 候选仅允许审核一次',True)

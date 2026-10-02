@@ -47,6 +47,7 @@
 | 20261002201644_AssessmentContexts | 10.0.4 |
 | 20261002204255_EvidenceRevocations | 10.0.4 |
 | 20261002211632_IndependentMappingDrafts | 10.0.4 |
+| 20261002222837_BuilderStructuredProtocol | 10.0.4 |
 
 ## Accounts
 
@@ -306,6 +307,7 @@
 | InputSnapshot | text | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| ProtocolResult | text | 是 | 无 |
 
 约束：
 
@@ -386,6 +388,7 @@
 | ReviewReason | text | 否 | ''::text |
 | ReviewedAt | timestamp with time zone | 是 | 无 |
 | ReviewedBy | uuid | 是 | 无 |
+| ProtocolPayload | text | 是 | 无 |
 
 约束：
 

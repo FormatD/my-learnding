@@ -148,6 +148,7 @@ test('建库候选保留引用，审核草稿可继续编辑并发布',async({pa
   const quote='有小括号时，先计算小括号里的加减，再计算除法。';
   await page.getByLabel('来源标题').fill('家长原创运算说明');await page.getByLabel('文本内容').fill(quote);await page.getByRole('button',{name:'保存来源'}).click();await page.getByRole('button',{name:'验证候选流程'}).click();
   await expect(async()=>{await page.getByRole('button',{name:'刷新',exact:true}).click();await expect(page.getByRole('button',{name:'接受为新草稿'})).toBeVisible();}).toPass();
+  const records=page.getByRole('region',{name:'建库运行记录'});await records.getByText('查看每次尝试',{exact:true}).click();await expect(records.getByText(/结构与来源校验通过 · 本地模拟处理 1 次 · 首次通过/)).toBeVisible();
   await page.getByLabel('名称',{exact:true}).fill('先算小括号');await page.getByLabel('可测行为',{exact:true}).fill('独立计算一层小括号内的加减，再计算除法');await page.getByLabel('能力边界').fill('不含嵌套，不推断建模能力');
   await page.getByRole('button',{name:'接受为新草稿'}).click();await page.getByRole('button',{name:'查看引用与审核'}).click();
   const trace=page.getByRole('region',{name:'内容来源追溯'});
@@ -157,6 +158,7 @@ test('建库候选保留引用，审核草稿可继续编辑并发布',async({pa
   await page.getByRole('button',{name:'新增测量题'}).click();const q=page.locator('[aria-label="题目 1"]');await q.getByLabel('题干',{exact:true}).fill('(8 + 4) ÷ 3 = ?');await q.getByLabel('参考答案').fill('4');await q.getByLabel('讲解说明').fill('先算8+4=12，再算12÷3=4。');
   await page.getByRole('button',{name:'新增课时'}).click();await page.locator('[aria-label="课时 1"]').getByLabel('课时名称').fill('原创小括号练习');await page.getByRole('button',{name:'保存并退回待审核'}).click();await page.getByRole('button',{name:'审核答案与映射后发布'}).click();
   await page.getByText('能力定义与来源',{exact:true}).click();await page.getByRole('button',{name:'查看能力来源'}).click();await expect(trace.getByText(quote,{exact:true})).toBeVisible();
+  await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });
 
 test('家长安排步骤题并保留未观察步骤',async({page})=>{

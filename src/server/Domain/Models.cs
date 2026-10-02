@@ -321,6 +321,7 @@ public class BuilderRun : Row
 }
 public class Candidate : Row
 {
+    public string? ProtocolPayload { get; set; }
     public Guid? CreatedDraftId { get; set; }
     public Guid? CreatedKCId { get; set; }
     public Guid? ReviewedBy { get; set; }

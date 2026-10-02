@@ -1,0 +1,49 @@
+using Learning;
+using System.Text.Json.Nodes;
+
+public static class BuilderProtocolCases
+{
+    static BuilderFragment[] Fragments()=>[new(Guid.NewGuid(),"先乘除后加减，含括号时先算括号内。")];
+    static string Valid(BuilderFragment[] fragments)=>new MockBuilderCandidateProvider().Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None).GetAwaiter().GetResult();
+    static void Assert(bool value){if(!value)throw new Exception("Builder protocol invariant failed");}
+    static void Reject(Action action,string code){try{action();throw new Exception("expected rejection "+code);}catch(ApiError ex){Assert(ex.Code==code);}}
+    public static void Validation()
+    {
+        var f=Fragments();var valid=Valid(f);Assert(BuilderProtocol.Validate(valid,f).Candidates.Single().SupportingQuotes.Single()==f[0].Text);
+        foreach(var change in new Action<JsonObject>[] {
+            x=>x["extra"]=true,x=>x["gradeMin"]=13,x=>x["subject"]="SCIENCE",x=>x["modelScore"]=1.1m,x=>x["kcType"]="Other",x=>x.Remove("boundary"),x=>x["name"]=" ",x=>x["gradeMax"]="3",x=>x["measurableBehavior"]=new string('a',4001)})
+        {
+            var root=JsonNode.Parse(valid)!.AsObject();change(root["candidates"]![0]!.AsObject());Reject(()=>BuilderProtocol.Validate(root.ToJsonString(),f),"BUILDER_SCHEMA_INVALID");
+        }
+        foreach(var change in new Action<JsonObject>[] {
+            x=>x["sourceChunkIds"]=new JsonArray(Guid.NewGuid().ToString()),x=>x["sourceChunkIds"]=new JsonArray("chunk-01"),x=>x["supportingQuotes"]=new JsonArray("来源中不存在的引用"),x=>{x["sourceChunkIds"]=new JsonArray(f[0].Id.ToString(),f[0].Id.ToString());x["supportingQuotes"]=new JsonArray(f[0].Text,f[0].Text);},x=>x["supportingQuotes"]=new JsonArray(f[0].Text,f[0].Text)})
+        {
+            var root=JsonNode.Parse(valid)!.AsObject();change(root["candidates"]![0]!.AsObject());Reject(()=>BuilderProtocol.Validate(root.ToJsonString(),f),"BUILDER_SOURCE_INVALID");
+        }
+        Reject(()=>BuilderProtocol.Validate(valid.Replace("\"schemaVersion\":","\"schemaVersion\":\"kc-candidate/1\",\"schemaVersion\":"),f),"BUILDER_SCHEMA_INVALID");
+        Reject(()=>BuilderProtocol.Validate("```json\n"+valid+"\n```",f),"BUILDER_SCHEMA_INVALID");
+        Reject(()=>BuilderProtocol.Validate(new string('x',BuilderProtocol.MaxOutputCharacters+1),f),"BUILDER_OUTPUT_LIMIT");
+        var unicode=new[]{new BuilderFragment(Guid.NewGuid(),new string('中',79)+"😀后续")};Assert(BuilderProtocol.Validate(Valid(unicode),unicode).Candidates.Single().SupportingQuotes.Single()==new string('中',79));
+        var empty=JsonNode.Parse(valid)!.AsObject();empty["candidates"]=new JsonArray();Assert(BuilderProtocol.Validate(empty.ToJsonString(),f).Candidates.Length==0);
+    }
+    public static void Control()
+    {
+        var f=Fragments();var valid=Valid(f);var provider=new Fake("{}",valid);var result=BuilderProtocol.Run(provider,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult();Assert(result.Calls==2 && result.Repaired && provider.Requests[1].InvalidOutput=="{}" && provider.Requests[1].ValidationCode=="BUILDER_SCHEMA_INVALID");
+        provider=new Fake("{}","{}",valid);Reject(()=>BuilderProtocol.Run(provider,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_NEEDS_REPAIR");Assert(provider.Requests.Count==2);
+        provider=new Fake(new string('x',BuilderProtocol.MaxOutputCharacters+1),valid);Reject(()=>BuilderProtocol.Run(provider,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_OUTPUT_LIMIT");Assert(provider.Requests.Count==1);
+        var slow=new Slow();Reject(()=>BuilderProtocol.Run(slow,f,TimeSpan.FromMilliseconds(20),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_TIMEOUT");Assert(slow.Calls==1);
+        using var canceled=new CancellationTokenSource();canceled.Cancel();try{BuilderProtocol.Run(slow,f,TimeSpan.FromSeconds(1),canceled.Token).GetAwaiter().GetResult();throw new Exception("cancellation swallowed");}catch(OperationCanceledException){}
+        provider=new Fake(valid);Reject(()=>BuilderProtocol.Run(provider,[new(f[0].Id,new string('a',BuilderProtocol.MaxInputCharacters+1))],TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_INPUT_LIMIT");Assert(provider.Requests.Count==0);
+        Reject(()=>BuilderProtocol.ValidateInput(Enumerable.Range(0,101).Select(_=>new BuilderFragment(Guid.NewGuid(),"片段")).ToArray()),"BUILDER_INPUT_LIMIT");Reject(()=>BuilderProtocol.ValidateInput([f[0],f[0]]),"BUILDER_INPUT_LIMIT");
+    }
+    sealed class Fake(params string[] outputs):IBuilderCandidateProvider
+    {
+        public List<BuilderProviderRequest> Requests {get;}=[];
+        public Task<string> Generate(BuilderProviderRequest request,CancellationToken ct){ct.ThrowIfCancellationRequested();Requests.Add(request);return Task.FromResult(outputs[Requests.Count-1]);}
+    }
+    sealed class Slow:IBuilderCandidateProvider
+    {
+        public int Calls;
+        public async Task<string> Generate(BuilderProviderRequest request,CancellationToken ct){Calls++;await Task.Delay(Timeout.Infinite,ct);return "{}";}
+    }
+}

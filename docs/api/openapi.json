@@ -780,6 +780,12 @@
               "string"
             ]
           },
+          "protocolResult": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "retryRound": {
             "format": "int32",
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -940,6 +946,12 @@
           },
           "name": {
             "type": "string"
+          },
+          "protocolPayload": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "quote": {
             "type": "string"

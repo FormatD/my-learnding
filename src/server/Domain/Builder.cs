@@ -60,7 +60,7 @@ public static class Builder
             {
                 var name=input.Name??c.Name;var behavior=input.Behavior??c.Behavior;var boundary=input.Boundary??c.Boundary;
                 if (string.IsNullOrWhiteSpace(behavior) || string.IsNullOrWhiteSpace(boundary) || string.IsNullOrWhiteSpace(name) || name.Length>100 || behavior.Contains("请审核者补充") || boundary.Contains("请审核者补充")) throw new ApiError(422,"INVALID_DEFINITION","请补充可测行为和边界。");
-                var k=new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.CUSTOM.{Guid.NewGuid():N}",name,behavior,boundary);
+                var k=new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.CUSTOM.{Guid.NewGuid():N}",name,behavior,boundary,c.Type);
                 var draft=new ContentDraft { FamilyId=a.FamilyId,Title=$"Builder 审核草稿 · {name}",Payload=Json.Write(new Catalog([k],[],[],[],[])) };db.Drafts.Add(draft);c.CreatedDraftId=draft.Id;c.CreatedKCId=k.Id;c.Status="Accepted";
             }
             else throw new ApiError(422,"INVALID_DECISION","支持新建草稿、关联已有或拒绝。");
@@ -95,8 +95,8 @@ public static class Builder
         var id=run.Id;await tx.CreateSavepointAsync("builder_work",ct);
         try
         {
-            await ValidateRun(db,run,ct);await Execute(db,run,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
-            db.Add(Attempt(run,number,started,run.Status));await db.SaveChangesAsync(ct);
+            await ValidateRun(db,run,ct);var protocol=await Execute(db,run,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+            var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
         }
         catch(Exception ex)when(ex is not OperationCanceledException)
         {
@@ -109,7 +109,7 @@ public static class Builder
         await tx.CommitAsync(ct);
     }
     static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=Json.Write(new{run.SourceId,run.Type,run.LibraryReleaseId,run.InputVersion,run.InputHash,run.Provider,run.Model,run.PromptVersion})};
-    static async Task Execute(Database db,BuilderRun run,CancellationToken ct)
+    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,CancellationToken ct)
     {
         if (run.Type=="ParsePDF")
         {
@@ -123,21 +123,21 @@ public static class Builder
                 run.Status="Completed";
             }
             catch(ApiError e){run.Status=e.Code=="NEEDS_OCR"?"NeedsOCR":"Failed";run.Error=e.Code;}
-            run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return;
+            run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;
         }
-        var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).Take(100).ToListAsync(ct);
+        var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).ToListAsync(ct);
         if(run.InputVersion!="builder-input/2")
-        {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return;}
+        {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;}
         var release=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        foreach (var chunk in chunks)
+        var output=await BuilderProtocol.Run(new MockBuilderCandidateProvider(),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),TimeSpan.FromSeconds(30),ct);
+        foreach (var candidate in output.Output.Candidates)
         {
-            // Mock output is deliberately recognizable and quotes only the real input.
-            var quote=chunk.Text[..Math.Min(80,chunk.Text.Length)];
-            db.Candidates.Add(new() { FamilyId=run.FamilyId,RunId=run.Id,ChunkId=chunk.Id,Name=quote[..Math.Min(24,quote.Length)],Quote=quote,Behavior="请审核者补充独立可测行为",Boundary="请审核者补充排除范围",SuggestedAction="NeedsReview",Matches=Json.Write(Retrieval.TopK(chunk.Text,kcs)) });
+            var chunk=chunks.Single(c=>c.Id==candidate.SourceChunkIds[0]);
+            db.Candidates.Add(new() { FamilyId=run.FamilyId,RunId=run.Id,ProtocolPayload=Json.Write(candidate),ChunkId=chunk.Id,Name=candidate.Name,Quote=candidate.SupportingQuotes[0],Behavior=candidate.MeasurableBehavior,Boundary=candidate.Boundary,Type=candidate.KcType,SuggestedAction="NeedsReview",Matches=Json.Write(Retrieval.TopK(chunk.Text,kcs)) });
         }
-        run.Status="Completed";run.Error=null;run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);
+        run.Status="Completed";run.Error=null;run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return output;
     }
 }

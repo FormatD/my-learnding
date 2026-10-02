@@ -9,5 +9,6 @@ public class BuilderAttempt:Row
     public string Status {get;set;}="Completed";
     public string? ErrorCode {get;set;}
     public DateTimeOffset? NextAttemptAt {get;set;}
+    public string? ProtocolResult {get;set;}
     public string InputSnapshot {get;set;}="";
 }
