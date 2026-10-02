@@ -96,6 +96,10 @@
     {
       "id": "20261002171057_MappingSuggestionReview",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002184306_ContentReviewSnapshots",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1814,6 +1818,203 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_ContentIdentity\" ON public.\"ContentIdentity\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "ContentReviewRecord",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DraftId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DraftVersion",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceTitle",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourcePayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PayloadHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReviewerId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReviewedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Scope",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReasonSource",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PublishedReleaseId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_ContentReviewRecord_Accounts_FamilyId_ReviewerId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ReviewerId\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ContentReviewRecord_Drafts_FamilyId_DraftId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"DraftId\") REFERENCES \"Drafts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ContentReviewRecord_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ContentReviewRecord_Releases_FamilyId_PublishedReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"PublishedReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_ContentReviewRecord",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_ContentReviewRecord_DraftId_DraftVersion",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ContentReviewRecord_DraftId_DraftVersion\" ON public.\"ContentReviewRecord\" USING btree (\"DraftId\", \"DraftVersion\")"
+        },
+        {
+          "name": "IX_ContentReviewRecord_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ContentReviewRecord_FamilyId\" ON public.\"ContentReviewRecord\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ContentReviewRecord_FamilyId_DraftId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ContentReviewRecord_FamilyId_DraftId\" ON public.\"ContentReviewRecord\" USING btree (\"FamilyId\", \"DraftId\")"
+        },
+        {
+          "name": "IX_ContentReviewRecord_FamilyId_PublishedReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ContentReviewRecord_FamilyId_PublishedReleaseId\" ON public.\"ContentReviewRecord\" USING btree (\"FamilyId\", \"PublishedReleaseId\")"
+        },
+        {
+          "name": "IX_ContentReviewRecord_FamilyId_ReviewerId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ContentReviewRecord_FamilyId_ReviewerId\" ON public.\"ContentReviewRecord\" USING btree (\"FamilyId\", \"ReviewerId\")"
+        },
+        {
+          "name": "PK_ContentReviewRecord",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_ContentReviewRecord\" ON public.\"ContentReviewRecord\" USING btree (\"Id\")"
         }
       ]
     },

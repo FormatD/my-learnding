@@ -100,7 +100,19 @@ public static class Endpoints
         api.MapPost("/content/unit-pack",(Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var draft=new ContentDraft {FamilyId=a.FamilyId,Title="原创单元草稿 · 混合运算（160题 / 15资源，印次与人工审核待确认）",Payload=Json.Write(MixedOperationsPack.Create())};db.Drafts.Add(draft);return TypedResults.Ok(draft); });
         api.MapPost("/content/drafts",(DraftInput input,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("ContentEditor");var d=new ContentDraft { FamilyId=a.FamilyId,Title=input.Title,Payload=Json.Write(input.Catalog) };db.Drafts.Add(d);return TypedResults.Ok(d); });
         api.MapPut("/content/drafts/{id:guid}",async (Guid id,DraftInput input,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","已发布版本不可修改，请创建新草稿。");d.Payload=Json.Write(input.Catalog);d.Title=input.Title;d.Status="Draft";d.ReviewedBy=null;d.Version++;return TypedResults.Ok(d); });
-        api.MapPost("/content/drafts/{id:guid}:review",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);await CatalogDirectory.ValidateSources(db,ctx.Actor().FamilyId,Json.Read<Catalog>(d.Payload));var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));if (d.Status=="Published") throw new ApiError(409,"IMMUTABLE","版本已发布。");d.Status="Approved";d.ReviewedBy=ctx.Actor().Id;return TypedResults.Ok(d); });
+        api.MapGet("/content/drafts/{id:guid}/reviews",async(Guid id,Database db,HttpContext ctx)=>
+        {
+            var a=ctx.Actor();a.Require("ContentEditor");await Owned<ContentDraft>(db,a,id);
+            return await db.Set<ContentReviewRecord>().Where(r=>r.FamilyId==a.FamilyId && r.DraftId==id).OrderByDescending(r=>r.ReviewedAt).ThenByDescending(r=>r.Id).ToArrayAsync();
+        });
+        api.MapPost("/content/drafts/{id:guid}/reviews",async(Guid id,ContentReviewInput input,Database db,HttpContext ctx)=>
+        {
+            var a=ctx.Actor();a.Require("ContentEditor");return TypedResults.Ok(await ContentReviews.Approve(db,a,await Owned<ContentDraft>(db,a,id),input));
+        });
+        api.MapPost("/content/drafts/{id:guid}:review",async(Guid id,Database db,HttpContext ctx)=>
+        {
+            var a=ctx.Actor();a.Require("ContentEditor");return TypedResults.Ok(await ContentReviews.Approve(db,a,await Owned<ContentDraft>(db,a,id),null));
+        });
         api.MapGet("/content/drafts/{id:guid}/preview",async (Guid id,Database db,HttpContext ctx) => { ctx.Actor().Require("Publisher");var d=await Owned<ContentDraft>(db,ctx.Actor(),id);return new { hash=Content.Hash(d.Payload+":"+d.Version),errors=Content.Validate(Json.Read<Catalog>(d.Payload)),status=d.Status }; });
         api.MapPost("/content/drafts/{id:guid}:publish",async (Guid id,PublishInput input,Database db,HttpContext ctx) =>
         {
@@ -108,7 +120,8 @@ public static class Endpoints
             if (d.Status!="Approved" || d.ReviewedBy==null) throw new ApiError(422,"REVIEW_REQUIRED","内容必须先经过人工审核。");
             if (Content.Hash(d.Payload+":"+d.Version)!=input.PreviewHash) throw new ApiError(412,"PREVIEW_CHANGED","草稿已变化，请重新预览。");
             var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));
-            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release);d.Status="Published";return TypedResults.Ok(release);
+            var review=await ContentReviews.ForPublish(db,d);
+            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release);review.PublishedReleaseId=release.Id;d.Status="Published";return TypedResults.Ok(release);
         });
         api.MapPost("/students/{id:guid}/content/{releaseId:guid}:bind",async (Guid id,Guid releaseId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var r=await Owned<Release>(db,a,releaseId);if (r.Withdrawn) throw new ApiError(422,"WITHDRAWN","该发布版本已撤回。");s.ActiveReleaseId=releaseId;return TypedResults.Ok(s); });
         api.MapPost("/content/releases/{id:guid}:withdraw",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Publisher");var release=await Owned<Release>(db,a,id);if(string.IsNullOrWhiteSpace(input.Reason))throw new ApiError(422,"REASON_REQUIRED","撤回需要原因。");release.Withdrawn=true;db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="ReleaseWithdrawal",Details=Json.Write(new {releaseId=id,input.Reason})});return TypedResults.Ok(new {release.Id,release.Withdrawn,notice="阻止新会话；已领取会话与历史证据保留。"});});

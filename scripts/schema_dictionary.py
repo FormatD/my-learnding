@@ -38,6 +38,7 @@ PURPOSES = {
     "KCProposalEvent": "提案审核和状态变更历史。",
     "KnowledgeMigration": "能力变更关系元数据；不迁移概率、证据或复习。",
     "Masteries": "指定评估世代的能力状态、Beta 参数与覆盖。",
+    "ContentReviewRecord": "整份内容人工审核；冻结草稿版本、原内容与审核者，区分明确备注与命令确认并关联实际发布。",
     "MappingRun": "映射建议运行；冻结原草稿、对象版本和正式能力库输入。",
     "MappingSuggestion": "题目/课时/资源原始建议与排序，仅经人工审核生成草稿。",
     "MappingReviewDecision": "不可覆盖的映射审核依据、原始/校正摘要、审核人及所建草稿。",

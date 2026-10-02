@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 51 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 52 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -41,6 +41,7 @@
 | 20261002095324_ParentBurdenRecords | 10.0.4 |
 | 20261002105257_StudentScopedAudit | 10.0.4 |
 | 20261002171057_MappingSuggestionReview | 10.0.4 |
+| 20261002184306_ContentReviewSnapshots | 10.0.4 |
 
 ## Accounts
 
@@ -411,6 +412,44 @@
 - `CREATE INDEX "IX_ContentIdentity_FamilyId" ON public."ContentIdentity" USING btree ("FamilyId")`
 - `CREATE UNIQUE INDEX "IX_ContentIdentity_FamilyId_EntityType_Code" ON public."ContentIdentity" USING btree ("FamilyId", "EntityType", "Code")`
 - `CREATE UNIQUE INDEX "PK_ContentIdentity" ON public."ContentIdentity" USING btree ("Id")`
+
+## ContentReviewRecord
+
+整份内容人工审核；冻结草稿版本、原内容与审核者，区分明确备注与命令确认并关联实际发布。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| DraftId | uuid | 否 | 无 |
+| DraftVersion | bigint | 否 | 无 |
+| SourceTitle | text | 否 | 无 |
+| SourcePayload | text | 否 | 无 |
+| PayloadHash | text | 否 | 无 |
+| ReviewerId | uuid | 否 | 无 |
+| ReviewedAt | timestamp with time zone | 否 | 无 |
+| Scope | text | 否 | 无 |
+| Reason | text | 否 | 无 |
+| ReasonSource | text | 否 | 无 |
+| PublishedReleaseId | uuid | 是 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_ContentReviewRecord_Accounts_FamilyId_ReviewerId`：`FOREIGN KEY ("FamilyId", "ReviewerId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ContentReviewRecord_Drafts_FamilyId_DraftId`：`FOREIGN KEY ("FamilyId", "DraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ContentReviewRecord_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_ContentReviewRecord_Releases_FamilyId_PublishedReleaseId`：`FOREIGN KEY ("FamilyId", "PublishedReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_ContentReviewRecord`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_ContentReviewRecord_DraftId_DraftVersion" ON public."ContentReviewRecord" USING btree ("DraftId", "DraftVersion")`
+- `CREATE INDEX "IX_ContentReviewRecord_FamilyId" ON public."ContentReviewRecord" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_ContentReviewRecord_FamilyId_DraftId" ON public."ContentReviewRecord" USING btree ("FamilyId", "DraftId")`
+- `CREATE INDEX "IX_ContentReviewRecord_FamilyId_PublishedReleaseId" ON public."ContentReviewRecord" USING btree ("FamilyId", "PublishedReleaseId")`
+- `CREATE INDEX "IX_ContentReviewRecord_FamilyId_ReviewerId" ON public."ContentReviewRecord" USING btree ("FamilyId", "ReviewerId")`
+- `CREATE UNIQUE INDEX "PK_ContentReviewRecord" ON public."ContentReviewRecord" USING btree ("Id")`
 
 ## ContentRevision
 

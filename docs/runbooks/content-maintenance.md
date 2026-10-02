@@ -73,3 +73,13 @@
 | 映射更正预览/确认 | POST `/students/{id}/mapping-corrections:preview` / `:confirm` | Parent；releaseId/attemptIds/reason，确认加previewHash |
 
 备份、恢复、删除回执和私有导出见[本地运行手册](local.md)；实际结构见[数据字典](../data-dictionary.md)。内容维护不替代正式题库人工审核、真实模型评估或四周家庭试用验收。
+
+## 完整内容审核快照
+
+新增审核记录保存审核时的草稿标题、版本、完整内容、摘要、审核者和时间，范围为整份内容（CatalogSnapshot）。页面发布使用显式版本检查；另一页面已经保存新版本时返回DRAFT_CHANGED，须刷新核对，不能直接批准未看到的新内容。可以填写“审核备注（可选）”；实际备注标为UserProvided，没有备注只记录执行审核命令的CommandConfirmation，不伪造逐题意见。
+
+“查看审核记录”可以核对当时题目、答案、关联、课时和资源。保存草稿会撤销审核资格并递增版本，原审核快照保留；重新审核新增记录。发布核对当前完整内容、标题、草稿版本及审核者与记录相符，成功后关联实际ReleaseId；发布失败不写半成品关联。家庭导出和加密备份保留记录，孩子不可读取，其他家庭查询404。
+
+旧发布快照保持原样，不回填缺失审核事实。升级前只有ReviewedBy的待发布草稿需要重新审核；缺少完整记录时返回REVIEW_SNAPSHOT_REQUIRED。旧`:review`命令仍可使用，不增加原请求要求，同样捕获当前完整快照；新POST `/content/drafts/{id}/reviews`要求expectedDraftVersion（正整数），可带reason；GET同路径读取记录，前缀为`/api/v1`。新接口读写需内容维护权限及既有登录/同源/幂等约定。
+
+整份内容审核不是教材逐题专业审查、规范化MappingSet或正式模型质量评测的替代品。直接编辑器与历史映射仍需进一步统一容器；本轮未把旧记录补造成逐项审核。

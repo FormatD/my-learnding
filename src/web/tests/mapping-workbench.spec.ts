@@ -69,8 +69,15 @@ for(const provider of ['Mock','Manual'])test(provider+' 映射批量审核保留
   await work.getByRole('button',{name:'继续编辑审核映射草稿'}).first().click();
   const editor=page.getByRole('region',{name:'内容草稿编辑器'});await expect(editor).toBeVisible();await editor.getByRole('button',{name:'取消',exact:true}).click();
   const row=page.locator('.content-row').filter({has:page.getByRole('heading',{name:generated.title,exact:true})});
+  const wholeReason='核对完整内容适用性 '+unsafe;
+  if(provider==='Manual')await row.getByLabel('审核备注（可选）').fill(wholeReason);
   await row.getByRole('button',{name:'审核答案与映射后发布'}).click();
   await expect(page.getByText('内容已发布，可以绑定学生。',{exact:true})).toBeVisible();
+  await row.getByRole('button',{name:'查看审核记录',exact:true}).click();
+  const history=page.getByRole('region',{name:'完整内容审核记录'});await expect(history.getByText(provider==='Manual'?'审核备注：'+wholeReason:'确认记录：审核者执行整份内容审核确认。',{exact:true})).toBeVisible();
+  await expect(history.getByText(/已关联实际发布/)).toBeVisible();
+  await history.getByText('核对审核时的题目与映射',{exact:true}).click();await expect(history.getByText(JSON.parse(generated.payload).questions[0].stem,{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>(window as any).__mappingUnsafe)).toBeUndefined();
   const releases=(await call('/content')).releases;expect(releases).toHaveLength(2);expect(releases.find((r:any)=>r.id===original.id).payload).toBe(original.payload);
   expect((await call('/students')).find((s:any)=>s.id===student.id).activeReleaseId).toBe(original.id);
 });
