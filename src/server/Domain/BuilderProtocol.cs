@@ -19,9 +19,10 @@ public static class BuilderProtocol
     {"type":"object","additionalProperties":false,"required":["schemaVersion","candidates"],"properties":{"schemaVersion":{"const":"kc-candidate/1"},"candidates":{"type":"array","maxItems":100,"items":{"type":"object","additionalProperties":false,"required":["name","subject","kcType","gradeMin","gradeMax","measurableBehavior","boundary","sourceChunkIds","supportingQuotes","modelScore"],"properties":{"name":{"type":"string","minLength":1,"maxLength":100},"subject":{"const":"MATH"},"kcType":{"enum":["Procedure","Concept","Application","Representation","Misconception"]},"gradeMin":{"type":"integer","minimum":1,"maximum":12},"gradeMax":{"type":"integer","minimum":1,"maximum":12},"measurableBehavior":{"type":"string","minLength":1,"maxLength":4000},"boundary":{"type":"string","minLength":1,"maxLength":4000},"sourceChunkIds":{"type":"array","minItems":1,"maxItems":10,"uniqueItems":true,"items":{"type":"string","format":"uuid"}},"supportingQuotes":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"string","minLength":1,"maxLength":1000}},"modelScore":{"type":"number","minimum":0,"maximum":1}}}}}}
     """;
     static ApiError Invalid(string code)=>new(422,code,"建库输出未通过结构或来源核对，请人工检查；没有生成正式内容。");
-    public static void ValidateInput(BuilderFragment[] fragments)
+    public static void ValidateInput(BuilderFragment[] fragments,BuilderLimits? limits=null)
     {
-        if(fragments.Length==0 || fragments.Length>MaxFragments || fragments.Any(f=>f.Id==Guid.Empty || string.IsNullOrWhiteSpace(f.Text)) || fragments.Select(f=>f.Id).Distinct().Count()!=fragments.Length || fragments.Sum(f=>(long)f.Text.Length)>MaxInputCharacters)
+        limits??=new();limits.Validate();
+        if(fragments.Length==0 || fragments.Length>limits.MaxFragments || fragments.Any(f=>f.Id==Guid.Empty || string.IsNullOrWhiteSpace(f.Text)) || fragments.Select(f=>f.Id).Distinct().Count()!=fragments.Length || fragments.Sum(f=>(long)f.Text.Length)>limits.MaxInputCharacters)
             throw Invalid("BUILDER_INPUT_LIMIT");
     }
     static void Shape(JsonElement value,params string[] required)
@@ -39,10 +40,10 @@ public static class BuilderProtocol
     {
         var field=value.GetProperty(name);if(field.ValueKind!=JsonValueKind.Array || field.GetArrayLength()<min || field.GetArrayLength()>max)throw Invalid("BUILDER_SCHEMA_INVALID");return field.EnumerateArray().ToArray();
     }
-    public static BuilderEnvelope Validate(string output,BuilderFragment[] fragments)
+    public static BuilderEnvelope Validate(string output,BuilderFragment[] fragments,BuilderLimits? limits=null)
     {
-        ValidateInput(fragments);
-        if(output.Length>MaxOutputCharacters)throw Invalid("BUILDER_OUTPUT_LIMIT");
+        limits??=new();ValidateInput(fragments,limits);
+        if(output.Length>limits.MaxOutputCharacters)throw Invalid("BUILDER_OUTPUT_LIMIT");
         try
         {
             using var document=JsonDocument.Parse(output,new JsonDocumentOptions{MaxDepth=8});var root=document.RootElement;
@@ -71,17 +72,22 @@ public static class BuilderProtocol
     }
     public static async Task<BuilderProtocolResult> Run(IBuilderCandidateProvider provider,BuilderFragment[] fragments,TimeSpan timeout,CancellationToken ct)
     {
-        fragments=fragments.ToArray();ValidateInput(fragments);if(timeout<=TimeSpan.Zero || timeout>TimeSpan.FromMinutes(2))throw new ArgumentOutOfRangeException(nameof(timeout));
-        using var deadline=CancellationTokenSource.CreateLinkedTokenSource(ct);deadline.CancelAfter(timeout);
+        if(timeout<=TimeSpan.Zero || timeout>TimeSpan.FromMinutes(2))throw new ArgumentOutOfRangeException(nameof(timeout));
+        return await Run(provider,fragments,new BuilderLimits(TimeoutMilliseconds:(int)timeout.TotalMilliseconds),ct);
+    }
+    public static async Task<BuilderProtocolResult> Run(IBuilderCandidateProvider provider,BuilderFragment[] fragments,BuilderLimits limits,CancellationToken ct)
+    {
+        fragments=fragments.ToArray();ValidateInput(fragments,limits);
+        using var deadline=CancellationTokenSource.CreateLinkedTokenSource(ct);deadline.CancelAfter(limits.TimeoutMilliseconds);
         try
         {
             string? invalid=null;string? code=null;
-            for(var call=1;call<=2;call++)
+            for(var call=1;call<=1+limits.RepairAttempts;call++)
             {
                 var raw=await provider.Generate(new(fragments.ToArray(),Schema,invalid,code),deadline.Token).WaitAsync(deadline.Token);
-                try{return new(Validate(raw,fragments),call,call==2);}
+                try{return new(Validate(raw,fragments,limits),call,call==2);}
                 catch(ApiError ex)when(ex.Code is "BUILDER_SCHEMA_INVALID" or "BUILDER_SOURCE_INVALID")
-                {if(call==2)throw Invalid("BUILDER_NEEDS_REPAIR");invalid=raw;code=ex.Code;}
+                {if(call==1+limits.RepairAttempts)throw Invalid("BUILDER_NEEDS_REPAIR");invalid=raw;code=ex.Code;}
             }
             throw Invalid("BUILDER_NEEDS_REPAIR");
         }

@@ -304,6 +304,8 @@ public class Chunk : Row
 }
 public class BuilderRun : Row
 {
+    public string? ModelConfigPayload { get; set; }
+    public string? ModelConfigHash { get; set; }
     public Guid? LibraryReleaseId { get; set; }
     public string InputVersion { get; set; } = "builder-input/2";
     public string Type { get; set; } = "Candidates";

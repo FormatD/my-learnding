@@ -1,4 +1,5 @@
 using Learning;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json.Nodes;
 
 public static class BuilderProtocolCases
@@ -35,6 +36,18 @@ public static class BuilderProtocolCases
         using var canceled=new CancellationTokenSource();canceled.Cancel();try{BuilderProtocol.Run(slow,f,TimeSpan.FromSeconds(1),canceled.Token).GetAwaiter().GetResult();throw new Exception("cancellation swallowed");}catch(OperationCanceledException){}
         provider=new Fake(valid);Reject(()=>BuilderProtocol.Run(provider,[new(f[0].Id,new string('a',BuilderProtocol.MaxInputCharacters+1))],TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_INPUT_LIMIT");Assert(provider.Requests.Count==0);
         Reject(()=>BuilderProtocol.ValidateInput(Enumerable.Range(0,101).Select(_=>new BuilderFragment(Guid.NewGuid(),"片段")).ToArray()),"BUILDER_INPUT_LIMIT");Reject(()=>BuilderProtocol.ValidateInput([f[0],f[0]]),"BUILDER_INPUT_LIMIT");
+    }
+    public static void Configuration()
+    {
+        var original=BuilderConfiguration.Current(new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Builder:MaxFragments","1"},{"Builder:RepairAttempts","0"}}).Build());
+        var changed=BuilderConfiguration.Current(new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Builder:MaxFragments","2"}}).Build());
+        Assert(Json.Write(original)!=Json.Write(changed));var payload=Json.Write(original);var run=new BuilderRun{InputVersion="builder-input/3",ModelConfigPayload=payload,ModelConfigHash=Content.Hash(payload)};var limits=BuilderConfiguration.Resolve(run);Assert(limits.MaxFragments==1 && limits.RepairAttempts==0);
+        var fragments=Fragments();var provider=new Fake("{}",Valid(fragments));Reject(()=>BuilderProtocol.Run(provider,fragments,limits,CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_NEEDS_REPAIR");Assert(provider.Requests.Count==1);
+        Reject(()=>BuilderProtocol.Run(new Fake(Valid(fragments)),[fragments[0],new(Guid.NewGuid(),"第二片段")],limits,CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_INPUT_LIMIT");
+        run.ModelConfigPayload=Json.Write(changed);Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.ModelConfigHash=Content.Hash(run.ModelConfigPayload);Assert(BuilderConfiguration.Resolve(run).MaxFragments==2);
+        run.Model="different";Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.Model="fixture/1";run.ModelConfigPayload=null;Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.ModelConfigHash=null;Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.InputVersion="builder-input/2";Assert(BuilderConfiguration.Resolve(run).MaxFragments==100 && run.ModelConfigPayload==null);
+        run.ModelConfigPayload=payload.Replace("\"schemaHash\":", "\"unknown\":0,\"schemaHash\":");run.ModelConfigHash=Content.Hash(run.ModelConfigPayload);Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");
+        Reject(()=>new BuilderLimits(RepairAttempts:2).Validate(),"BUILDER_CONFIGURATION_INVALID");Reject(()=>new BuilderLimits(TimeoutMilliseconds:120001).Validate(),"BUILDER_CONFIGURATION_INVALID");
     }
     sealed class Fake(params string[] outputs):IBuilderCandidateProvider
     {

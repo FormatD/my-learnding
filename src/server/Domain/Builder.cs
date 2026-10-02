@@ -20,14 +20,15 @@ public static class Builder
             for (var i=0;i<paragraphs.Length;i++) db.Chunks.Add(new() { FamilyId=a.FamilyId,SourceId=source.Id,Locator=$"段落 {i+1}",Text=paragraphs[i] });
             return TypedResults.Created($"/api/v1/content/sources/{source.Id}",source);
         });
-        api.MapPost("/builder/runs",async Task<Results<Ok<BuilderRun>,Accepted<BuilderRun>>> (RunInput input,Database db,HttpContext ctx) =>
+        api.MapPost("/builder/runs",async Task<Results<Ok<BuilderRun>,Accepted<BuilderRun>>> (RunInput input,Database db,HttpContext ctx,IConfiguration configuration) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");var source=await db.Sources.SingleOrDefaultAsync(s => s.Id==input.SourceId && s.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","来源不存在。");
             if (input.Provider!="Mock") throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED",source.AllowExternalAI?"模型尚未配置，学习功能可继续使用。":"来源未允许发送外部模型。");
             if (string.IsNullOrWhiteSpace(source.Text)) throw new ApiError(422,"SOURCE_NOT_READY","来源尚未解析完成，或没有文本层。");
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
-            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/2:"+library?.Hash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
-            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputHash=hash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
+            var configPayload=Json.Write(BuilderConfiguration.Current(configuration));var configHash=Content.Hash(configPayload);
+            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/3:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
+            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputVersion="builder-input/3",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/runs/{id:guid}:retry",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>
         {
@@ -79,10 +80,16 @@ public static class Builder
         }
         else
         {
-            if(run.Type!="Candidates" || run.InputVersion!="builder-input/2")throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
+            if(run.Type!="Candidates" || run.InputVersion is not ("builder-input/2" or "builder-input/3"))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
             if(run.Provider!="Mock")throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
             if(run.Model!="fixture/1" || run.PromptVersion!="kc-candidate/1")throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
+            BuilderConfiguration.Resolve(run);
             if(run.LibraryReleaseId!=null && !await db.Releases.AnyAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原正式库输入已不可用。");
+            if(run.ModelConfigHash!=null)
+            {
+                var libraryHash=run.LibraryReleaseId==null?null:await db.Releases.Where(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId).Select(r=>r.Hash).SingleAsync(ct);
+                if(run.InputHash!=Content.Hash(source.Hash+":"+run.Provider+":"+run.Model+":"+run.PromptVersion+":"+run.InputVersion+":"+libraryHash+":"+run.ModelConfigHash))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","建库输入摘要与原来源、正式库或配置不一致。");
+            }
             if(string.IsNullOrWhiteSpace(source.Text))throw new ApiError(422,"SOURCE_NOT_READY","来源尚未准备完成。");
         }
     }
@@ -108,7 +115,7 @@ public static class Builder
         }
         await tx.CommitAsync(ct);
     }
-    static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=Json.Write(new{run.SourceId,run.Type,run.LibraryReleaseId,run.InputVersion,run.InputHash,run.Provider,run.Model,run.PromptVersion})};
+    static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=Json.Write(new{run.SourceId,run.Type,run.LibraryReleaseId,run.InputVersion,run.InputHash,run.Provider,run.Model,run.PromptVersion,run.ModelConfigHash,run.ModelConfigPayload})};
     static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,CancellationToken ct)
     {
         if (run.Type=="ParsePDF")
@@ -126,13 +133,13 @@ public static class Builder
             run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;
         }
         var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).ToListAsync(ct);
-        if(run.InputVersion!="builder-input/2")
+        if(run.InputVersion is not ("builder-input/2" or "builder-input/3"))
         {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;}
         var release=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        var output=await BuilderProtocol.Run(new MockBuilderCandidateProvider(),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),TimeSpan.FromSeconds(30),ct);
+        var output=await BuilderProtocol.Run(new MockBuilderCandidateProvider(),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
         foreach (var candidate in output.Output.Candidates)
         {
             var chunk=chunks.Single(c=>c.Id==candidate.SourceChunkIds[0]);

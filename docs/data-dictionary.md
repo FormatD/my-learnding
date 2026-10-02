@@ -48,6 +48,7 @@
 | 20261002204255_EvidenceRevocations | 10.0.4 |
 | 20261002211632_IndependentMappingDrafts | 10.0.4 |
 | 20261002222837_BuilderStructuredProtocol | 10.0.4 |
+| 20261002224110_BuilderFrozenConfiguration | 10.0.4 |
 
 ## Accounts
 
@@ -345,6 +346,8 @@
 | LibraryReleaseId | uuid | 是 | 无 |
 | NextAttemptAt | timestamp with time zone | 是 | 无 |
 | RetryRound | integer | 否 | 0 |
+| ModelConfigHash | text | 是 | 无 |
+| ModelConfigPayload | text | 是 | 无 |
 
 约束：
 

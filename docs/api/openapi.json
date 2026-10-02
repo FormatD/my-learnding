@@ -851,6 +851,18 @@
           "model": {
             "type": "string"
           },
+          "modelConfigHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modelConfigPayload": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "nextAttemptAt": {
             "format": "date-time",
             "type": [

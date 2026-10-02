@@ -176,6 +176,7 @@ Test("评估上下文包含未准入与重试，证据固定同一上下文与�
 });
 Test("Builder 严格结构、真实引文与未知字段拒绝",BuilderProtocolCases.Validation);
 Test("Builder 一次受控修复、超时取消与输入上限",BuilderProtocolCases.Control);
+Test("Builder 固定配置摘要、受控限额与旧缺口不补造",BuilderProtocolCases.Configuration);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

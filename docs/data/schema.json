@@ -124,6 +124,10 @@
     {
       "id": "20261002222837_BuilderStructuredProtocol",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002224110_BuilderFrozenConfiguration",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1595,6 +1599,22 @@
           "identity": "",
           "generated": "",
           "default": "0"
+        },
+        {
+          "name": "ModelConfigHash",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ModelConfigPayload",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
