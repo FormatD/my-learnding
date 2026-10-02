@@ -81,6 +81,10 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         Foreign<Plan, PlanRevision>(b, "PlanId"); Foreign<PlanRevision, Placement>(b, "RevisionId");
         Foreign<StudyTask, Placement>(b, "TaskId"); Foreign<StudyTask, LearningSession>(b, "TaskId");
         Foreign<Release, LearningSession>(b, "ReleaseId"); Foreign<Release, StudyTask>(b, "ReleaseId");
+        Foreign<ContentRevision, LearningSession>(b,"QuestionRevisionId"); Foreign<MappingSetRevision, LearningSession>(b,"MappingSetRevisionId");
+        Foreign<ContentRevision, Attempt>(b,"QuestionRevisionId"); Foreign<MappingSetRevision, Attempt>(b,"MappingSetRevisionId");
+        Foreign<MappingSetRevision, Evidence>(b,"MappingSetRevisionId");
+        Foreign<ContentRevision, CorrectionItem>(b,"QuestionRevisionId"); Foreign<MappingSetRevision, CorrectionItem>(b,"MappingSetRevisionId");
         Foreign<LearningSession, Attempt>(b, "SessionId"); Foreign<Attempt, Grading>(b, "AttemptId");
         Foreign<Attempt, Outbox>(b, "AttemptId"); Foreign<Generation, Evidence>(b, "GenerationId");
         Foreign<Generation, Mastery>(b, "GenerationId"); Foreign<Generation, Review>(b, "GenerationId");

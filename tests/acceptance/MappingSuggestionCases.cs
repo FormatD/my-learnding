@@ -44,6 +44,13 @@ internal static class MappingSuggestionCases
         Check(manual.Proposal.Items.All(i=>i.ModelScore==null) && manual.Proposal.Items.Select(i=>i.Step).SequenceEqual(q.Mappings.Select(m=>m.Step)),"manual source preserves only explicit independent observation steps");
         var outside=MappingSuggestions.Manual(c,owner,[],reference);
         Check(outside.Proposal.Items.Length==0 && outside.Flags.Contains("OriginalKCOutsideLibrary"),"manual source flags missing original KC without substitute inference");
+        var set=new MappingSetRevision{OwnerType="Question",OwnerId=q.Id,OwnerRevisionId=q.RevisionId,OwnerDefinitionHash=Content.Hash(Json.Write(q)),EvidencePolicy=q.Policy};
+        var fixedItems=manual.Proposal.Items.Select(i=>new MappingSetItem{KCId=i.KCId,KCRevisionId=i.KCRevisionId,Role=i.Role,EvidenceShare=i.EvidenceShare,EvidenceMode=i.EvidenceMode,Step=i.Step,Sequence=i.Sequence}).ToArray();
+        var projected=PublishedMappings.Project(c,q,set,fixedItems);
+        Check(projected.Mappings.SequenceEqual(q.Mappings),"normalized step projection retains independently observed budgets");
+        fixedItems[0].EvidenceShare+=.1m;
+        try{PublishedMappings.Project(c,q,set,fixedItems);throw new Exception("a frozen budget cannot silently drift from the released question");}
+        catch(ApiError e){Check(e.Code=="MAPPING_SNAPSHOT_UNKNOWN","mismatched source budget rejected");}
         var missing=MappingSuggestions.Suggest(owner,[],reference);
         Check(missing.Flags.Contains("NoLibraryMatch") && missing.Proposal.Items.Length==0,"missing library does not invent a KC");
     }

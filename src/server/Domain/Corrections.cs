@@ -12,6 +12,8 @@ public class CorrectionBatch : Row
 }
 public class CorrectionItem : Row
 {
+    public Guid? QuestionRevisionId { get; set; }
+    public Guid? MappingSetRevisionId { get; set; }
     public long Sequence { get; set; }
     public Guid BatchId { get; set; }
     public Guid AttemptId { get; set; }
@@ -50,7 +52,11 @@ public static class Corrections
             var batch=new CorrectionBatch {FamilyId=a.FamilyId,StudentId=id,ReleaseId=p.Release.Id,PreviewHash=p.Hash,Reason=input.Reason,ConfirmedBy=a.Id};db.Add(batch);
             foreach(var attemptId in input.AttemptIds)
             {
-                db.Add(new CorrectionItem {FamilyId=a.FamilyId,BatchId=batch.Id,AttemptId=attemptId,MappingReleaseId=p.Release.Id});
+                var attempt=await db.Attempts.SingleAsync(x=>x.Id==attemptId && x.FamilyId==a.FamilyId);
+                var session=await db.Sessions.SingleAsync(x=>x.Id==attempt.SessionId && x.FamilyId==a.FamilyId);
+                var question=Json.Read<Catalog>(p.Release.Payload).Questions.Single(q=>q.Id==session.QuestionId);
+                var mapping=await PublishedMappings.Resolve(db,p.Release,question);
+                db.Add(new CorrectionItem {FamilyId=a.FamilyId,BatchId=batch.Id,AttemptId=attemptId,MappingReleaseId=p.Release.Id,QuestionRevisionId=question.RevisionId,MappingSetRevisionId=mapping});
                 db.Outbox.Add(new() {FamilyId=a.FamilyId,StudentId=id,AttemptId=attemptId});
             }
             return TypedResults.Accepted("/api/v1/students/"+id+"/mastery",batch);

@@ -36,11 +36,16 @@ def main():
     attempts=c.request('/students/'+sid+'/attempts')['attempts'];assert len(attempts)==1 and attempts[0]['answer']=='45' and attempts[0]['answerSource']=='ParentPaperConfirmed'
     reviews=c.request('/students/'+sid+'/reviews');assert len(reviews)==1 and reviews[0]['targetId']==draft['questionId'] and reviews[0]['stage']=='R1'
     due=(date.fromisoformat(TODAY)+timedelta(days=2)).isoformat();c.request('/students/'+sid+'/plans/'+due+':generate',{});tasks=c.request('/students/'+sid+'/plans/'+due)['tasks'];assert any(t['questionId']==draft['questionId'] and t['type']=='Review' for t in tasks)
+    binding=next(b for b in c.request('/content/releases/'+r2['id']+'/mapping-sets')['bindings'] if b['ownerType']=='Question' and b['ownerId']==draft['questionId'])
+    assert attempts[0]['mappingSetRevisionId']==binding['setRevisionId'] and attempts[0]['questionRevisionId']==next(q['revisionId'] for q in json.loads(r2['payload'])['questions'] if q['id']==draft['questionId'])
+    assert c.request('/students/'+sid+'/mastery/'+m['masteries'][0]['kcId'])['evidence'][0]['mappingSetRevisionId']==binding['setRevisionId']
     assert confirmed['confirmedBy'] and confirmed['confirmedAt'] and confirmed['releaseId']==r2['id']
     print('PASS 原题明确确认、失效预览拒绝、幂等重试不双计；一条可信首次作答及原题R1日程')
     aid=confirmed['attemptId'];grade={'result':'Correct','reason':'重新核对纸质答案，录入误判'};p=c.request('/attempts/'+aid+'/grading-preview',grade);c.request('/attempts/'+aid+'/grading-revisions',{**grade,'previewHash':p['previewHash']},expected=202);m=settle();assert m['masteries'][0]['beta']==2 and m['masteries'][0]['alpha']==3
     assert not any(r['targetType']=='WrongQuestion' for r in c.request('/students/'+sid+'/reviews'))
     export=c.request('/students/'+sid+'/export');assert export['paperWrongs'][0]['attemptId']==aid and export['attempts'][0]['answer']=='45' and len(export['gradings'])==2
+    assert export['sessions'][0]['mappingSetRevisionId']==binding['setRevisionId'] and any(x['id']==binding['setRevisionId'] for x in export['mappingSets'])
+    assert any(x['setRevisionId']==binding['setRevisionId'] for x in export['mappingItems'])
     print('PASS 纸质代录支持判分更正与世代重放，原始答案和审核记录导出完整')
     c.request('/students/'+sid+'/child-sessions',{});c.request('/paper-wrongs/'+wid+'/preview',inp,expected=403);c.request('/students/'+sid+'/paper-wrongs',expected=403)
     print('PASS 孩子不能读取私有纸质记录或代录结果')

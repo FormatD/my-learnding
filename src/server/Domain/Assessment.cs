@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
-public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null);
+public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null,Guid? MappingSetRevisionId=null);
 public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory,List<MasteryEvent> MasteryHistory);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
@@ -111,7 +111,7 @@ public static class Assessment
                     if (weight<raw && !duplicate) suppressed="VARIANT_DAILY_CAP";
                     dailyPositive[(group,day)]=used+weight;
                 }
-                evidence.Add(new Evidence { FamilyId=family, StudentId=student, GenerationId=generation, AttemptId=a.Id, GradingId=g.Id, ReleaseId=s.ReleaseId, MappingReleaseId=input.MappingReleaseId??s.ReleaseId,CorrectionBatchId=input.CorrectionBatchId, KCId=kc.Id, KCRevisionId=kc.RevisionId, Part=m.Step??"WholeItem", Positive=positive, RawWeight=raw, Weight=weight, OccurredAt=time, Factors=Json.Write(new { share=m.Share, quality=1, difficulty, independence, delayDays=delay, delayFactor, novelty, suppressed, suppressedWeight=raw-weight, rule=EvidenceRuleVersion }) });
+                evidence.Add(new Evidence { FamilyId=family, StudentId=student, GenerationId=generation, AttemptId=a.Id, GradingId=g.Id, ReleaseId=s.ReleaseId, MappingReleaseId=input.MappingReleaseId??s.ReleaseId,MappingSetRevisionId=input.MappingSetRevisionId,CorrectionBatchId=input.CorrectionBatchId, KCId=kc.Id, KCRevisionId=kc.RevisionId, Part=m.Step??"WholeItem", Positive=positive, RawWeight=raw, Weight=weight, OccurredAt=time, Factors=Json.Write(new { share=m.Share, quality=1, difficulty, independence, delayDays=delay, delayFactor, novelty, suppressed, suppressedWeight=raw-weight, rule=EvidenceRuleVersion }) });
                 if (weight<=0) continue;
                 var v=state.Value; if (positive) v.Alpha+=weight; else v.Beta+=weight;
                 v.EffectiveEvidence=v.Alpha+v.Beta-4; v.Probability=v.Alpha/(v.Alpha+v.Beta);
@@ -175,14 +175,38 @@ public static class Assessment
         var releases=await db.Releases.Where(r => r.FamilyId==student.FamilyId).ToDictionaryAsync(r => r.Id,ct);
         var tasks=await db.Tasks.Where(t => t.StudentId==student.Id).ToDictionaryAsync(t => t.Id,ct);
         var attemptIds=attempts.Select(a=>a.Id).ToArray();var corrections=await db.Set<CorrectionItem>().Where(c=>c.FamilyId==student.FamilyId && attemptIds.Contains(c.AttemptId)).OrderBy(c=>c.Sequence).ToListAsync(ct);
-        var inputs=attempts.Select(a => { var s=sessions[a.SessionId];var correction=corrections.LastOrDefault(c=>c.AttemptId==a.Id);var mappingRelease=correction?.MappingReleaseId??s.ReleaseId; var catalog=Json.Read<Catalog>(releases[mappingRelease].Payload); return new AssessmentInput(a,s,catalog.Questions.Single(q => q.Id==s.QuestionId),grades.Last(g => g.AttemptId==a.Id),catalog.Kcs,tasks[s.TaskId],mappingRelease,correction?.BatchId); }).ToArray();
+        var mappingIds=attempts.Where(a=>a.MappingSetRevisionId!=null).Select(a=>a.MappingSetRevisionId!.Value).Concat(corrections.Where(c=>c.MappingSetRevisionId!=null).Select(c=>c.MappingSetRevisionId!.Value)).Distinct().ToArray();
+        var sets=await db.Set<MappingSetRevision>().Where(m=>m.FamilyId==student.FamilyId && mappingIds.Contains(m.Id)).ToDictionaryAsync(m=>m.Id,ct);
+        var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==student.FamilyId && mappingIds.Contains(i.SetRevisionId)).ToArrayAsync(ct);
+        var itemLookup=items.ToLookup(i=>i.SetRevisionId);
+        var bindings=await db.Set<ReleaseMappingSet>().Where(b=>b.FamilyId==student.FamilyId && b.OwnerType=="Question" && mappingIds.Contains(b.SetRevisionId)).ToArrayAsync(ct);
+        var bindingKeys=bindings.Select(b=>(b.ReleaseId,b.OwnerId,b.OwnerRevisionId,b.SetRevisionId)).ToHashSet();
+        var usedReleases=attempts.Select(a=>sessions[a.SessionId].ReleaseId).Concat(corrections.Select(c=>c.MappingReleaseId)).Distinct().ToArray();
+        var catalogs=usedReleases.ToDictionary(id=>id,id=>Json.Read<Catalog>(releases[id].Payload));
+        var inputs=attempts.Select(a=>
+        {
+            var session=sessions[a.SessionId];var correction=corrections.LastOrDefault(c=>c.AttemptId==a.Id);var mappingRelease=correction?.MappingReleaseId??session.ReleaseId;
+            var catalog=catalogs[mappingRelease];var question=catalog.Questions.Single(q=>q.Id==session.QuestionId);
+            if(a.MappingSetRevisionId!=session.MappingSetRevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","原作答与原会话的固定映射不一致。");
+            var original=catalogs[session.ReleaseId].Questions.Single(q=>q.Id==session.QuestionId);
+            if(session.QuestionRevisionId!=null && session.QuestionRevisionId!=original.RevisionId || a.QuestionRevisionId!=null && a.QuestionRevisionId!=original.RevisionId || correction?.QuestionRevisionId!=null && correction.QuestionRevisionId!=question.RevisionId)
+                throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","记录的题目修订与固定内容版本不一致。");
+            var mapping=correction!=null?correction.MappingSetRevisionId:a.MappingSetRevisionId;
+            if(mapping!=null)
+            {
+                if(!bindingKeys.Contains((mappingRelease,session.QuestionId,question.RevisionId,mapping.Value)))throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","生效映射不属于固定发布版本。");
+                if(!sets.TryGetValue(mapping.Value,out var set))throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","固定映射容器不可用。");
+                question=PublishedMappings.Project(catalog,question,set,itemLookup[set.Id].ToArray());
+            }
+            return new AssessmentInput(a,session,question,grades.Last(g=>g.AttemptId==a.Id),catalog.Kcs,tasks[session.TaskId],mappingRelease,correction?.BatchId,mapping);
+        }).ToArray();
         var teaching=tasks.Values.Where(t=>t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null).Select(t=>new TeachingAnchor(t.KCId!.Value,t.CompletedAt!.Value)).OrderBy(t=>t.Time).ThenBy(t=>t.KCId).ToArray();
         return(inputs,teaching);
     }
     public static async Task Rebuild(Database db, Student student, CancellationToken ct=default)
     {
         var (inputs,teaching)=await LoadInputs(db,student,ct);
-        var hash=Content.Hash(Json.Write(new {inputs,teaching,rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
+        var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="mapping-context/1",rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
         if (student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash,ct)) return;
         var gen=new Generation { FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
         db.Generations.Add(gen);

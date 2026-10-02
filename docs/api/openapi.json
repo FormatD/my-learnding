@@ -197,11 +197,25 @@
             "format": "uuid",
             "type": "string"
           },
+          "mappingSetRevisionId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "number": {
             "format": "int32",
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
+              "string"
+            ]
+          },
+          "questionRevisionId": {
+            "format": "uuid",
+            "type": [
+              "null",
               "string"
             ]
           },
@@ -1267,6 +1281,13 @@
             "type": "string"
           },
           "mappingReleaseId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mappingSetRevisionId": {
             "format": "uuid",
             "type": [
               "null",

@@ -20,7 +20,16 @@ public static class Endpoints
 {
     static async Task<T> Owned<T>(Database db,Actor actor,Guid id) where T:Row => await db.Set<T>().SingleOrDefaultAsync(x => x.Id==id && x.FamilyId==actor.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","找不到该记录。");
     static DateOnly Today(Student s) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow,TimeZoneInfo.FindSystemTimeZoneById(s.TimeZone)).DateTime);
-    static async Task<Question> QuestionFor(Database db,LearningSession s) => Json.Read<Catalog>((await db.Releases.SingleAsync(r => r.Id==s.ReleaseId)).Payload).Questions.Single(q => q.Id==s.QuestionId);
+    static async Task<Question> QuestionFor(Database db,LearningSession s)
+    {
+        var release=await db.Releases.SingleAsync(r=>r.Id==s.ReleaseId && r.FamilyId==s.FamilyId);var catalog=Json.Read<Catalog>(release.Payload);var question=catalog.Questions.Single(q=>q.Id==s.QuestionId);
+        if(s.QuestionRevisionId!=null && s.QuestionRevisionId!=question.RevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","会话原题修订与发布快照不一致。");
+        if(s.MappingSetRevisionId==null)return question;
+        if(await PublishedMappings.Resolve(db,release,question)!=s.MappingSetRevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","会话固定映射与原发布记录不一致。");
+        var set=await db.Set<MappingSetRevision>().SingleAsync(m=>m.Id==s.MappingSetRevisionId && m.FamilyId==s.FamilyId);
+        var items=await db.Set<MappingSetItem>().Where(i=>i.SetRevisionId==set.Id && i.FamilyId==s.FamilyId).ToArrayAsync();
+        return PublishedMappings.Project(catalog,question,set,items);
+    }
     static async Task<(Catalog Catalog,Question Question,Guid ReleaseId)> GradingContext(Database db,Attempt attempt)
     {
         var session=await db.Sessions.SingleAsync(x=>x.Id==attempt.SessionId && x.FamilyId==attempt.FamilyId);
@@ -227,7 +236,7 @@ public static class Endpoints
             var q=Json.Read<Catalog>(release.Payload).Questions.SingleOrDefault(q => q.Id==task.QuestionId) ?? throw new ApiError(404,"QUESTION_UNPUBLISHED","题目未发布。");
             var existing=await db.Sessions.Where(s => s.TaskId==id).OrderByDescending(s => s.StartedAt).FirstOrDefaultAsync();
             if(release.Withdrawn && existing==null)throw new ApiError(422,"WITHDRAWN","内容已撤回，请联系家长。");
-            var session=existing??new LearningSession { FamilyId=a.FamilyId,StudentId=task.StudentId,TaskId=id,ReleaseId=release.Id,QuestionId=q.Id };
+            var session=existing??new LearningSession { FamilyId=a.FamilyId,StudentId=task.StudentId,TaskId=id,ReleaseId=release.Id,QuestionId=q.Id,QuestionRevisionId=q.RevisionId,MappingSetRevisionId=await PublishedMappings.Resolve(db,release,q) };
             if (existing==null) db.Sessions.Add(session);
             var lastAttempt=await db.Attempts.Where(x=>x.SessionId==session.Id).OrderByDescending(x=>x.Number).FirstOrDefaultAsync();
             var lastGrade=lastAttempt==null?null:await db.Gradings.Where(g=>g.AttemptId==lastAttempt.Id).OrderByDescending(g=>g.Number).FirstOrDefaultAsync();
@@ -243,7 +252,7 @@ public static class Endpoints
             var old=await db.Attempts.SingleOrDefaultAsync(x => x.StudentId==s.StudentId && x.ClientSubmissionId==input.ClientSubmissionId);
             if (old!=null) { if (old.SessionId!=id || old.Answer!=input.Answer) throw new ApiError(409,"SUBMISSION_CONFLICT","提交标识对应了其他答案。");return TypedResults.Ok(new ExistingAttemptResponse(old,await db.Gradings.Where(g => g.AttemptId==old.Id).OrderByDescending(g => g.Number).FirstAsync(),"Pending")); }
             var q=await QuestionFor(db,s);var count=await db.Attempts.CountAsync(x => x.SessionId==id);
-            var attempt=new Attempt { FamilyId=a.FamilyId,StudentId=s.StudentId,SessionId=id,ClientSubmissionId=input.ClientSubmissionId,Number=count+1,Answer=input.Answer,HintLevel=s.HintLevel,AnswerShown=s.AnswerShown,AnswerSource=a.Role=="Child"?"Child":"ParentEntered" };
+            var attempt=new Attempt { FamilyId=a.FamilyId,StudentId=s.StudentId,SessionId=id,QuestionRevisionId=q.RevisionId,MappingSetRevisionId=s.MappingSetRevisionId,ClientSubmissionId=input.ClientSubmissionId,Number=count+1,Answer=input.Answer,HintLevel=s.HintLevel,AnswerShown=s.AnswerShown,AnswerSource=a.Role=="Child"?"Child":"ParentEntered" };
             var result=q.Type is "ShortAnswer" or "MultiStep" ? "Pending" : q.Type=="Numeric" ? decimal.TryParse(input.Answer,NumberStyles.Number,CultureInfo.InvariantCulture,out var value) && value==decimal.Parse(q.Answer,CultureInfo.InvariantCulture) ? "Correct" : "Incorrect" : input.Answer.Trim().Normalize()==q.Answer.Trim().Normalize() ? "Correct" : "Incorrect";
             var grade=new Grading { FamilyId=a.FamilyId,AttemptId=attempt.Id,Number=1,Result=result,Method=result=="Pending"?"ManualRequired":"Rule" };
             db.Attempts.Add(attempt);db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=s.StudentId,AttemptId=attempt.Id });

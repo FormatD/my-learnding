@@ -165,6 +165,8 @@ public class Placement : Row
 }
 public class LearningSession : Row
 {
+    public Guid? QuestionRevisionId { get; set; }
+    public Guid? MappingSetRevisionId { get; set; }
     public Guid StudentId { get; set; }
     public Guid TaskId { get; set; }
     public Guid ReleaseId { get; set; }
@@ -175,6 +177,8 @@ public class LearningSession : Row
 }
 public class Attempt : Row
 {
+    public Guid? QuestionRevisionId { get; set; }
+    public Guid? MappingSetRevisionId { get; set; }
     public Guid StudentId { get; set; }
     public Guid SessionId { get; set; }
     public Guid ClientSubmissionId { get; set; }
@@ -216,6 +220,7 @@ public class Generation : Row
 }
 public class Evidence : Row
 {
+    public Guid? MappingSetRevisionId { get; set; }
     public Guid? MappingReleaseId { get; set; }
     public Guid? CorrectionBatchId { get; set; }
     public Guid GenerationId { get; set; }

@@ -43,6 +43,7 @@
 | 20261002171057_MappingSuggestionReview | 10.0.4 |
 | 20261002184306_ContentReviewSnapshots | 10.0.4 |
 | 20261002190022_PublishedMappingContainers | 10.0.4 |
+| 20261002191928_LearningMappingReferences | 10.0.4 |
 
 ## Accounts
 
@@ -117,11 +118,15 @@
 | AnswerShown | boolean | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| MappingSetRevisionId | uuid | 是 | 无 |
+| QuestionRevisionId | uuid | 是 | 无 |
 
 约束：
 
 - `AK_Attempts_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `FK_Attempts_ContentRevision_FamilyId_QuestionRevisionId`：`FOREIGN KEY ("FamilyId", "QuestionRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Attempts_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_Attempts_MappingSetRevision_FamilyId_MappingSetRevisionId`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Attempts_Sessions_FamilyId_SessionId`：`FOREIGN KEY ("FamilyId", "SessionId") REFERENCES "Sessions"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Attempts_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_Attempts`：`PRIMARY KEY ("Id")`
@@ -130,6 +135,8 @@
 
 - `CREATE UNIQUE INDEX "AK_Attempts_FamilyId_Id" ON public."Attempts" USING btree ("FamilyId", "Id")`
 - `CREATE INDEX "IX_Attempts_FamilyId" ON public."Attempts" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_Attempts_FamilyId_MappingSetRevisionId" ON public."Attempts" USING btree ("FamilyId", "MappingSetRevisionId")`
+- `CREATE INDEX "IX_Attempts_FamilyId_QuestionRevisionId" ON public."Attempts" USING btree ("FamilyId", "QuestionRevisionId")`
 - `CREATE INDEX "IX_Attempts_FamilyId_SessionId" ON public."Attempts" USING btree ("FamilyId", "SessionId")`
 - `CREATE INDEX "IX_Attempts_FamilyId_StudentId" ON public."Attempts" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_Attempts_SessionId_Number" ON public."Attempts" USING btree ("SessionId", "Number")`
@@ -528,12 +535,16 @@
 | MappingReleaseId | uuid | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| MappingSetRevisionId | uuid | 是 | 无 |
+| QuestionRevisionId | uuid | 是 | 无 |
 
 约束：
 
 - `FK_CorrectionItem_Attempts_FamilyId_AttemptId`：`FOREIGN KEY ("FamilyId", "AttemptId") REFERENCES "Attempts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_CorrectionItem_ContentRevision_FamilyId_QuestionRevisionId`：`FOREIGN KEY ("FamilyId", "QuestionRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_CorrectionItem_CorrectionBatch_FamilyId_BatchId`：`FOREIGN KEY ("FamilyId", "BatchId") REFERENCES "CorrectionBatch"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_CorrectionItem_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_CorrectionItem_MappingSetRevision_FamilyId_MappingSetRevisi~`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_CorrectionItem_Releases_FamilyId_MappingReleaseId`：`FOREIGN KEY ("FamilyId", "MappingReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_CorrectionItem`：`PRIMARY KEY ("Id")`
 
@@ -544,6 +555,8 @@
 - `CREATE INDEX "IX_CorrectionItem_FamilyId_AttemptId" ON public."CorrectionItem" USING btree ("FamilyId", "AttemptId")`
 - `CREATE INDEX "IX_CorrectionItem_FamilyId_BatchId" ON public."CorrectionItem" USING btree ("FamilyId", "BatchId")`
 - `CREATE INDEX "IX_CorrectionItem_FamilyId_MappingReleaseId" ON public."CorrectionItem" USING btree ("FamilyId", "MappingReleaseId")`
+- `CREATE INDEX "IX_CorrectionItem_FamilyId_MappingSetRevisionId" ON public."CorrectionItem" USING btree ("FamilyId", "MappingSetRevisionId")`
+- `CREATE INDEX "IX_CorrectionItem_FamilyId_QuestionRevisionId" ON public."CorrectionItem" USING btree ("FamilyId", "QuestionRevisionId")`
 - `CREATE UNIQUE INDEX "PK_CorrectionItem" ON public."CorrectionItem" USING btree ("Id")`
 
 ## Drafts
@@ -624,6 +637,7 @@
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | CorrectionBatchId | uuid | 是 | 无 |
 | MappingReleaseId | uuid | 是 | 无 |
+| MappingSetRevisionId | uuid | 是 | 无 |
 
 约束：
 
@@ -631,6 +645,7 @@
 - `FK_Evidence_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Evidence_Generations_FamilyId_GenerationId`：`FOREIGN KEY ("FamilyId", "GenerationId") REFERENCES "Generations"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Evidence_Gradings_FamilyId_GradingId`：`FOREIGN KEY ("FamilyId", "GradingId") REFERENCES "Gradings"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_Evidence_MappingSetRevision_FamilyId_MappingSetRevisionId`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Evidence_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_Evidence`：`PRIMARY KEY ("Id")`
 
@@ -640,6 +655,7 @@
 - `CREATE INDEX "IX_Evidence_FamilyId_AttemptId" ON public."Evidence" USING btree ("FamilyId", "AttemptId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_GenerationId" ON public."Evidence" USING btree ("FamilyId", "GenerationId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_GradingId" ON public."Evidence" USING btree ("FamilyId", "GradingId")`
+- `CREATE INDEX "IX_Evidence_FamilyId_MappingSetRevisionId" ON public."Evidence" USING btree ("FamilyId", "MappingSetRevisionId")`
 - `CREATE INDEX "IX_Evidence_FamilyId_StudentId" ON public."Evidence" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_Evidence_GenerationId_AttemptId_KCId_Part" ON public."Evidence" USING btree ("GenerationId", "AttemptId", "KCId", "Part")`
 - `CREATE UNIQUE INDEX "PK_Evidence" ON public."Evidence" USING btree ("Id")`
@@ -1625,11 +1641,15 @@
 | StartedAt | timestamp with time zone | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| MappingSetRevisionId | uuid | 是 | 无 |
+| QuestionRevisionId | uuid | 是 | 无 |
 
 约束：
 
 - `AK_Sessions_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `FK_Sessions_ContentRevision_FamilyId_QuestionRevisionId`：`FOREIGN KEY ("FamilyId", "QuestionRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Sessions_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_Sessions_MappingSetRevision_FamilyId_MappingSetRevisionId`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Sessions_Releases_FamilyId_ReleaseId`：`FOREIGN KEY ("FamilyId", "ReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Sessions_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Sessions_Tasks_FamilyId_TaskId`：`FOREIGN KEY ("FamilyId", "TaskId") REFERENCES "Tasks"("FamilyId", "Id") ON DELETE CASCADE`
@@ -1639,6 +1659,8 @@
 
 - `CREATE UNIQUE INDEX "AK_Sessions_FamilyId_Id" ON public."Sessions" USING btree ("FamilyId", "Id")`
 - `CREATE INDEX "IX_Sessions_FamilyId" ON public."Sessions" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_Sessions_FamilyId_MappingSetRevisionId" ON public."Sessions" USING btree ("FamilyId", "MappingSetRevisionId")`
+- `CREATE INDEX "IX_Sessions_FamilyId_QuestionRevisionId" ON public."Sessions" USING btree ("FamilyId", "QuestionRevisionId")`
 - `CREATE INDEX "IX_Sessions_FamilyId_ReleaseId" ON public."Sessions" USING btree ("FamilyId", "ReleaseId")`
 - `CREATE INDEX "IX_Sessions_FamilyId_StudentId" ON public."Sessions" USING btree ("FamilyId", "StudentId")`
 - `CREATE INDEX "IX_Sessions_FamilyId_TaskId" ON public."Sessions" USING btree ("FamilyId", "TaskId")`

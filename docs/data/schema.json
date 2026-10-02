@@ -104,6 +104,10 @@
     {
       "id": "20261002190022_PublishedMappingContainers",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002191928_LearningMappingReferences",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -439,6 +443,22 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "MappingSetRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "QuestionRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -451,9 +471,25 @@
           "initiallyDeferred": false
         },
         {
+          "name": "FK_Attempts_ContentRevision_FamilyId_QuestionRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"QuestionRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_Attempts_Families_FamilyId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_Attempts_MappingSetRevision_FamilyId_MappingSetRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingSetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -495,6 +531,18 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Attempts_FamilyId\" ON public.\"Attempts\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_Attempts_FamilyId_MappingSetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Attempts_FamilyId_MappingSetRevisionId\" ON public.\"Attempts\" USING btree (\"FamilyId\", \"MappingSetRevisionId\")"
+        },
+        {
+          "name": "IX_Attempts_FamilyId_QuestionRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Attempts_FamilyId_QuestionRevisionId\" ON public.\"Attempts\" USING btree (\"FamilyId\", \"QuestionRevisionId\")"
         },
         {
           "name": "IX_Attempts_FamilyId_SessionId",
@@ -2374,6 +2422,22 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "MappingSetRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "QuestionRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -2381,6 +2445,14 @@
           "name": "FK_CorrectionItem_Attempts_FamilyId_AttemptId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"AttemptId\") REFERENCES \"Attempts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_CorrectionItem_ContentRevision_FamilyId_QuestionRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"QuestionRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -2397,6 +2469,14 @@
           "name": "FK_CorrectionItem_Families_FamilyId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_CorrectionItem_MappingSetRevision_FamilyId_MappingSetRevisi~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingSetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -2448,6 +2528,18 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_CorrectionItem_FamilyId_MappingReleaseId\" ON public.\"CorrectionItem\" USING btree (\"FamilyId\", \"MappingReleaseId\")"
+        },
+        {
+          "name": "IX_CorrectionItem_FamilyId_MappingSetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_CorrectionItem_FamilyId_MappingSetRevisionId\" ON public.\"CorrectionItem\" USING btree (\"FamilyId\", \"MappingSetRevisionId\")"
+        },
+        {
+          "name": "IX_CorrectionItem_FamilyId_QuestionRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_CorrectionItem_FamilyId_QuestionRevisionId\" ON public.\"CorrectionItem\" USING btree (\"FamilyId\", \"QuestionRevisionId\")"
         },
         {
           "name": "PK_CorrectionItem",
@@ -2833,6 +2925,14 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "MappingSetRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -2864,6 +2964,14 @@
           "name": "FK_Evidence_Gradings_FamilyId_GradingId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"GradingId\") REFERENCES \"Gradings\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_Evidence_MappingSetRevision_FamilyId_MappingSetRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingSetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -2909,6 +3017,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Evidence_FamilyId_GradingId\" ON public.\"Evidence\" USING btree (\"FamilyId\", \"GradingId\")"
+        },
+        {
+          "name": "IX_Evidence_FamilyId_MappingSetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Evidence_FamilyId_MappingSetRevisionId\" ON public.\"Evidence\" USING btree (\"FamilyId\", \"MappingSetRevisionId\")"
         },
         {
           "name": "IX_Evidence_FamilyId_StudentId",
@@ -7683,6 +7797,22 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "MappingSetRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "QuestionRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -7695,9 +7825,25 @@
           "initiallyDeferred": false
         },
         {
+          "name": "FK_Sessions_ContentRevision_FamilyId_QuestionRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"QuestionRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_Sessions_Families_FamilyId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_Sessions_MappingSetRevision_FamilyId_MappingSetRevisionId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingSetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -7747,6 +7893,18 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Sessions_FamilyId\" ON public.\"Sessions\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_Sessions_FamilyId_MappingSetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Sessions_FamilyId_MappingSetRevisionId\" ON public.\"Sessions\" USING btree (\"FamilyId\", \"MappingSetRevisionId\")"
+        },
+        {
+          "name": "IX_Sessions_FamilyId_QuestionRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Sessions_FamilyId_QuestionRevisionId\" ON public.\"Sessions\" USING btree (\"FamilyId\", \"QuestionRevisionId\")"
         },
         {
           "name": "IX_Sessions_FamilyId_ReleaseId",

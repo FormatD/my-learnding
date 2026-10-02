@@ -35,7 +35,9 @@ def main():
     parser.add_argument("--baseline", type=Path, help="Also compare a previous revision's contract.")
     parser.add_argument("--regression", action="store_true", help="Run core API, version/PDF, content authoring and observed-step suites in the same disposable service.")
     parser.add_argument("--export-schema", action="store_true", help="Explicitly regenerate the schema dictionary from this migrated disposable database.")
+    parser.add_argument("--paper-regression",action="store_true",help="Run paper confirmation in a separate disposable service from core regression (keeps real login limit intact).")
     args = parser.parse_args()
+    if args.paper_regression and args.regression:parser.error("Run paper regression separately from core regression to respect the real login limit.")
     env = os.environ.copy()
     env["PATH"] = "/opt/homebrew/opt/postgresql@16/bin:" + env["PATH"]
     database = "learning_fault_openapi_" + uuid.uuid4().hex[:12]
@@ -115,6 +117,9 @@ def main():
                     advanced_api_acceptance.main()
                     content_authoring_api_acceptance.main()
                     observed_steps_api_acceptance.main()
+                if args.paper_regression:
+                    import paper_learning_api_acceptance
+                    paper_learning_api_acceptance.main()
                 verify_failures(document,client,env)
                 verify_rate(document)
             finally:

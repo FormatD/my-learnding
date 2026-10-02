@@ -67,6 +67,23 @@ public static class PublishedMappings
             db.Add(new ReleaseMappingSet{FamilyId=release.FamilyId,ReleaseId=release.Id,SetRevisionId=chosen.Id,OwnerType=owner.OwnerType,OwnerId=owner.Id,OwnerRevisionId=owner.RevisionId});
         }
     }
+    public static Question Project(Catalog catalog,Question question,MappingSetRevision set,MappingSetItem[] items)
+    {
+        var owner=MappingSuggestions.Owner(catalog,new("Question",question.Id,question.RevisionId));
+        if(set.OwnerType!="Question" || set.OwnerId!=question.Id || set.OwnerRevisionId!=question.RevisionId || set.OwnerDefinitionHash!=Content.Hash(Json.Write(question)) || !Matches(catalog,owner,set,items))
+            throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","固定映射与原题快照不一致，请核对发布记录。");
+        return question with{Policy=set.EvidencePolicy,Mappings=items.OrderBy(i=>i.Sequence).Select(i=>new Mapping(i.KCId,i.Role,i.EvidenceShare,i.EvidenceMode,i.Step)).ToArray()};
+    }
+    public static async Task<Guid?> Resolve(Database db,Release release,Question question)
+    {
+        if(!await db.Set<ContentReviewRecord>().AnyAsync(r=>r.FamilyId==release.FamilyId && r.PublishedReleaseId==release.Id && r.PublishedMappingVersion=="mapping-container/1"))return null;
+        var binding=await db.Set<ReleaseMappingSet>().SingleOrDefaultAsync(b=>b.FamilyId==release.FamilyId && b.ReleaseId==release.Id && b.OwnerType=="Question" && b.OwnerId==question.Id);
+        var set=binding==null?null:await db.Set<MappingSetRevision>().SingleOrDefaultAsync(s=>s.FamilyId==release.FamilyId && s.Id==binding.SetRevisionId);
+        if(binding==null || set==null || binding.OwnerRevisionId!=question.RevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","这个发布版本缺少准确题目映射，不能创建新会话。");
+        var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==release.FamilyId && i.SetRevisionId==set.Id).ToArrayAsync();
+        Project(Json.Read<Catalog>(release.Payload),question,set,items);
+        return set.Id;
+    }
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/content/releases/{id:guid}/mapping-sets",async(Guid id,Database db,HttpContext ctx)=>

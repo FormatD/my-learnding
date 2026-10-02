@@ -1,6 +1,8 @@
 import base64
 import copy
 import json
+import io,zipfile
+import api_acceptance
 import time
 import uuid
 from api_acceptance import Client,TODAY
@@ -27,6 +29,10 @@ def main():
     r2=publish(c.request('/content/drafts',{'title':'审核后的映射更正','catalog':changed}));c.request('/students/'+sid+'/content/'+r2['id']+':bind',{})
     a=c.request('/sessions/'+session['sessionId']+'/attempts',{'clientSubmissionId':str(uuid.uuid4()),'answer':'999'},expected=201)
     assert a['attempt']['sessionId']==session['sessionId']
+    q1=next(q for q in catalog['questions'] if q['id']==t['questionId'])
+    binding1=next(b for b in c.request('/content/releases/'+r1['id']+'/mapping-sets')['bindings'] if b['ownerType']=='Question' and b['ownerId']==q1['id'])
+    assert a['attempt']['questionRevisionId']==q1['revisionId'] and a['attempt']['mappingSetRevisionId']==binding1['setRevisionId']
+    original_attempt=a['attempt'].copy()
     def wait():
         for _ in range(50):
             m=c.request('/students/'+sid+'/mastery')
@@ -34,12 +40,23 @@ def main():
             time.sleep(.1)
         raise AssertionError('projection did not settle')
     m=wait();assert m['masteries'][0]['kcId']==oldkc
+    assert c.request('/students/'+sid+'/mastery/'+oldkc)['evidence'][0]['mappingSetRevisionId']==binding1['setRevisionId']
     print('PASS AT09 切换发布版本后，当前会话仍按领取内容归因')
     correction={'releaseId':r2['id'],'attemptIds':[a['attempt']['id']],'reason':'人工确认原映射错误'}
     p=c.request('/students/'+sid+'/mapping-corrections:preview',correction)
     c.request('/students/'+sid+'/mapping-corrections:confirm',{**correction,'previewHash':p['previewHash']},expected=202)
     m=wait();assert len(m['masteries'])==1 and m['masteries'][0]['kcId']==newkc and m['masteries'][0]['beta']==3
     detail=c.request('/students/'+sid+'/mastery/'+newkc);assert detail['evidence'][0]['mappingReleaseId']==r2['id'] and detail['evidence'][0]['correctionBatchId']
+    binding2=next(b for b in c.request('/content/releases/'+r2['id']+'/mapping-sets')['bindings'] if b['ownerType']=='Question' and b['ownerId']==q1['id'])
+    assert detail['evidence'][0]['mappingSetRevisionId']==binding2['setRevisionId'] and binding2['setRevisionId']!=binding1['setRevisionId']
+    assert next(x for x in c.request('/students/'+sid+'/attempts')['attempts'] if x['id']==original_attempt['id'])==original_attempt
+    with c.http.open(api_acceptance.BASE+'/family/export') as response:
+        data=json.loads(zipfile.ZipFile(io.BytesIO(response.read())).read('manifest.json'))['data']
+    stored_session=next(s for s in data['LearningSession'] if s['id']==session['sessionId']);correction_row=next(x for x in data['CorrectionItem'] if x['attemptId']==original_attempt['id'])
+    assert stored_session['mappingSetRevisionId']==binding1['setRevisionId'] and stored_session['questionRevisionId']==q1['revisionId']
+    assert correction_row['mappingSetRevisionId']==binding2['setRevisionId'] and correction_row['questionRevisionId']==q['revisionId']
+    export=c.request('/students/'+sid+'/export');assert {binding1['setRevisionId'],binding2['setRevisionId']}.issubset({x['id'] for x in export['mappingSets']})
+    assert export['sessions'][0]['mappingSetRevisionId']==binding1['setRevisionId'] and {binding1['setRevisionId'],binding2['setRevisionId']}.issubset({x['setRevisionId'] for x in export['mappingBindings']})
     print('PASS AT10 映射更正新世代重放，旧 KC 不双计')
     for text,status in [('First multiply then add.','Completed'),('','NeedsOCR')]:
         f=c.request('/files',{'name':'fixture.pdf','mimeType':'application/pdf','base64':base64.b64encode(pdf(text)).decode()},expected=201)
