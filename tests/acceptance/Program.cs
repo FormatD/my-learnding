@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Learning;
 
+if(args.Length==2 && args[0]=="--export-unit-pack"){File.WriteAllText(args[1],Json.Write(MixedOperationsPack.Create()));return 0;}
 var tests=new List<(string,Action)>();
 void Test(string name,Action action) => tests.Add((name,action));
 void Eq<T>(T actual,T expected) { if (!Equals(actual,expected)) throw new Exception($"expected {expected}, actual {actual}"); }
@@ -16,6 +17,12 @@ AssessmentInput Input(int n,bool correct=true,int day=0,Guid? questionId=null,in
 }
 AssessmentOutput Replay(params AssessmentInput[] inputs)=>Assessment.Replay(family,student,generation,"Asia/Shanghai",inputs);
 Test("M0 混合运算 20 题发布校验",()=>{var c=Content.Fixture();Eq(c.Questions.Length,20);Eq(Content.Validate(c).Length,0);});
+Test("原创题包身份稳定、目录合法、变式分组与人工步骤映射",()=>{
+    var c=MixedOperationsPack.Create();Eq(Json.Write(c),Json.Write(MixedOperationsPack.Create()));Eq(Content.Validate(c).Length,0);Eq(c.Questions.Length,160);Eq(c.Resources.Length,15);
+    Eq(c.Questions.Count(q=>q.Type=="Numeric"),128);Eq(c.Questions.Count(q=>q.Policy=="ObservedSteps"),16);
+    Eq(c.Questions.All(q=>q.VariantGroupId!=null),true);Eq(c.Questions.Where(q=>q.Policy=="ObservedSteps").All(q=>q.Mappings.Select(m=>m.Step).SequenceEqual(new[]{"model","calculate"})),true);
+    Eq(c.Questions.Where(q=>q.Policy=="SingleKC").All(q=>q.Mappings.Length==1),true);Eq(c.Resources.All(r=>r.PaperReference.Contains("独立练") && r.PaperReference.Contains("核对")),true);
+});
 Test("AT33 前置环拒绝",()=>{var c=Content.Fixture();var cycle=c with { Relations=[new(c.Kcs[0].Id,c.Kcs[1].Id),new(c.Kcs[1].Id,c.Kcs[0].Id)] };Eq(Content.Validate(cycle).Any(e=>e.Contains("CYCLE")),true);});
 Test("AT03 重试不抵消首次负证据",()=>{var first=Input(1,false);var retry=Input(2) with { Session=first.Session,Question=first.Question };retry.Attempt.SessionId=first.Session.Id;retry.Attempt.Number=2;var o=Replay(first,retry);Eq(o.Evidence.Count,1);Eq(o.Masteries[0].Beta,3m);});
 Test("AT04 Pending 不选后续正确",()=>{var first=Input(1,result:"Pending");var retry=Input(2,attemptNo:2);Eq(Replay(first,retry).Evidence.Count,0);});
