@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 
-test('映射批量审核保留校正、拒绝过期覆盖，只生成待审核草稿',async({page,context})=>{
+for(const provider of ['Mock','Manual'])test(provider+' 映射批量审核保留校正、拒绝过期覆盖，只生成待审核草稿',async({page,context})=>{
   let etag='';
   async function call(path:string,body?:unknown,method=body===undefined?'GET':'POST'){
     const response=await context.request.fetch('/api/v1'+path,{method,headers:{'X-Learning-Request':'1','Idempotency-Key':crypto.randomUUID(),'If-Match':etag},...(body===undefined?{}:{data:body})});
@@ -19,6 +19,7 @@ test('映射批量审核保留校正、拒绝过期覆盖，只生成待审核�
   await page.goto('/');await page.getByRole('button',{name:/内容与发布/}).click();
   const work=page.getByRole('region',{name:'映射建议与批量审核'});
   await work.getByText('准备一批建议',{exact:true}).click();
+  await work.getByLabel('准备方式').selectOption(provider);
   await work.getByLabel('映射来源草稿').selectOption(source.id);
   await work.getByLabel('对照的正式能力库').selectOption(original.id);
   await work.getByRole('checkbox',{name:/^题目 · 第 1 题 ·/}).check();
@@ -26,9 +27,9 @@ test('映射批量审核保留校正、拒绝过期覆盖，只生成待审核�
   await work.getByRole('checkbox',{name:'资源 · '+catalog.resources[0].title,exact:true}).check();
   await work.getByLabel('对象类型').selectOption('Lesson');
   await work.getByRole('checkbox',{name:'课时 · '+catalog.lessons[0].title,exact:true}).check();
-  await work.getByRole('button',{name:'准备本地模拟映射建议'}).click();
-  await expect(work.getByText('模拟建议已准备，原草稿和能力库版本已固定；请逐项核对。',{exact:true})).toBeVisible();
-  const run=(await call('/builder/mapping-runs'))[0];const path='/builder/mapping-runs/'+run.id;
+  await work.getByRole('button',{name:provider==='Manual'?'准备手工映射维护':'准备本地模拟映射建议'}).click();
+  await expect(work.getByText(provider==='Manual'?'手工维护已准备，只带入原关联并固定输入；覆盖权重默认值须逐项核对。':'模拟建议已准备，原草稿和能力库版本已固定；请逐项核对。',{exact:true})).toBeVisible();
+  const run=(await call('/builder/mapping-runs'))[0];const path='/builder/mapping-runs/'+run.id;expect(run.provider).toBe(provider);if(provider==='Manual')expect(run.model).toBe('None');
   await expect(work.getByText('共 3 项 · 待处理 3 项 · 接受 0 项 · 拒绝 0 项 · 接受时校正 0 项',{exact:true})).toBeVisible();
   const resource=work.getByRole('article',{name:'资源映射审核 · '+catalog.resources[0].title,exact:true});
   const reason='逐项核对原题与教学覆盖 '+unsafe;
@@ -62,9 +63,9 @@ test('映射批量审核保留校正、拒绝过期覆盖，只生成待审核�
   expect((await call('/students')).find((s:any)=>s.id===student.id).activeReleaseId).toBe(original.id);
   await work.getByText('查看已保存的决定与草稿',{exact:true}).click();await expect(work.getByText(reason,{exact:false}).first()).toBeVisible();
   expect(await page.evaluate(()=>(window as any).__mappingUnsafe)).toBeUndefined();
-  await page.screenshot({path:'../../test-results/mapping-workbench-tablet.png',fullPage:true});
+  await page.screenshot({path:'../../test-results/mapping-workbench-'+provider.toLowerCase()+'-tablet.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await page.screenshot({path:'../../test-results/mapping-workbench-phone.png',fullPage:true});
+  await page.screenshot({path:'../../test-results/mapping-workbench-'+provider.toLowerCase()+'-phone.png',fullPage:true});
   await work.getByRole('button',{name:'继续编辑审核映射草稿'}).first().click();
   const editor=page.getByRole('region',{name:'内容草稿编辑器'});await expect(editor).toBeVisible();await editor.getByRole('button',{name:'取消',exact:true}).click();
   const row=page.locator('.content-row').filter({has:page.getByRole('heading',{name:generated.title,exact:true})});

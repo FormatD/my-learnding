@@ -5,6 +5,7 @@ type Item=Record<string,any>;
 const props=defineProps<{drafts:Item[];releases:Item[];disabled:boolean}>();
 const emit=defineEmits<{refresh:[];editDraft:[id:string]}>();
 const busy=ref(false),error=ref(''),notice=ref(''),draftId=ref(''),libraryId=ref('');
+const provider=ref('Mock');
 const selectedOwners=ref<string[]>([]),ownerType=ref('All'),search=ref(''),ownerPage=ref(0);
 const runs=ref<Item[]>([]),detail=ref<Item|null>(null),reviewVersion=ref(''),rows=ref<Item[]>([]);
 const selectedReviews=ref<string[]>([]),reviewPage=ref(0),acknowledged=ref(false),commonReason=ref(''),commonDecision=ref('Accept');
@@ -36,7 +37,7 @@ async function run(action:()=>Promise<void>){if(blocked.value)return;busy.value=
 async function load(){runs.value=await api('/builder/mapping-runs');}
 async function open(id:string){const response=await apiWithVersion('/builder/mapping-runs/'+id);detail.value=response.data;reviewVersion.value=response.version;rows.value=detail.value!.suggestions.map((s:Item)=>({...s,proposal:{evidencePolicy:s.evidencePolicy,items:JSON.parse(s.suggestedItems)},decision:'Later',reason:''}));selectedReviews.value=[];reviewPage.value=0;acknowledged.value=false;}
 function chooseOwner(o:Item,event:Event){const checked=(event.target as HTMLInputElement).checked;if(checked&&selectedOwners.value.length>=100){(event.target as HTMLInputElement).checked=false;error.value='一次最多选择100个对象，可以分批准备。';return;}selectedOwners.value=checked?[...selectedOwners.value,key(o)]:selectedOwners.value.filter(k=>k!==key(o));}
-async function prepare(){await run(async()=>{const result=await api('/builder/mapping-runs',{draftId:draftId.value,libraryReleaseId:libraryId.value,provider:'Mock',owners:owners.value.filter(o=>selectedOwners.value.includes(key(o))).map(o=>({ownerType:o.type,ownerId:o.id,ownerRevisionId:o.revision}))});await load();await open(result.id);notice.value='模拟建议已准备，原草稿和能力库版本已固定；请逐项核对。';});}
+async function prepare(){await run(async()=>{const result=await api('/builder/mapping-runs',{draftId:draftId.value,libraryReleaseId:libraryId.value,provider:provider.value,owners:owners.value.filter(o=>selectedOwners.value.includes(key(o))).map(o=>({ownerType:o.type,ownerId:o.id,ownerRevisionId:o.revision}))});await load();await open(result.id);notice.value=provider.value==='Manual'?'手工维护已准备，只带入原关联并固定输入；覆盖权重默认值须逐项核对。':'模拟建议已准备，原草稿和能力库版本已固定；请逐项核对。';});}
 function owner(r:Item){const list=frozen.value?.[collections[r.ownerType]]||[];return list.find((o:Item)=>o.id===r.ownerId);}
 function kcName(id:string){return detail.value?.library.find((k:Item)=>k.id===id)?.name||frozen.value?.kcs.find((k:Item)=>k.id===id)?.name||'原版本能力';}
 function setKC(item:Item,id:string){item.kcId=id;item.kcRevisionId=detail.value!.library.find((k:Item)=>k.id===id).revisionId;item.modelScore=null;}
@@ -47,7 +48,7 @@ function changeRole(i:Item){if(['Context','Prerequisite'].includes(i.role)){i.ev
 function changePolicy(r:Item){if(r.proposal.evidencePolicy==='NoEvidence')r.proposal.items.forEach((i:Item)=>{i.evidenceMode='None';changeMode(i);});}
 function applyCommon(){selected.value.forEach(r=>{r.decision=commonDecision.value;r.reason=commonReason.value.trim();});}
 async function decide(){await run(async()=>{const result=await api('/builder/mapping-runs/'+detail.value!.run.id+'/suggestions:decide',{decisions:selected.value.map(r=>({suggestionId:r.id,decision:r.decision,reason:r.reason.trim(),correctedProposal:r.decision==='Accept'?r.proposal:null}))},'POST',undefined,reviewVersion.value);await open(result.runId);await load();emit('refresh');notice.value=result.draftId?'本批决定已保存，接受项生成待审核草稿；尚未发布或改变学生学习。':'拒绝决定已保存，没有生成正式映射。';});}
-function flags(r:Item){const labels:Record<string,string>={MockOnly:'本地模拟，尚无质量评测',HumanReviewRequired:'须人工核对',IndependentStepReviewRequired:'逐个核对独立观察步骤',OriginalKCOutsideLibrary:'原能力不在所选能力库',NoLibraryMatch:'没有能力库匹配'};return JSON.parse(r.validationFlags).map((f:string)=>labels[f]||f).join('；');}
+function flags(r:Item){const labels:Record<string,string>={ManualSource:'手工维护，只带入原有关联，不使用模型',CoverageNeedsReview:'原快照未记录覆盖权重，默认值1须人工核对',MockOnly:'本地模拟，尚无质量评测',HumanReviewRequired:'须人工核对',IndependentStepReviewRequired:'逐个核对独立观察步骤',OriginalKCOutsideLibrary:'原能力不在所选能力库',NoLibraryMatch:'没有能力库匹配'};return JSON.parse(r.validationFlags).map((f:string)=>labels[f]||f).join('；');}
 onMounted(()=>run(load));
 </script>
 <template>
@@ -55,6 +56,8 @@ onMounted(()=>run(load));
   <h2>映射建议与批量审核</h2><p class="muted">选择题目、课时或讲解资源，参考本地模拟建议，再由你核对和校正。接受只生成待审核草稿，发布仍需单独审核；排序分数与接受次数不代表映射质量。</p>
   <p v-if="error" class="warning" role="alert">{{error}}</p><p v-if="notice" role="status">{{notice}}</p>
   <details><summary>准备一批建议</summary>
+    <label>准备方式<select v-model="provider" :disabled="blocked"><option value="Mock">本地模拟建议</option><option value="Manual">手工维护原映射</option></select></label>
+    <p v-if="provider==='Manual'" class="muted">只带入原对象已记录的能力关联与观察步骤。所选库以外的原关联会明确提示，需自行补齐；不会自动选择替代能力。</p>
     <label>映射来源草稿<select v-model="draftId" @change="resetOwners" :disabled="blocked"><option value="">选择要核对的内容</option><option v-for="d in drafts" :key="d.id" :value="d.id">{{d.title}} · 第 {{d.version}} 版</option></select></label>
     <label>对照的正式能力库<select v-model="libraryId" :disabled="blocked"><option value="">明确选择正式版本</option><option v-for="r in available" :key="r.id" :value="r.id">内容版本 {{r.number}}</option></select></label>
     <p v-if="!available.length" class="muted">先人工建立并发布一个正式能力库，再准备建议。</p>
@@ -64,12 +67,12 @@ onMounted(()=>run(load));
       <label v-for="o in visibleOwners" :key="key(o)" class="mapping-check"><input type="checkbox" :checked="selectedOwners.includes(key(o))" :disabled="blocked||!o.revision" @change="chooseOwner(o,$event)"><span>{{names[o.type]}} · {{o.title}}<small v-if="!o.revision">版本未记录，请先编辑保存草稿。</small></span></label>
       <div class="mapping-actions"><button @click="ownerPage--" :disabled="blocked||ownerPage===0">上一页对象</button><span>第 {{ownerPage+1}} 页 · 共 {{filtered.length}} 项</span><button @click="ownerPage++" :disabled="blocked||(ownerPage+1)*20>=filtered.length">下一页对象</button><button @click="selectedOwners=[]" :disabled="blocked">清除对象选择</button></div>
     </template>
-    <button class="primary" @click="prepare" :disabled="blocked||!draftId||!libraryId||!selectedOwners.length">准备本地模拟映射建议</button>
+    <button class="primary" @click="prepare" :disabled="blocked||!draftId||!libraryId||!selectedOwners.length">{{provider==='Manual'?'准备手工映射维护':'准备本地模拟映射建议'}}</button>
   </details>
-  <label>查看建议运行<select :value="detail?.run.id||''" @change="run(()=>open(($event.target as HTMLSelectElement).value))" :disabled="blocked"><option value="" disabled>选择一批建议</option><option v-for="r in runs" :key="r.id" :value="r.id">{{r.sourceTitle}} · {{new Date(r.createdAt).toLocaleString('zh-CN')}}</option></select></label>
+  <label>查看建议运行<select :value="detail?.run.id||''" @change="run(()=>open(($event.target as HTMLSelectElement).value))" :disabled="blocked"><option value="" disabled>选择一批建议</option><option v-for="r in runs" :key="r.id" :value="r.id">{{r.provider==='Manual'?'手工':'模拟'}} · {{r.sourceTitle}} · {{new Date(r.createdAt).toLocaleString('zh-CN')}}</option></select></label>
   <button @click="run(async()=>{await load();if(detail)await open(detail.run.id)})" :disabled="blocked">刷新映射审核</button>
   <template v-if="detail">
-    <p class="muted">源草稿第 {{detail.run.sourceDraftVersion}} 版 · 固定能力库内容版本 {{releases.find(r=>r.id===detail!.run.libraryReleaseId)?.number||'历史'}}。源草稿后续修改与新发布版本不会替换本批输入。</p>
+    <p class="muted">{{detail.run.provider==='Manual'?'手工原映射':'本地模拟建议'}} · 源草稿第 {{detail.run.sourceDraftVersion}} 版 · 固定能力库内容版本 {{releases.find(r=>r.id===detail!.run.libraryReleaseId)?.number||'历史'}}。源草稿后续修改与新发布版本不会替换本批输入。</p>
     <p>共 {{detail.quality.suggested}} 项 · 待处理 {{detail.quality.pending}} 项 · 接受 {{detail.quality.accepted}} 项 · 拒绝 {{detail.quality.rejected}} 项 · 接受时校正 {{detail.quality.corrected}} 项</p><p class="muted">{{detail.quality.note}}</p>
     <div v-if="pending.length">
       <label>选中项的处理方式<select v-model="commonDecision" :disabled="blocked"><option value="Accept">接受校正后的映射</option><option value="Reject">拒绝建议</option></select></label><label>选中项的共同审核依据<textarea v-model="commonReason" maxlength="4000" :disabled="blocked" placeholder="先核对选中对象，再填写具体依据。也可以逐项填写不同理由。"></textarea></label>

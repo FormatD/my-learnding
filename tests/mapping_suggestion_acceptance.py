@@ -124,6 +124,29 @@ def verify(document,c):
     quality=c.request(editor_path)['quality'];assert quality['accepted']==1 and quality['corrected']==0 and quality['unchanged']==1
     print('PASS editor role/revoked session/cached reply protected; removing only sorting metadata is not reported as a mapping correction')
 
+    manual_request={**request,'provider':'Manual','owners':[owners[0],owners[2]]}
+    manual=c.request('/builder/mapping-runs',manual_request,expected=201)
+    assert manual['provider']=='Manual' and manual['model']=='None' and manual['promptVersion']=='manual-source/1'
+    assert c.request('/builder/mapping-runs',manual_request)['id']==manual['id']
+    manual_path='/builder/mapping-runs/'+manual['id'];md=c.request(manual_path)
+    for row in md['suggestions']:
+        flags=json.loads(row['validationFlags']);items=json.loads(row['suggestedItems'])
+        assert 'ManualSource' in flags and 'CoverageNeedsReview' in flags and 'MockOnly' not in flags and json.loads(row['matches'])==[]
+        owner=next(x for x in catalog['questions' if row['ownerType']=='Question' else 'lessons'] if x['id']==row['ownerId'])
+        expected=[m['kcId'] for m in owner['mappings']] if row['ownerType']=='Question' else owner['kcIds']
+        assert [i['kcId'] for i in items]==expected and all(i['modelScore'] is None for i in items)
+    decisions=[]
+    for row in md['suggestions']:
+        manual_proposal=proposal(row)
+        for i in manual_proposal['items']:i['coverageWeight']=.7
+        decisions.append(accept(row,manual_proposal))
+    accepted_manual=c.request(manual_path+'/suggestions:decide',{'decisions':decisions})
+    assert accepted_manual['pending']==0 and accepted_manual['draftValidationWarnings']==[]
+    reviewed_manual=c.request(manual_path)
+    assert len(reviewed_manual['sets'])==2 and all(i['coverageWeight']==.7 and i['modelScore'] is None for i in reviewed_manual['items'])
+    assert reviewed_manual['quality']['evaluationStatus']=='NotEvaluated'
+    print('PASS manual source keeps explicit associations without ranking or substitutes; frozen revisions, explicit coverage, review decisions and normalized sets share the same atomic workflow')
+
     pending_source=draft(original,'撤回能力库后的审核边界');pending_request={**request,'draftId':pending_source['id'],'owners':[owners[0]]}
     pending_run=c.request('/builder/mapping-runs',pending_request,expected=201);pending_path='/builder/mapping-runs/'+pending_run['id'];pending_suggestion=c.request(pending_path)['suggestions'][0]
     c.request('/content/releases/'+library['id']+':withdraw',{'reason':'隔离用例明确撤回旧能力库'})

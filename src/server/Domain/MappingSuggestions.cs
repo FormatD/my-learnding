@@ -122,6 +122,19 @@ public static class MappingSuggestions
         }
         return(new("NoEvidence",[Item(best,"Primary",0,"None",null,1)]),matches,flags.ToArray());
     }
+    public static (MappingProposal Proposal,Match[] Matches,string[] Flags) Manual(Catalog source,MappingOwner owner,KC[] library,string sourceRef)
+    {
+        // Copy explicit source associations only. No ranking, replacement KC or invented steps.
+        var mappings=owner.OwnerType=="Question"?owner.Mappings:
+            (owner.OwnerType=="Lesson"?source.Lessons.Single(l=>l.Id==owner.Id).KCIds:source.Resources.Single(r=>r.Id==owner.Id).KCIds)
+            .Select(id=>new Mapping(id,"Primary",0,"None",null)).ToArray();
+        var flags=new List<string>{"ManualSource","HumanReviewRequired","CoverageNeedsReview"};
+        if(mappings.Any(m=>!library.Any(k=>k.Id==m.KCId)))flags.Add("OriginalKCOutsideLibrary");
+        var items=mappings.Where(m=>library.Any(k=>k.Id==m.KCId)).Select((m,i)=>new SuggestedMappingItem(
+            m.KCId,library.Single(k=>k.Id==m.KCId).RevisionId,m.Role,1,m.Share,m.Mode,m.Step,i+1,null,[sourceRef])).ToArray();
+        if(owner.EvidencePolicy=="ObservedSteps")flags.Add("IndependentStepReviewRequired");
+        return(new(owner.EvidencePolicy,items),[],flags.ToArray());
+    }
     public static string[] Validate(MappingOwner owner,MappingProposal proposal,KC[] library,string sourceRef)
     {
         var errors=new List<string>();var items=proposal.Items;

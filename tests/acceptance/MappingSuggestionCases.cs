@@ -39,6 +39,11 @@ internal static class MappingSuggestionCases
         Check(MappingSuggestions.Validate(owner,over,c.Kcs,reference).Length>0,"step evidence budget cannot exceed one");
         var numeric=owner with{QuestionType="Numeric"};
         Check(MappingSuggestions.Validate(numeric,mock.Proposal,c.Kcs,reference).Length>0,"mapping cannot invent manual grading ability on numeric question");
+        var manual=MappingSuggestions.Manual(c,owner,c.Kcs,reference);
+        Check(manual.Matches.Length==0 && manual.Flags.Contains("ManualSource") && !manual.Flags.Contains("MockOnly"),"manual source never invokes ranking or claims model output");
+        Check(manual.Proposal.Items.All(i=>i.ModelScore==null) && manual.Proposal.Items.Select(i=>i.Step).SequenceEqual(q.Mappings.Select(m=>m.Step)),"manual source preserves only explicit independent observation steps");
+        var outside=MappingSuggestions.Manual(c,owner,[],reference);
+        Check(outside.Proposal.Items.Length==0 && outside.Flags.Contains("OriginalKCOutsideLibrary"),"manual source flags missing original KC without substitute inference");
         var missing=MappingSuggestions.Suggest(owner,[],reference);
         Check(missing.Flags.Contains("NoLibraryMatch") && missing.Proposal.Items.Length==0,"missing library does not invent a KC");
     }

@@ -48,13 +48,13 @@ public static class MappingBuilder
                 var original=suggestions.Single(s=>s.Id==d.SuggestionId);
                 return !MappingSuggestions.SameMapping(new(original.EvidencePolicy,Json.Read<SuggestedMappingItem[]>(original.SuggestedItems)),Json.Read<MappingProposal>(d.CorrectedPayload));
             });
-            var quality=new MappingQuality(suggestions.Length,suggestions.Count(s=>s.Status=="Pending"),accepted.Length,decisions.Count(d=>d.Decision=="Reject"),corrected,accepted.Length-corrected,"NotEvaluated","仅统计人工处理与校正次数；Mock排序和接受率不代表映射正确率，没有正式金标准质量评测。");
+            var quality=new MappingQuality(suggestions.Length,suggestions.Count(s=>s.Status=="Pending"),accepted.Length,decisions.Count(d=>d.Decision=="Reject"),corrected,accepted.Length-corrected,"NotEvaluated","仅统计人工处理与校正次数；处理次数、模拟排序和接受率不代表映射正确率，没有正式金标准质量评测。");
             return new MappingRunDetail(run,suggestions,decisions,sets,items,library.Kcs,quality);
         });
         api.MapPost("/builder/mapping-runs",async Task<Results<Ok<MappingRun>,Created<MappingRun>>>(MappingRunInput input,Database db,HttpContext ctx)=>
         {
             var a=ctx.Actor();a.Require("ContentEditor");
-            if(input.Provider!="Mock")throw new ApiError(422,"PROVIDER_UNCONFIGURED","模型稍后接入，当前只允许本地模拟建议，不外发内容。");
+            if(input.Provider is not "Mock" and not "Manual")throw new ApiError(422,"PROVIDER_UNCONFIGURED","模型稍后接入，当前支持本地模拟建议或手工维护，不外发内容。");
             if(input.Owners==null || input.Owners.Length is <1 or >100 || input.Owners.Any(o=>o==null) || input.Owners.Select(o=>new{o.OwnerType,o.OwnerId}).Distinct().Count()!=input.Owners.Length)throw new ApiError(422,"INVALID_SELECTION","请选择1到100个不同对象和明确修订。");
             var draft=await db.Drafts.SingleOrDefaultAsync(d=>d.Id==input.DraftId && d.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","内容草稿不存在。");
             var release=await db.Releases.SingleOrDefaultAsync(r=>r.Id==input.LibraryReleaseId && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","能力库版本不存在。");
@@ -63,12 +63,14 @@ public static class MappingBuilder
             if(library.Length is <1 or >1000)throw new ApiError(422,"LIBRARY_SIZE_INVALID","本地建议支持1到1000个正式能力，请选择合适的能力库版本。");
             var selections=input.Owners.OrderBy(o=>o.OwnerType,StringComparer.Ordinal).ThenBy(o=>o.OwnerId).ToArray();var owners=selections.Select(o=>MappingSuggestions.Owner(source,o)).ToArray();
             var sourceHash=Content.Hash(draft.Payload);var libraryHash=Content.Hash(release.Payload);
-            var hash=Content.Hash(Json.Write(new{draft.Id,draft.Version,sourceHash,releaseId=release.Id,libraryHash,selections,input.Provider,model=Retrieval.Space,promptVersion="mapping-suggestion/1"}));
+            var model=input.Provider=="Manual"?"None":Retrieval.Space;var promptVersion=input.Provider=="Manual"?"manual-source/1":"mapping-suggestion/1";
+            var hash=Content.Hash(Json.Write(new{draft.Id,draft.Version,sourceHash,releaseId=release.Id,libraryHash,selections,input.Provider,model,promptVersion}));
             var existing=await db.Set<MappingRun>().SingleOrDefaultAsync(r=>r.FamilyId==a.FamilyId && r.InputHash==hash);if(existing!=null)return TypedResults.Ok(existing);
-            var run=new MappingRun{FamilyId=a.FamilyId,SourceDraftId=draft.Id,SourceDraftVersion=draft.Version,SourceTitle=draft.Title,SourcePayload=draft.Payload,SourceHash=sourceHash,LibraryReleaseId=release.Id,LibraryHash=libraryHash,InputHash=hash};db.Add(run);
+            var run=new MappingRun{FamilyId=a.FamilyId,SourceDraftId=draft.Id,SourceDraftVersion=draft.Version,SourceTitle=draft.Title,SourcePayload=draft.Payload,SourceHash=sourceHash,LibraryReleaseId=release.Id,LibraryHash=libraryHash,InputHash=hash,Provider=input.Provider,Model=model,PromptVersion=promptVersion};db.Add(run);
             foreach(var owner in owners)
             {
-                var result=MappingSuggestions.Suggest(owner,library,MappingSuggestions.SourceRef(draft.Id,owner));
+                var reference=MappingSuggestions.SourceRef(draft.Id,owner);
+                var result=input.Provider=="Manual"?MappingSuggestions.Manual(source,owner,library,reference):MappingSuggestions.Suggest(owner,library,reference);
                 var validation=MappingSuggestions.Validate(owner,result.Proposal,library,MappingSuggestions.SourceRef(draft.Id,owner));
                 db.Add(new MappingSuggestion{FamilyId=a.FamilyId,RunId=run.Id,OwnerType=owner.OwnerType,OwnerId=owner.Id,OwnerRevisionId=owner.RevisionId,OwnerTitle=owner.Title,EvidencePolicy=result.Proposal.EvidencePolicy,SuggestedItems=Json.Write(result.Proposal.Items),Matches=Json.Write(result.Matches),ValidationFlags=Json.Write(result.Flags.Concat(validation).ToArray())});
             }
