@@ -100,7 +100,7 @@ app.Use(async (ctx,next) =>
         ctx.Response.StatusCode=cached.StatusCode; ctx.Response.ContentType="application/json"; await ctx.Response.WriteAsync(cached.Response); return;
     }
     var family=await db.Families.SingleAsync(f => f.Id==actor.FamilyId);
-    if ((ctx.Request.Method is "PUT" or "PATCH" || ctx.Request.Path.Value!.EndsWith(":publish") || ctx.Request.Path.Value.EndsWith(":decide") || ctx.Request.Path.Value.EndsWith(":correct")) && ctx.Request.Headers.IfMatch!=$"\"{family.Version}\"") throw new ApiError(412,"VERSION_CONFLICT","数据已更新，请刷新后重新确认。");
+    if ((ctx.Request.Method is "PUT" or "PATCH" || ctx.Request.Path.Value!.EndsWith(":publish") || ctx.Request.Path.Value.EndsWith(":decide") || ctx.Request.Path.Value.EndsWith(":correct") || ctx.Request.Path.Value.EndsWith(":adjust")) && ctx.Request.Headers.IfMatch!=$"\"{family.Version}\"") throw new ApiError(412,"VERSION_CONFLICT","数据已更新，请刷新后重新确认。");
     var response=ctx.Response.Body; await using var buffer=new MemoryStream(); ctx.Response.Body=buffer;
     try
     {

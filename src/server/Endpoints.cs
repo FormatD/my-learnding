@@ -150,14 +150,14 @@ public static class Endpoints
         api.MapPost("/plans/{id:guid}:adjust",async (Guid id,AdjustInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("Parent");var rev=await Owned<PlanRevision>(db,a,id);
-            if (rev.Status!="Draft" || string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"ADJUST_INVALID","只可调整草稿，并需填写原因。");
+            if (rev.Status!="Draft" || string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>1000) throw new ApiError(422,"ADJUST_INVALID","只可调整草稿，并需填写原因。");
             var placements=await db.Placements.Where(p => p.RevisionId==id).ToListAsync();
-            if (input.TaskIds.Distinct().Count()!=input.TaskIds.Length || input.TaskIds.Any(t => !placements.Any(p => p.TaskId==t)) || input.LockedIds.Distinct().Count()!=input.LockedIds.Length || input.LockedIds.Any(t=>!input.TaskIds.Contains(t))) throw new ApiError(422,"INVALID_TASK_IDS","任务顺序无效。");
+            if (input.TaskIds==null || input.LockedIds==null || input.TaskIds.Distinct().Count()!=input.TaskIds.Length || input.TaskIds.Any(t => !placements.Any(p => p.TaskId==t)) || input.LockedIds.Distinct().Count()!=input.LockedIds.Length || input.LockedIds.Any(t=>!input.TaskIds.Contains(t))) throw new ApiError(422,"INVALID_TASK_IDS","任务顺序无效。");
             var beforeIds=placements.OrderBy(p=>p.Sequence).Select(p=>p.TaskId).ToArray();
             foreach (var p in placements)
             {
                 var t=await Owned<StudyTask>(db,a,p.TaskId);
-                if (!input.TaskIds.Contains(t.Id)) { if (t.Mandatory || t.Status is "Completed" or "InProgress") throw new ApiError(422,"FIXED_TASK","不能移除已执行或必做任务。");db.Placements.Remove(p); }
+                if (!input.TaskIds.Contains(t.Id)) { if (t.Mandatory || t.Locked || t.Status is "Completed" or "InProgress") throw new ApiError(422,"FIXED_TASK","不能移除已执行、必做或锁定任务；可选任务需先解除锁定。");db.Placements.Remove(p); }
                 else { p.Sequence=Array.IndexOf(input.TaskIds,t.Id);t.Locked=input.LockedIds.Contains(t.Id); }
             }
             rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);
