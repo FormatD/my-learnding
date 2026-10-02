@@ -24,6 +24,7 @@ builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(k
 builder.Services.AddHostedService<ProjectionWorker>();
 builder.Services.AddSingleton<RequestMetrics>();
 builder.Services.AddSingleton(new StorageProbe(privateRoot));
+builder.Services.AddSingleton(new BackupProbe(builder.Configuration["BackupConfigFile"],Path.Combine(privateRoot,"../scripts/daily_backup.py"),builder.Configuration.GetConnectionString("Learning")??$"Host=127.0.0.1;Port=55432;Database=learning;Username={Environment.UserName}"));
 builder.Services.AddHostedService<OperationsMonitor>();
 builder.Services.AddRateLimiter(o => o.AddPolicy("auth",ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString()??"local",_ => new() { PermitLimit=10,Window=TimeSpan.FromMinutes(1),QueueLimit=0 })));
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.PropertyNamingPolicy=System.Text.Json.JsonNamingPolicy.CamelCase);

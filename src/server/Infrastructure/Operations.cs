@@ -47,22 +47,24 @@ public static class Operations
     }
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/operations",async(Database db,HttpContext ctx,RequestMetrics metrics,StorageProbe storage)=>
+        api.MapGet("/operations",async(Database db,HttpContext ctx,RequestMetrics metrics,StorageProbe storage,BackupProbe backups)=>
         {
             var a=ctx.Actor();a.Require("Parent");var now=DateTimeOffset.UtcNow;var editor=a.Can("ContentEditor");
             var pending=await db.Outbox.Where(j=>j.FamilyId==a.FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).ToArrayAsync();
             var names=await db.Students.Where(s=>s.FamilyId==a.FamilyId).ToDictionaryAsync(s=>s.Id,s=>s.Name);
             var signals=(await Signals(db,a.FamilyId,now)).Where(s=>editor || !s.Code.StartsWith("Builder")).ToList();
             var owner=(await db.Families.SingleAsync(f=>f.Id==a.FamilyId)).OwnerAccountId==a.AccountId;var disk=owner?storage.Read():null;if(disk?.Low==true)signals.Add(new("StorageLow","Warning","本地存储空间不足",1,"请检查本地存储容量与备份位置；不要直接删除数据库或私有附件。"));
-            return new{observedAt=now,signals,storage=disk,requests=metrics.Read(a.FamilyId),projection=new{pending=pending.Length,failed=pending.Count(j=>j.Retries>=3),oldestSeconds=pending.Length==0?(double?)null:Math.Max(0,(now-pending[0].CreatedAt).TotalSeconds),jobs=pending.Take(100).Select(j=>new{j.Id,j.StudentId,student=names.GetValueOrDefault(j.StudentId,"学生"),j.CreatedAt,j.Retries,j.NextAttemptAt,errorCode=j.Error,canRetry=j.Retries>=3})},builder=editor?new{queued=await db.BuilderRuns.CountAsync(r=>r.FamilyId==a.FamilyId&&r.Status=="Queued"),failed=await db.BuilderRuns.CountAsync(r=>r.FamilyId==a.FamilyId&&r.Status=="Failed"),needsOCR=await db.BuilderRuns.CountAsync(r=>r.FamilyId==a.FamilyId&&r.Status=="NeedsOCR"),unreviewed=await db.Candidates.CountAsync(c=>c.FamilyId==a.FamilyId&&c.Status=="Pending"),drafts=await db.Drafts.CountAsync(d=>d.FamilyId==a.FamilyId&&d.Status!="Published")} : null,backup=new{verified=false,notice="尚未配置并验收每日加密备份、独立磁盘与30天保留；手工导出不能替代完整备份。"},model=new{connected=false,notice="外部模型按当前安排尚未接入；已发布内容可以继续学习。"}};
+            var backup=owner?backups.Read():null;if(backup!=null)signals.AddRange(BackupProbe.Signals(backup));
+            return new{observedAt=now,signals,storage=disk,requests=metrics.Read(a.FamilyId),projection=new{pending=pending.Length,failed=pending.Count(j=>j.Retries>=3),oldestSeconds=pending.Length==0?(double?)null:Math.Max(0,(now-pending[0].CreatedAt).TotalSeconds),jobs=pending.Take(100).Select(j=>new{j.Id,j.StudentId,student=names.GetValueOrDefault(j.StudentId,"学生"),j.CreatedAt,j.Retries,j.NextAttemptAt,errorCode=j.Error,canRetry=j.Retries>=3})},builder=editor?new{queued=await db.BuilderRuns.CountAsync(r=>r.FamilyId==a.FamilyId&&r.Status=="Queued"),failed=await db.BuilderRuns.CountAsync(r=>r.FamilyId==a.FamilyId&&r.Status=="Failed"),needsOCR=await db.BuilderRuns.CountAsync(r=>r.FamilyId==a.FamilyId&&r.Status=="NeedsOCR"),unreviewed=await db.Candidates.CountAsync(c=>c.FamilyId==a.FamilyId&&c.Status=="Pending"),drafts=await db.Drafts.CountAsync(d=>d.FamilyId==a.FamilyId&&d.Status!="Published")} : null,backup,model=new{connected=false,notice="外部模型按当前安排尚未接入；已发布内容可以继续学习。"}};
         });
     }
 }
 // Independent of the projection worker, so stalled processing can still be reported.
-public sealed class OperationsMonitor(IServiceScopeFactory scopes,ILogger<OperationsMonitor> logger,StorageProbe storage):BackgroundService
+public sealed class OperationsMonitor(IServiceScopeFactory scopes,ILogger<OperationsMonitor> logger,StorageProbe storage,BackupProbe backups):BackgroundService
 {
     readonly Dictionary<(Guid Family,string Code),int> active=new();
     bool? storageLow;
+    readonly HashSet<string> backupActive=[];
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         while(!ct.IsCancellationRequested)
@@ -71,6 +73,10 @@ public sealed class OperationsMonitor(IServiceScopeFactory scopes,ILogger<Operat
             {
                 await using var scope=scopes.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<Database>();var now=DateTimeOffset.UtcNow;var observed=new Dictionary<(Guid Family,string Code),int>();
                 var disk=storage.Read();if(disk.Available && storageLow!=disk.Low){if(disk.Low)logger.LogWarning("Operational alert StorageLow FreeBytes {FreeBytes}",disk.FreeBytes);else if(storageLow==true)logger.LogInformation("Operational alert resolved StorageLow");storageLow=disk.Low;}
+                var backupSignals=BackupProbe.Signals(backups.Read()).Select(s=>s.Code).ToHashSet();
+                foreach(var code in backupSignals.Except(backupActive))logger.LogWarning("Operational alert {Code}",code);
+                foreach(var code in backupActive.Except(backupSignals))logger.LogInformation("Operational alert resolved {Code}",code);
+                backupActive.Clear();backupActive.UnionWith(backupSignals);
                 var families=await db.Outbox.Where(j=>j.ProcessedAt==null).Select(j=>j.FamilyId).Union(db.BuilderRuns.Where(r=>r.Status=="Failed"||r.Status=="Queued").Select(r=>r.FamilyId)).Distinct().ToArrayAsync(ct);
                 foreach(var family in families)foreach(var signal in await Operations.Signals(db,family,now,ct))
                 {

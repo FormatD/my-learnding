@@ -11,6 +11,7 @@ if test -z "${ConnectionStrings__Learning:-}"; then
   if ! pg_isready -h 127.0.0.1 -p 55432 >/dev/null; then pg_ctl -D .local/postgres -l .local/postgres.log -o '-h 127.0.0.1 -p 55432' start; fi
   ConnectionStrings__Learning="Host=127.0.0.1;Port=55432;Database=learning;Username=$(id -un)"; export ConnectionStrings__Learning
 fi
+if test -f "$task_root/.local/daily-backup-config.json"; then BackupConfigFile="${BackupConfigFile:-$task_root/.local/daily-backup-config.json}"; export BackupConfigFile; fi
 DOTNET_CLI_TELEMETRY_OPTOUT=1; export DOTNET_CLI_TELEMETRY_OPTOUT
 npm ci --prefix src/web
 npm run build --prefix src/web

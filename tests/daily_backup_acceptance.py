@@ -7,10 +7,14 @@ import json
 import os
 import secrets
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
 import uuid
+import urllib.request
+import api_acceptance
+from api_acceptance import Client
 from datetime import timedelta
 from pathlib import Path
 
@@ -91,8 +95,61 @@ def main():
                         if observed.get('pid')==watcher.pid and observed.get('status')=='Waiting':break
                     time.sleep(.05)
                 else:raise AssertionError('watcher did not complete a real due check')
+                with socket.socket() as listener:listener.bind(('127.0.0.1',0));port=listener.getsockname()[1]
+                api_env=env|{'ConnectionStrings__Learning':env['PERSISTENCE_TEST_CONNECTION'],'BackupConfigFile':str(configfile),
+                            'DeletionLedger':str(ledgers[0]),'FamilyDeletionLedger':str(ledgers[1]),'ExportDirectory':str(tmp/'exports')}
+                with open(tmp/'api.log','w+') as log:
+                    api=subprocess.Popen([str(root/'.tools/dotnet/dotnet'),str(root/'src/server/bin/Debug/net10.0/Learning.Api.dll'),'--urls',f'http://127.0.0.1:{port}'],cwd=root/'src/server',env=api_env,stdout=log,stderr=subprocess.STDOUT)
+                    try:
+                        deadline=time.monotonic()+30
+                        while time.monotonic()<deadline:
+                            assert api.poll() is None,'isolated API stopped'
+                            try:
+                                with urllib.request.urlopen(f'http://127.0.0.1:{port}/api/health',timeout=1) as response:
+                                    if response.status==200:break
+                            except OSError:time.sleep(.1)
+                        else:raise AssertionError('isolated API unavailable')
+                        api_acceptance.BASE=f'http://127.0.0.1:{port}/api/v1';client=Client();credentials={'userName':env['PLAN_TEST_USERNAME'],'password':env['PLAN_TEST_PASSWORD']}
+                        client.request('/auth/login',credentials);client.request('/me');status=client.request('/operations')['backup']
+                        assert status['configured'] and status['available'] and status['schedulerActive'] and status['archiveVerified']
+                        assert not status['verified'] and not status['restoreVerified'] and not status['independentDisk']
+                        assert secret not in json.dumps(status) and str(key) not in json.dumps(status) and str(archive.parent) not in json.dumps(status)
+                        if os.environ.get('RUN_BACKUP_BROWSER')=='1':
+                            browser_env=api_env|{'LEARNING_TEST_URL':f'http://127.0.0.1:{port}','BACKUP_TEST_USER':credentials['userName'],'BACKUP_TEST_PASSWORD':credentials['password']}
+                            subprocess.run(['npm','run','test:e2e','--','tests/backup_status.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env,check=True)
+                        client.request('/family/members',{'userName':'backup-parent-'+suffix,'password':secret,'roles':['Parent']},expected=201)
+                        parent=Client();parent.request('/auth/login',{'userName':'backup-parent-'+suffix,'password':secret});parent.request('/me')
+                        assert parent.request('/operations')['backup'] is None
+                        statefile=Path(config['stateFile']);original_state=json.loads(statefile.read_text());aged=copy.deepcopy(original_state)
+                        aged['lastSuccess']['snapshotStartedAt']=job.stamp(job.utc()-timedelta(hours=25));aged['status']='Failed';aged['errorCode']='TOOL_FAILED_PG_DUMP';job.write_json(statefile,aged)
+                        observed=client.request('/operations');codes={s['code'] for s in observed['signals']};assert {'BackupFailed','BackupOverdue'}<=codes and observed['backup']['lastSnapshotAt'] and observed['backup']['archiveVerified']
+                        deadline=time.monotonic()+12
+                        while time.monotonic()<deadline:
+                            log.seek(0);logs=log.read()
+                            if 'Operational alert BackupFailed' in logs and 'Operational alert BackupOverdue' in logs:break
+                            time.sleep(.1)
+                        else:raise AssertionError('independent backup failure monitor did not log')
+                        job.write_json(statefile,original_state)
+                        deadline=time.monotonic()+12
+                        while time.monotonic()<deadline:
+                            log.seek(0);logs=log.read()
+                            if 'Operational alert resolved BackupFailed' in logs and 'Operational alert resolved BackupOverdue' in logs:break
+                            time.sleep(.1)
+                        else:raise AssertionError('backup recovery not logged')
+                        malformed=copy.deepcopy(original_state);malformed['lastSuccess']['snapshotStartedAt']='not-a-date';job.write_json(statefile,malformed)
+                        unavailable=client.request('/operations');assert unavailable['backup']['status']=='Unavailable' and any(s['code']=='BackupUnavailable' for s in unavailable['signals'])
+                        job.write_json(statefile,original_state)
+                        original_bytes=Path(good['archive']).read_bytes();damaged=bytearray(original_bytes);damaged[-1]^=1;Path(good['archive']).write_bytes(damaged)
+                        assert any(s['code']=='BackupArchiveUnavailable' for s in client.request('/operations')['signals'])
+                        Path(good['archive']).write_bytes(original_bytes)
+                        watcher.terminate();watcher.communicate(timeout=10)
+                        stopped=client.request('/operations');assert not stopped['backup']['schedulerActive'] and any(s['code']=='BackupSchedulerStopped' for s in stopped['signals'])
+                        client.request('/students/'+fixture['studentId']+'/child-sessions',{});client.request('/operations',expected=403)
+                        print('PASS 负责人状态核对真实进程及摘要；超过24小时/失败/归档损坏/进程终止分别告警，非负责人不见本机备份，孩子拒绝',flush=True)
+                    finally:
+                        api.terminate();api.wait(timeout=10)
             finally:
-                watcher.terminate();watcher.communicate(timeout=10)
+                if watcher.poll() is None:watcher.terminate();watcher.communicate(timeout=10)
             print('PASS 实际独立调度进程完成到期检查并写原子心跳，正常等待不制造重复归档；口令文件宽权限拒绝',flush=True)
             # Prove an actual restore, beyond pg_restore --list archive inspection.
             restore_env=env|{'BACKUP_PASSPHRASE':secret,'GNUPGHOME':str(tmp/'gpg'),'DELETION_LEDGER':str(ledgers[0]),'FAMILY_DELETION_LEDGER':str(ledgers[1])}
