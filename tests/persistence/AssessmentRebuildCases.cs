@@ -4,9 +4,9 @@ public static class AssessmentRebuildCases
 {
     static void Check(bool yes,string error){if(!yes)throw new Exception(error);}
     static Database Open(Database db,bool crash=false){var b=new DbContextOptionsBuilder<Database>().UseNpgsql(db.Database.GetConnectionString());if(crash)b.AddInterceptors(new CrashBeforeCommit());return new(b.Options);}
-    static async Task<AssessmentRebuildRequest> Seed(Database db)
+    internal static async Task<AssessmentRebuildRequest> Seed(Database db)
     {
-        await db.Database.MigrateAsync();var f=new Family();var a=new Account{FamilyId=f.Id,UserName="rebuild-"+Guid.NewGuid()};var catalog=Content.Fixture();var release=new Release{FamilyId=f.Id,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog)),Number=1};var s=new Student{FamilyId=f.Id,ActiveReleaseId=release.Id,TimeZone="Asia/Shanghai"};db.AddRange(f,a,new FamilyMembership{FamilyId=f.Id,AccountId=a.Id,Roles="Parent"},release,s);await db.SaveChangesAsync();await Publishing.Register(db,release);await db.SaveChangesAsync();
+        await db.Database.MigrateAsync();var f=new Family();var a=new Account{FamilyId=f.Id,UserName=Environment.GetEnvironmentVariable("REBUILD_COMPAT_USER")??"rebuild-"+Guid.NewGuid(),PasswordHash=Security.Password(Environment.GetEnvironmentVariable("REBUILD_COMPAT_PASSWORD")??"isolated-rebuild-fixture")};var catalog=Content.Fixture();var release=new Release{FamilyId=f.Id,Payload=Json.Write(catalog),Hash=Content.Hash(Json.Write(catalog)),Number=1};var s=new Student{FamilyId=f.Id,ActiveReleaseId=release.Id,TimeZone="Asia/Shanghai"};db.AddRange(f,a,new FamilyMembership{FamilyId=f.Id,AccountId=a.Id,Roles="Parent"},release,s);await db.SaveChangesAsync();await Publishing.Register(db,release);await db.SaveChangesAsync();
         async Task Append(Question q,bool modern)
         {
             var t=new StudyTask{FamilyId=f.Id,StudentId=s.Id,ReleaseId=release.Id,QuestionId=q.Id};var session=new LearningSession{FamilyId=f.Id,StudentId=s.Id,TaskId=t.Id,ReleaseId=release.Id,QuestionId=q.Id};var attempt=new Attempt{FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,Number=1,ClientSubmissionId=Guid.NewGuid(),Answer="999",CreatedAt=new DateTimeOffset(2000,1,1,20,0,0,TimeSpan.Zero)};var grade=new Grading{FamilyId=f.Id,AttemptId=attempt.Id,Number=1,Result="Incorrect"};

@@ -19,6 +19,7 @@ if(args[0].StartsWith("cursor-")){await AssessmentConsumptionCases.Run(db,args[0
 if(args[0].StartsWith("online-")){await OnlineAssessmentCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("incremental-")){await IncrementalCheckpointCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("cancel-worker")){await JobCancellationCases.Run(db,args[0]);return;}
+if(args[0].StartsWith("rebuild-compat")){await RebuildCompatibilityCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("rebuild-job")){await AssessmentRebuildCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("mapping-job")){await MappingJobCases.Run(db,args[0]);return;}
 if(args[0]=="job-lease"){await JobLeaseCases.Run(db);return;}

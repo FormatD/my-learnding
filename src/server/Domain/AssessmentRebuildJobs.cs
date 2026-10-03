@@ -28,6 +28,18 @@ public record AssessmentRebuildSummary(Guid Id,Guid JobId,Guid StudentId,Guid Ta
 public static class AssessmentRebuildJobs
 {
     public const string Type="AssessmentRebuild";
+    public static async Task RequireLegacyCompatible(Database db,Student student,CancellationToken ct=default)
+    {
+        // An old synchronous call cannot restart work stopped through the explicit job controls.
+        var request=await db.Set<AssessmentRebuildRequest>().AsNoTracking().Where(r=>r.FamilyId==student.FamilyId && r.StudentId==student.Id).OrderByDescending(r=>r.CreatedAt).ThenByDescending(r=>r.Id).FirstOrDefaultAsync(ct);
+        if(request==null)return;
+        if(await db.Set<BackgroundJob>().AnyAsync(j=>j.FamilyId==student.FamilyId && j.StudentId==student.Id && j.Type==Type && (j.Status=="Queued" || j.Status=="Running" || j.Status=="Retrying"),ct))throw LegacyRequired();
+        var job=await db.Set<BackgroundJob>().AsNoTracking().SingleOrDefaultAsync(j=>j.Id==request.JobId && j.FamilyId==student.FamilyId && j.StudentId==student.Id && j.Type==Type,ct);
+        if(job?.Status!="Succeeded")throw LegacyRequired();
+        var result=await db.Set<AssessmentRebuildResult>().AsNoTracking().SingleOrDefaultAsync(r=>r.RequestId==request.Id && r.FamilyId==student.FamilyId && r.StudentId==student.Id,ct);
+        if(result==null || result.JobId!=job.Id || !await AssessmentCheckpoints.ValidateResult(db,result,ct) || !await db.Set<DomainEvent>().AnyAsync(e=>e.Id==result.AppliedEventId && e.FamilyId==student.FamilyId && e.StudentId==student.Id && e.AggregateId==result.GenerationId && e.EventType=="AssessmentApplied",ct))throw new ApiError(422,"REBUILD_RESULT_INVALID","原重建结果引用不完整，请核对记录。");
+    }
+    static ApiError LegacyRequired()=>new(409,"REBUILD_JOB_REQUIRED","已有后台重建请求，请查看原任务进度；已失败或取消时须明确恢复或重新准备，不能通过旧入口重算。");
     public static AssessmentRebuildSummary Summary(AssessmentRebuildRequest r,BackgroundJob j,AssessmentRebuildResult? result)=>new(r.Id,j.Id,r.StudentId,r.TargetGenerationId,j.Status,j.AttemptCount,j.RetryRound,j.LastErrorCode,r.CreatedAt,result);
     public static async Task<AssessmentRebuildRequest> Enqueue(Database db,Actor a,Guid studentId,string reason,bool forceFull=false)
     {
