@@ -15,6 +15,8 @@ fi
 python3 tests/openapi_acceptance.py --mapping-regression
 python3 tests/mapping_job_persistence_acceptance.py
 python3 tests/mapping_job_fault_acceptance.py
+python3 tests/mapping_compatibility_acceptance.py
+python3 tests/mapping_compatibility_api_acceptance.py
 
 # Manual assessment rebuilds retain real authentication limits in an isolated service.
 python3 tests/openapi_acceptance.py --rebuild-regression

@@ -6,7 +6,7 @@ MappingPreparation与BackgroundJob、排队审计同领域请求事务写入。�
 
 新MappingSuggestions任务使用统一领取/心跳/提交围栏，最多4次执行（包含实际中断）。Worker按冻结快照处理，后续修改草稿或发布新能力库不会替换原输入；冻结能力库撤回、原请求人维护权限撤销、输入/版本不一致必须失败，不能自动绕过。Mock为本地排序，Manual只携带明确原关联；二者不调用外部或付费模型。建议、实际完成MappingRun及审计与任务/领取完成同事务提交；失去领取权后旧进程不能提交。重复处理只核对原结果，不能生成多组建议或自动变更正式映射。
 
-MappingRun仍表示真实完成的建议结果，CompletedAt沿用已有非空时间语义；队列状态由独立准备记录对应的BackgroundJob读取，不填假完成时间。既有同步POST /builder/mapping-runs保留原有接口契约，页面已迁入后台。兼容入口与新准备同输入相遇时使用相同固定RunId，避免两个结果；该旧接口仍同步，尚不能宣称全部映射API路径统一后台化。家长重建页面及设计入口已[后台化](assessment-rebuild.md)；旧同步兼容接口和独立增量评估仍开放。
+MappingRun仍表示真实完成的建议结果，CompletedAt沿用已有非空时间语义；队列状态由独立准备记录对应的BackgroundJob读取，不填假完成时间。既有同步POST /builder/mapping-runs保留原有接口契约，页面已迁入后台。相同输入已有实际完成结果时旧入口仅原样复用该结果；相同输入已有后台准备但尚无完成结果时返回409 MAPPING_JOB_REQUIRED，要求查看原进度或明确恢复原任务。Queued、Running、Retrying、Failed和Cancelled均不能借旧入口生成、改写状态或替代本轮授权。原输入没有后台准备的独立旧同步请求仍按原契约处理；该旧接口仍同步，尚不能宣称全部映射API路径统一后台化。家长重建页面及设计入口已[后台化](assessment-rebuild.md)；旧同步兼容接口和独立增量评估仍开放。
 
 权限：ContentEditor/Publisher可准备、读取、重试本家庭任务；孩子403，其他家庭ID404。全家庭导出包含MappingPreparation的原快照及任务/领取/结果引用，家庭删除级联清除；学生导出不混入家庭级映射输入。恢复最新删除清单继续按实际外键结构闭合。
 
@@ -14,3 +14,5 @@ MappingRun仍表示真实完成的建议结果，CompletedAt沿用已有非空�
 
 
 可选任务取消及明确恢复已接入，实际停止与提供者费用分别核对，见[取消手册](job-cancellation.md)。必需学习结果同步不会被取消。
+
+兼容边界专项：mapping_compatibility_acceptance.py在真实临时库分别覆盖Mock/Manual，实际领取Running、受控暂时失败的真实领取终态Retrying、真实取消、明确恢复及实际撤权Failed；拒绝旧入口时原结果/原任务/审计不变，正常心跳字段另行保留自然推进。固定输出只由恢复后的真实后台提交，旧入口原样复用；独立新输入仍可旧同步生成。mapping_compatibility_api_acceptance.py在启动前真实排入未来一小时的任务，实际HTTP排队409、取消、再次409、明确retry及后台完成，避免用偶然抢在Worker之前的时序作为证据。二者纳入统一本地持续检查；不冒称全部旧路径已后台化。

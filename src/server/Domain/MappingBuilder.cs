@@ -55,6 +55,15 @@ public static class MappingBuilder
                 db.Add(new MappingSuggestion{FamilyId=run.FamilyId,RunId=run.Id,OwnerType=owner.OwnerType,OwnerId=owner.Id,OwnerRevisionId=owner.RevisionId,OwnerTitle=owner.Title,EvidencePolicy=result.Proposal.EvidencePolicy,SuggestedItems=Json.Write(result.Proposal.Items),Matches=Json.Write(result.Matches),ValidationFlags=Json.Write(result.Flags.Concat(validation).ToArray())});
             }
     }
+    public static async Task<(MappingRun Run,bool Created)> PrepareLegacy(Database db,Actor actor,MappingRunInput input)
+    {
+        actor.Require("ContentEditor");var (run,selections,source,library,owners)=await Freeze(db,actor,input);
+        var existing=await db.Set<MappingRun>().SingleOrDefaultAsync(r=>r.FamilyId==actor.FamilyId && r.InputHash==run.InputHash);if(existing!=null)return(existing,false);
+        if(await db.Set<MappingPreparation>().AnyAsync(p=>p.FamilyId==actor.FamilyId && p.InputHash==run.InputHash))throw new ApiError(409,"MAPPING_JOB_REQUIRED","此输入已有后台准备任务，请查看原任务进度；已取消或失败时须明确恢复原任务，不能通过旧入口重新生成。");
+        db.Add(run);Generate(db,run,source,library,owners);
+        db.Audits.Add(new(){FamilyId=actor.FamilyId,ActorId=actor.Id,Action="MappingSuggestionsPrepared",Details=Json.Write(new{runId=run.Id,run.SourceDraftId,run.SourceDraftVersion,run.LibraryReleaseId,run.InputHash,owners=selections.Length,provider=run.Provider})});
+        return(run,true);
+    }
     public static void Map(RouteGroupBuilder api)
     {
         MappingJobs.Map(api);
@@ -80,13 +89,8 @@ public static class MappingBuilder
         });
         api.MapPost("/builder/mapping-runs",async Task<Results<Ok<MappingRun>,Created<MappingRun>>>(MappingRunInput input,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("ContentEditor");
-            var (run,selections,source,library,owners)=await Freeze(db,a,input);
-            var existing=await db.Set<MappingRun>().SingleOrDefaultAsync(r=>r.FamilyId==a.FamilyId && r.InputHash==run.InputHash);if(existing!=null)return TypedResults.Ok(existing);
-            var queued=await db.Set<MappingPreparation>().SingleOrDefaultAsync(p=>p.FamilyId==a.FamilyId && p.InputHash==run.InputHash);if(queued!=null)run.Id=queued.RunId;
-            db.Add(run);
-            Generate(db,run,source,library,owners);
-            db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="MappingSuggestionsPrepared",Details=Json.Write(new{runId=run.Id,run.SourceDraftId,run.SourceDraftVersion,run.LibraryReleaseId,run.InputHash,owners=selections.Length,provider=run.Provider})});
+            var (run,created)=await PrepareLegacy(db,ctx.Actor(),input);
+            if(!created)return TypedResults.Ok(run);
             return TypedResults.Created($"/api/v1/builder/mapping-runs/{run.Id}",run);
         });
         api.MapPost("/builder/mapping-runs/{id:guid}/suggestions:decide",async(Guid id,MappingBatchInput input,Database db,HttpContext ctx)=>
