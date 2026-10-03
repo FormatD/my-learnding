@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace Learning;
 
 // Independent commits preserve call facts if candidate work or its transaction rolls back.
-public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemptNumber,IBuilderCandidateProvider inner):IBuilderCandidateProvider
+public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemptNumber,IBuilderCandidateProvider inner,JobLease? lease=null):IBuilderCandidateProvider
 {
     readonly Guid executionId=Guid.NewGuid();readonly string connection=owner.Database.GetConnectionString()??throw new InvalidOperationException("Builder ledger connection unavailable");int number;
     Database Open()=>new(new DbContextOptionsBuilder<Database>().UseNpgsql(connection).Options);
@@ -18,7 +18,7 @@ public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemp
     public async Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct)
     {
         var call=new BuilderCall{FamilyId=run.FamilyId,RunId=run.Id,ExecutionId=executionId,RetryRound=run.RetryRound,AttemptNumber=attemptNumber,CallNumber=++number,Repair=request.InvalidOutput!=null,Provider=run.Provider,Model=run.Model,InputHash=run.InputHash,ModelConfigHash=run.ModelConfigHash};
-        await using(var started=Open()){var denied=await BuilderBudget.Reserve(started,call,inner.Quote(request),ct);if(denied!=null)throw new ApiError(422,denied,"调用预算或并发名额不足，请查看调用账本并核对未确认调用。");}
+        await using(var started=Open()){var denied=await BuilderBudget.Reserve(started,call,inner.Quote(request),ct,lease);if(denied!=null)throw new ApiError(422,denied,"调用预算或并发名额不足，请查看调用账本并核对未确认调用。");}
         var watch=Stopwatch.StartNew();
         try
         {

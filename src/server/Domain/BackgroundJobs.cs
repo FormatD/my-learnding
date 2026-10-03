@@ -40,6 +40,7 @@ public static class BackgroundJobs
     public static async Task EnsureBuilderJobs(Database owner,CancellationToken ct=default)
     {
         await using var db=Open(owner);
+        await JobCancellation.ReconcileBuilder(db,ct);
         foreach(var run in await db.BuilderRuns.AsNoTracking().Where(r=>r.Status=="Queued").ToArrayAsync(ct))
         {
             var type=run.Type=="ParsePDF"?"ParsePDF":"BuilderCandidates";var payload=Snapshot(run);var hash=Content.Hash(payload);var key="builder:"+run.Id;
@@ -66,17 +67,18 @@ public static class BackgroundJobs
     }
     public static void Map(RouteGroupBuilder api)
     {
+        JobCancellation.Map(api);
         api.MapGet("/background-jobs",async(int? page,int? pageSize,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");var p=page??1;var size=pageSize??20;if(p<1 || p>100_000 || size<1 || size>50)throw new ApiError(422,"INVALID_PAGE","请使用有效页码及每页1～50条。");var query=db.Set<BackgroundJob>().Where(j=>j.FamilyId==a.FamilyId);var total=await query.CountAsync();var jobs=await query.OrderByDescending(j=>j.CreatedAt).ThenBy(j=>j.Id).Skip((p-1)*size).Take(size).ToArrayAsync();var ids=jobs.Select(j=>j.Id).ToArray();return new{page=p,pageSize=size,total,jobs,attempts=await db.Set<JobLeaseAttempt>().Where(j=>j.FamilyId==a.FamilyId && ids.Contains(j.JobId)).OrderBy(j=>j.CreatedAt).ThenBy(j=>j.Id).ToArrayAsync()};});
     }
 }
 public sealed class JobLease:IAsyncDisposable
 {
-    readonly string connection;readonly CancellationTokenSource work,stop=new();readonly Task heartbeat;int lost;
+    readonly Database owner;readonly string connection;readonly CancellationTokenSource work,stop=new();readonly Task heartbeat;int lost;
     public BackgroundJob Job {get;}
     public bool CanExecute {get;}
     public CancellationToken Token=>work.Token;
     public bool Lost=>Volatile.Read(ref lost)!=0;
-    public JobLease(Database db,BackgroundJob job,bool execute,CancellationToken ct){connection=db.Database.GetConnectionString()!;Job=job;CanExecute=execute;work=CancellationTokenSource.CreateLinkedTokenSource(ct);heartbeat=Pulse();}
+    public JobLease(Database db,BackgroundJob job,bool execute,CancellationToken ct){owner=db;connection=db.Database.GetConnectionString()!;Job=job;CanExecute=execute;work=CancellationTokenSource.CreateLinkedTokenSource(ct);heartbeat=Pulse();}
     Database Open()=>new(new DbContextOptionsBuilder<Database>().UseNpgsql(connection).Options);
     void Lose(){Interlocked.Exchange(ref lost,1);work.Cancel();}
     async Task Pulse()
@@ -94,6 +96,12 @@ public sealed class JobLease:IAsyncDisposable
         catch(OperationCanceledException)when(stop.IsCancellationRequested){}
         catch{Lose();}
     }
+    // Serialize a durable call start against cancellation, without holding this lock during the provider wait.
+    public async Task PermitCall(Database db,CancellationToken ct)
+    {
+        var rows=await db.Set<BackgroundJob>().FromSqlInterpolated($"SELECT * FROM \"BackgroundJob\" WHERE \"Id\"={Job.Id} AND \"FamilyId\"={Job.FamilyId} AND \"Status\"='Running' AND \"LeaseOwner\"={Job.LeaseOwner} AND \"LeaseExpiresAt\">clock_timestamp() FOR SHARE").AsNoTracking().ToArrayAsync(ct);
+        if(rows.Length!=1){Lose();throw new OperationCanceledException("Job no longer permits a call",Token);}
+    }
     // Lock the still-valid owner row in the result transaction. A replacement owner cannot pass this fence concurrently.
     public async Task Finish(Database db,string status,string? error,DateTimeOffset? next,CancellationToken ct)
     {
@@ -103,5 +111,5 @@ public sealed class JobLease:IAsyncDisposable
         if(attempt!=null){attempt.Status=status;attempt.ErrorCode=error;attempt.FinishedAt=DateTimeOffset.UtcNow;}
         await db.SaveChangesAsync(ct);
     }
-    public async ValueTask DisposeAsync(){stop.Cancel();await heartbeat;work.Dispose();stop.Dispose();}
+    public async ValueTask DisposeAsync(){stop.Cancel();await heartbeat;try{await JobCancellation.ObserveStopped(owner,Job);}finally{work.Dispose();stop.Dispose();}}
 }

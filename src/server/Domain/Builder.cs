@@ -34,8 +34,8 @@ public static class Builder
         {
             var a=ctx.Actor();a.Require("ContentEditor");var run=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","找不到建库任务。");
             if(string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000)throw new ApiError(422,"REASON_REQUIRED","请填写重新处理的依据，最多4000字。");
-            if(run.Status!="Failed")throw new ApiError(409,"RUN_NOT_FAILED","只可重新处理已停止的失败任务。");
-            if(run.Error is not ("BUILDER_PROCESSING_FAILED" or "BUILDER_CONCURRENCY_LIMIT" or "BUILDER_USAGE_RECONCILIATION_REQUIRED" or "BUILDER_CALL_BUDGET_LIMIT" or "BUILDER_DAILY_BUDGET_LIMIT" or "JOB_ATTEMPTS_EXHAUSTED"))throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
+            if(run.Status is not ("Failed" or "Cancelled"))throw new ApiError(409,"RUN_NOT_FAILED","只可重新处理已停止的失败任务。");
+            if(run.Error is not ("BUILDER_PROCESSING_FAILED" or "BUILDER_CONCURRENCY_LIMIT" or "BUILDER_USAGE_RECONCILIATION_REQUIRED" or "BUILDER_CALL_BUDGET_LIMIT" or "BUILDER_DAILY_BUDGET_LIMIT" or "JOB_ATTEMPTS_EXHAUSTED" or "JOB_CANCELLED_BY_USER"))throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
             await ValidateRun(db,run);
             if(await db.Candidates.AnyAsync(c=>c.RunId==id) || run.Type=="ParsePDF" && await db.Chunks.AnyAsync(c=>c.SourceId==run.SourceId))throw new ApiError(422,"RUN_OUTPUT_EXISTS","已有输出不能再次生成；请检查原运行记录。");
             var before=Json.Write(run);run.Status="Queued";run.Retries=0;run.RetryRound++;run.NextAttemptAt=null;run.CompletedAt=null;run.Error=null;
@@ -110,7 +110,7 @@ public static class Builder
             {
                 if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","后台任务多次中断后已停止，请核对原调用后人工恢复。");
                 if(Content.Hash(lease.Job.InputPayload)!=lease.Job.InputHash || BackgroundJobs.Snapshot(run)!=lease.Job.InputPayload)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","后台任务原输入已变化，请重新准备来源，不直接重试。");
-                await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+                await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct,lease);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
                 var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
             }
             catch(Exception ex)when(ex is not OperationCanceledException)
@@ -127,7 +127,7 @@ public static class Builder
         catch(OperationCanceledException)when(lease.Lost && !stopping.IsCancellationRequested){db.ChangeTracker.Clear();logger?.LogWarning("Builder lease lost; uncommitted result discarded {JobId}",lease.Job.Id);}
     }
     static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=BackgroundJobs.Snapshot(run)};
-    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct)
+    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct,JobLease? lease=null)
     {
         if (run.Type=="ParsePDF")
         {
@@ -150,7 +150,7 @@ public static class Builder
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,new MockBuilderCandidateProvider()),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
+        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,new MockBuilderCandidateProvider(),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
         foreach (var candidate in output.Output.Candidates)
         {
             var chunk=chunks.Single(c=>c.Id==candidate.SourceChunkIds[0]);

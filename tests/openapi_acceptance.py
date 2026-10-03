@@ -33,6 +33,7 @@ from builder_protocol_acceptance import verify as verify_builder_protocol
 from learning_reference_acceptance import verify as verify_learning_references
 from independent_mapping_acceptance import verify as verify_independent_mappings
 from rebuild_job_api_acceptance import verify as verify_rebuild_jobs
+from job_cancellation_api_acceptance import verify as verify_cancellation
 from mapping_job_api_acceptance import verify as verify_mapping_jobs
 from evidence_revocation_acceptance import verify as verify_revocations
 
@@ -46,7 +47,9 @@ def main():
     parser.add_argument("--paper-regression",action="store_true",help="Run paper confirmation in a separate disposable service from core regression (keeps real login limit intact).")
     parser.add_argument("--mapping-regression",action="store_true",help="Run queued mapping work in its own disposable service to retain real auth rate limits.")
     parser.add_argument("--rebuild-regression",action="store_true",help="Run background assessment rebuild in a separate disposable service.")
+    parser.add_argument("--cancel-regression",action="store_true",help="Run independent cancellation commands in a separate disposable service.")
     args = parser.parse_args()
+    if args.cancel_regression and (args.regression or args.paper_regression or args.mapping_regression or args.rebuild_regression):parser.error("Run cancellation regression in its own service.")
     if args.rebuild_regression and (args.regression or args.paper_regression or args.mapping_regression):parser.error("Run rebuild regression in its own service.")
     if args.mapping_regression and (args.regression or args.paper_regression):parser.error("Run mapping regression in its own service.")
     if args.paper_regression and args.regression:parser.error("Run paper regression separately from core regression to respect the real login limit.")
@@ -101,7 +104,7 @@ def main():
                 assert document["openapi"].startswith("3.") and document["paths"]
                 schemas = document["components"]["schemas"]
                 assert "WeeklySummary" in schemas and "ParentBurdenSummary" in schemas
-                if not args.mapping_regression and not args.rebuild_regression:
+                if not args.mapping_regression and not args.rebuild_regression and not args.cancel_regression:
                     verify(document,client,registered)
                     verify_budget(document,client)
                     verify_resources(document,client)
@@ -114,6 +117,8 @@ def main():
                     verify_builder_protocol(client)
                     verify_builder_budget(client,env)
                     verify_jobs(client)
+                elif args.cancel_regression:
+                    verify_cancellation(client,env)
                 elif args.rebuild_regression:
                     verify_rebuild_jobs(client)
                 else:
@@ -143,7 +148,7 @@ def main():
                 if args.paper_regression:
                     import paper_learning_api_acceptance
                     paper_learning_api_acceptance.main()
-                if not args.mapping_regression and not args.rebuild_regression:verify_failures(document,client,env)
+                if not args.mapping_regression and not args.rebuild_regression and not args.cancel_regression:verify_failures(document,client,env)
                 verify_rate(document)
             finally:
                 if child is not None and child.poll() is None:

@@ -51,9 +51,9 @@ public static class BuilderBudget
         return new(cost,tokens,active,unknown,unresolved,overruns);
     }
     public static async Task<BuilderBudgetState> State(Database db,Guid family,DateOnly day,CancellationToken ct=default)=>Calculate(await db.Set<BuilderCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct),await db.Set<BuilderBudgetReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct),day);
-    public static async Task<string?> Reserve(Database db,BuilderCall call,BuilderQuote quote,CancellationToken ct)
+    public static async Task<string?> Reserve(Database db,BuilderCall call,BuilderQuote quote,CancellationToken ct,JobLease? lease=null)
     {
-        quote.Validate();await using var tx=await db.Database.BeginTransactionAsync(ct);await Lock(db,call.FamilyId,ct);
+        quote.Validate();await using var tx=await db.Database.BeginTransactionAsync(ct);await Lock(db,call.FamilyId,ct);if(lease!=null)await lease.PermitCall(db,ct);
         var policy=await db.Set<BuilderBudgetPolicy>().SingleOrDefaultAsync(p=>p.FamilyId==call.FamilyId,ct)??new BuilderBudgetPolicy{FamilyId=call.FamilyId};if(db.Entry(policy).State==EntityState.Detached)db.Add(policy);Validate(policy);
         var day=DateOnly.FromDateTime(DateTime.UtcNow);var state=await State(db,call.FamilyId,day,ct);string? denied=null;
         if(state.OverrunCalls>0)denied="BUILDER_USAGE_RECONCILIATION_REQUIRED";

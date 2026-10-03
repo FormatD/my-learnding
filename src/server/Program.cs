@@ -103,6 +103,7 @@ app.Use(async (ctx,next) =>
     if (key.Length<ApiPolicy.MinIdempotencyLength || key.Length>ApiPolicy.MaxIdempotencyLength) throw new ApiError(422,"IDEMPOTENCY_REQUIRED","请提供有效的请求标识。");
     ctx.Request.EnableBuffering(); using var reader=new StreamReader(ctx.Request.Body,leaveOpen:true); var body=await reader.ReadToEndAsync(); ctx.Request.Body.Position=0;
     var requestHash=Content.Hash(body); var scopeKey=ctx.Request.Method+ctx.Request.Path;
+    if(ctx.GetEndpoint()?.Metadata.GetMetadata<JobControlCommandMetadata>()!=null){await JobControlCommands.Execute(ctx,next,db,actor,key,scopeKey,requestHash);return;}
     await using var tx=await db.Database.BeginTransactionAsync(); await db.Lock(actor.FamilyId);
     var currentSession=await db.AuthSessions.AsNoTracking().SingleOrDefaultAsync(s=>s.Id==actor.SessionId && !s.Revoked && s.ExpiresAt>DateTimeOffset.UtcNow);
     if(currentSession==null)throw new ApiError(401,"LOGIN_REQUIRED","权限或登录已变化，请重新登录。");
