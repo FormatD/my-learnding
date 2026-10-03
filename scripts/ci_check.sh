@@ -32,3 +32,7 @@ python3 tests/incremental_checkpoint_fault_acceptance.py
 # Online active-generation append and real rollback/recovery.
 python3 tests/online_assessment_acceptance.py
 python3 tests/online_assessment_fault_acceptance.py
+
+# Actual ordered source receipt progress and crash atomicity.
+python3 tests/assessment_consumption_acceptance.py
+python3 tests/assessment_consumption_fault_acceptance.py

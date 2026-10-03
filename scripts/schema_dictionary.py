@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "AssessmentConsumerCursor": "实际顺序消费进度，关联原事件、回执与不可修改应用记录；旧数据不补造游标",
     "AssessmentCheckpoint": "实际评估的增量状态、原输入前缀摘要与不可修改状态负载；旧世代不补造。",
     "AssessmentRebuildRequest": "家长后台重建的不可修改请求，固定学生、规则版本、时区和目标世代；基线为提交时已完成结果，处理时追平最新已提交输入。",
     "AssessmentRebuildResult": "实际后台重建结果回执，关联原请求、任务、实际世代和应用事件；与评估及事件消费同事务提交。",

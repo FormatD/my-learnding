@@ -27,4 +27,9 @@ def verify(c,sid):
         checkpoint=next(x for x in data['AssessmentCheckpoint'] if x['id']==row['checkpointId']);assert checkpoint['studentId']==sid and checkpoint['familyId']==row['familyId'] and checkpoint['generationId']==gen['id'] and checkpoint['inputHash']==row['inputHash']
         assert any(r['id']==row['id'] for r in data['ConsumerReceipt'])
         assert any(r['id']==row['id'] for r in individual['consumerReceipts']) and any(o['id']==row['eventId'] for o in individual['outbox']) and any(j['id']==row['jobId'] for j in individual['backgroundJobs'])
+    status=c.request('/students/'+sid+'/assessment-consumption');cursor=status['cursor'];assert cursor and status['pendingModern']==0
+    source=next(e for e in data['DomainEvent'] if e['id']==cursor['lastEventId']);receipt=next(r for r in data['ConsumerReceipt'] if r['id']==cursor['lastReceiptId']);applied=next(e for e in data['DomainEvent'] if e['id']==cursor['lastAppliedEventId']);advance=json.loads(applied['payload'])['data']['consumption']
+    assert source['studentId']==sid and source['dispatchTarget']=='assessment/1' and source['eventSequence']==cursor['lastEventSequence'] and receipt['eventId']==source['id'] and receipt['inputHash']==cursor['inputHash'] and applied['eventType']=='AssessmentApplied' and applied['aggregateId']==cursor['generationId']
+    assert advance['version']=='assessment-consumption/1' and advance['throughSequence']==cursor['lastEventSequence'] and advance['lastReceiptId']==receipt['id'] and receipt['id'] in advance['verifiedReceiptIds']
+    assert any(x==cursor for x in individual['assessmentConsumerCursors']) and any(x==cursor for x in data['AssessmentConsumerCursor'])
     print('PASS real assessment receipts bind private event/student/job/result hash and export without inventing prior history')

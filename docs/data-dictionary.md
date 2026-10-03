@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 67 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 68 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -59,6 +59,7 @@
 | 20261003171507_AssessmentInputHashVersion | 10.0.4 |
 | 20261003182502_IncrementalAssessmentCheckpoints | 10.0.4 |
 | 20261003191349_OnlineAssessmentAppend | 10.0.4 |
+| 20261003195858_AssessmentConsumptionCursor | 10.0.4 |
 
 ## Accounts
 
@@ -154,6 +155,45 @@
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_AssessmentCheckpoint_GenerationId_InputCount" ON public."AssessmentCheckpoint" USING btree ("GenerationId", "InputCount")`
 - `CREATE UNIQUE INDEX "PK_AssessmentCheckpoint" ON public."AssessmentCheckpoint" USING btree ("Id")`
+
+## AssessmentConsumerCursor
+
+实际顺序消费进度，关联原事件、回执与不可修改应用记录；旧数据不补造游标
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 否 | 无 |
+| ConsumerName | text | 否 | 无 |
+| LastEventSequence | bigint | 否 | 无 |
+| LastEventId | uuid | 否 | 无 |
+| LastReceiptId | uuid | 否 | 无 |
+| LastAppliedEventId | uuid | 否 | 无 |
+| GenerationId | uuid | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| UpdatedAt | timestamp with time zone | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_AssessmentConsumerCursor_Progress`：`CHECK ("ConsumerName" = 'assessment/1'::text AND "LastEventSequence" > 0 AND length("InputHash") = 64)`
+- `FK_AssessmentConsumerCursor_ConsumerReceipt_FamilyId_LastRecei~`：`FOREIGN KEY ("FamilyId", "LastReceiptId", "StudentId", "LastEventId", "GenerationId", "InputHash") REFERENCES "ConsumerReceipt"("FamilyId", "Id", "StudentId", "EventId", "GenerationId", "InputHash") ON DELETE CASCADE`
+- `FK_AssessmentConsumerCursor_DomainEvent_FamilyId_LastAppliedEv~`：`FOREIGN KEY ("FamilyId", "LastAppliedEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentConsumerCursor_DomainEvent_FamilyId_LastEventId`：`FOREIGN KEY ("FamilyId", "LastEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentConsumerCursor_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_AssessmentConsumerCursor_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_AssessmentConsumerCursor`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_AssessmentConsumerCursor_FamilyId" ON public."AssessmentConsumerCursor" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_AssessmentConsumerCursor_FamilyId_LastAppliedEventId" ON public."AssessmentConsumerCursor" USING btree ("FamilyId", "LastAppliedEventId")`
+- `CREATE INDEX "IX_AssessmentConsumerCursor_FamilyId_LastEventId" ON public."AssessmentConsumerCursor" USING btree ("FamilyId", "LastEventId")`
+- `CREATE INDEX "IX_AssessmentConsumerCursor_FamilyId_LastReceiptId_StudentId_L~" ON public."AssessmentConsumerCursor" USING btree ("FamilyId", "LastReceiptId", "StudentId", "LastEventId", "GenerationId", "InputHash")`
+- `CREATE INDEX "IX_AssessmentConsumerCursor_FamilyId_StudentId" ON public."AssessmentConsumerCursor" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentConsumerCursor_StudentId_ConsumerName" ON public."AssessmentConsumerCursor" USING btree ("StudentId", "ConsumerName")`
+- `CREATE UNIQUE INDEX "PK_AssessmentConsumerCursor" ON public."AssessmentConsumerCursor" USING btree ("Id")`
 
 ## AssessmentContext
 
@@ -780,6 +820,7 @@
 
 约束：
 
+- `AK_ConsumerReceipt_FamilyId_Id_StudentId_EventId_GenerationId_~`：`UNIQUE ("FamilyId", "Id", "StudentId", "EventId", "GenerationId", "InputHash")`
 - `FK_ConsumerReceipt_AssessmentCheckpoint_FamilyId_CheckpointId_~`：`FOREIGN KEY ("FamilyId", "CheckpointId", "StudentId", "GenerationId") REFERENCES "AssessmentCheckpoint"("FamilyId", "Id", "StudentId", "GenerationId") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_DomainEvent_FamilyId_DomainEventId`：`FOREIGN KEY ("FamilyId", "DomainEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
@@ -791,6 +832,7 @@
 
 索引（包含约束自动创建的索引）：
 
+- `CREATE UNIQUE INDEX "AK_ConsumerReceipt_FamilyId_Id_StudentId_EventId_GenerationId_~" ON public."ConsumerReceipt" USING btree ("FamilyId", "Id", "StudentId", "EventId", "GenerationId", "InputHash")`
 - `CREATE UNIQUE INDEX "IX_ConsumerReceipt_ConsumerName_EventId" ON public."ConsumerReceipt" USING btree ("ConsumerName", "EventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId" ON public."ConsumerReceipt" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_CheckpointId_StudentId_GenerationId" ON public."ConsumerReceipt" USING btree ("FamilyId", "CheckpointId", "StudentId", "GenerationId")`

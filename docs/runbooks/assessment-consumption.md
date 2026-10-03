@@ -1,0 +1,17 @@
+# 评估事件的顺序消费进度
+
+AssessmentConsumerCursor只描述assessment/1实际消费的现代事件流，按家庭/学生/消费者唯一。LastEventSequence是DomainEvent服务器顺序，不是Attempt.Sequence或Checkpoint.InputCount；序号分配后事务回滚、其他学生/家庭或非评估事件都会留下合法间隔，不要求整数连续。LastEventId、LastReceiptId、LastAppliedEventId关联实际原事件、消费回执及不可修改AssessmentApplied记录，GenerationId/InputHash描述最后实际消费结果，可以属于已退休世代，不冒充当前绑定。
+
+在家庭锁内，先验证新事件、既有进度及其原回执，再读取上个边界至本批最后新事件的评估流。已存在的实际回执用原Checkpoint验证；旧无Checkpoint关联的现代回执用实际不可修改应用负载中的jobId/generationId/inputHash/outboxIds核对。窗口中的旧式Outbox没有现代顺序，不补造序号；旧字段不回填，也不根据较大事件号猜测前面的事件已完成。既有游标以下的新无回执事件或窗口内完成标记没有真实回执，明确ASSESSMENT_CONSUMPTION_GAP，不能静默跳过。
+
+只有本批存在实际新增现代回执时才推进。AssessmentApplied原始负载保存consumption（assessment-consumption/1）：priorSequence、throughSequence、原事件/回执列表、本批新增事件及本批旧式事件。首次边界priorSequence为NULL，说明此次首次建立进度；验证已有回执不意味着重新处理或补造旧回执。结果、Checkpoint、消费回执、原事件完成标记、实际应用记录、游标及任务/领取终态同一个围栏事务提交。相同输入复用、旧标记修复或已合并事件的重复领取不推进游标、不新增进度应用事实。
+
+数据库外键关联同家庭学生事件/结果回执，触发器要求真实评估原事件的确切顺序、同学生实际应用负载及原边界；更新只能推进顺序，不能移动主体、改初始创建时间或重复/倒退更新。LastEventSequence另有并发检查。删除仍允许，以完成学生/家庭隐私清理；恢复按最新删除清单处理。进度表升级时为空，不回填历史。首次有新现代输入时，用实际既有回执验证已知窗口，缺失依据则停止。
+
+GET /students/{id}/assessment-consumption是家长只读接口，同一已提交快照返回cursor、pendingModern、pendingLegacy、legacyWithoutReceipt；没有建立边界时cursor为NULL，不能显示为已经顺序追平。legacyWithoutReceipt是所有无现代链接且无回执的旧式行数，包含待处理行，不等同已确认历史损坏。其他家庭404、孩子403。学生导出含assessmentConsumerCursors；家庭导出含同家庭进度表和原应用记录。
+
+原回执修复也核对自己的真实来源/学生/任务/结果；明确无效时保存Failed与原错误，不无限等待租约到期重试。修复原数据后，家长可按原事件恢复流程开新轮次，仍只修复标记，不重新计算已完成的证据。ASSESSMENT_CURSOR_INVALID表示进度与原应用事实不一致；需要核对/恢复原记录，不能把强制数学重建当作丢失历史消费依据的替代品。
+
+验证入口：assessment_consumption_acceptance.py在真实临时库验证旧式未知、不补造、合并现代事件、真实回滚序号间隔、非评估事件不假消费、重复/旧标记修复、损坏原链接的持久Failed及受控恢复、单调约束、缺回执停止和删除。受控兼容夹具保留实际计算状态但头字段NULL，删除进度后新增输入，用实际原应用事实验证旧无状态关联回执；原未知字段/回执/事实字节不变，该夹具不是历史用户数据迁移。assessment_consumption_fault_acceptance.py真正终止提交前进程，10张投影/队列表（包括游标）全部可见列不变；实际租约到期双消费者一次提交结果与边界，旧领取保留。接口/私有导出和实际浏览器另做验证。
+
+这一步提供独立的评估消费进度和范围证明。数学源读取与前缀核对仍加载学生完整输入，尚未以现代事件窗口替代所有源加载；非评估事件消费者继续开放。不能据此关闭全部增量协议、性能/设备、正式内容/模型和四周试用条件。

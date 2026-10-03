@@ -7,6 +7,7 @@ def verify(c):
     c.request('/me');sid=c.request('/students',{'name':'后台重建接口验收'},expected=201)['id'];path='/students/'+sid
     c.request(path+'/mastery:rebuild',{'reason':''},expected=422)
     c.request(path+'/mastery:rebuild',{'reason':'x'*4001},expected=422)
+    initial=c.request(path+'/assessment-consumption');assert initial=={'cursor':None,'pendingModern':0,'pendingLegacy':0,'legacyWithoutReceipt':0}
     first=c.request(path+'/mastery:rebuild',{'reason':'核对原始记录完整评估'},expected=202);assert first['status']=='Queued' and first['result'] is None and first['attemptCount']==0
     def settled(request):
         for _ in range(100):

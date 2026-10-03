@@ -23,7 +23,12 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
             if(pending==null){await lease.Finish(db,"Failed","PROJECTION_EVENT_MISSING",null,ct);await tx.CommitAsync(ct);return false;}
             await db.Entry(pending).ReloadAsync(ct);
             var receipt=await db.Set<ConsumerReceipt>().SingleOrDefaultAsync(r=>r.FamilyId==pending.FamilyId && r.ConsumerName==ProjectionJobs.Consumer && r.EventId==pending.Id,ct);
-            if(receipt!=null){pending.ProcessedAt??=receipt.CreatedAt;await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return false;}
+            if(receipt!=null)
+            {
+                try{await AssessmentConsumption.ValidateReceipt(db,pending,receipt,ct);}
+                catch(ApiError error){pending.Retries=Math.Min(3,pending.Retries+1);pending.Error=error.Code;pending.NextAttemptAt=null;await lease.Finish(db,"Failed",error.Code,null,ct);await tx.CommitAsync(ct);throw;}
+                pending.ProcessedAt??=receipt.CreatedAt;await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return false;
+            }
             if(pending.ProcessedAt!=null){await lease.Finish(db,"Failed","LEGACY_PROCESSED_WITHOUT_RECEIPT",null,ct);await tx.CommitAsync(ct);return false;}
             if(pending.Retries>=3){await lease.Finish(db,"Failed",pending.Error??"PROJECTION_FAILED",null,ct);await tx.CommitAsync(ct);return false;}
             if(pending.NextAttemptAt>DateTimeOffset.UtcNow){await lease.Finish(db,"Retrying",pending.Error,pending.NextAttemptAt,ct);await tx.CommitAsync(ct);return false;}
@@ -37,7 +42,8 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                 // Catch-up deliberately reads the latest committed student inputs under the family lock.
                 // The target identity survives retries; new events are receipted only in this same result transaction.
                 var applied=await AssessmentProjection.Apply(db,student,lease.Job.TargetGenerationId.Value,lease.Job.Id,ct,online:true);var generation=applied.Generation;
-                await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{jobId=lease.Job.Id,checkpointId=applied.Checkpoint?.Id,targetGenerationId=lease.Job.TargetGenerationId,generationId=generation.Id,generation.InputHash,generation.InputVersion,generation.CalculationMode,generation.ProcessedInputCount,generation.IncrementalBaseGenerationId,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
+                var appliedEvent=await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{consumption=applied.Consumption,jobId=lease.Job.Id,checkpointId=applied.Checkpoint?.Id,targetGenerationId=lease.Job.TargetGenerationId,generationId=generation.Id,generation.InputHash,generation.InputVersion,generation.CalculationMode,generation.ProcessedInputCount,generation.IncrementalBaseGenerationId,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
+                AssessmentConsumption.Commit(db,student,applied,appliedEvent);
                 await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return true;
             }
             catch(Exception ex)when(ex is not OperationCanceledException)

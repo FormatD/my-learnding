@@ -168,6 +168,10 @@
     {
       "id": "20261003191349_OnlineAssessmentAppend",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003195858_AssessmentConsumptionCursor",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -615,6 +619,209 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_AssessmentCheckpoint\" ON public.\"AssessmentCheckpoint\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "AssessmentConsumerCursor",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ConsumerName",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LastEventSequence",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LastEventId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LastReceiptId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LastAppliedEventId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "GenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "UpdatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_AssessmentConsumerCursor_Progress",
+          "kind": "c",
+          "definition": "CHECK (\"ConsumerName\" = 'assessment/1'::text AND \"LastEventSequence\" > 0 AND length(\"InputHash\") = 64)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentConsumerCursor_ConsumerReceipt_FamilyId_LastRecei~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LastReceiptId\", \"StudentId\", \"LastEventId\", \"GenerationId\", \"InputHash\") REFERENCES \"ConsumerReceipt\"(\"FamilyId\", \"Id\", \"StudentId\", \"EventId\", \"GenerationId\", \"InputHash\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentConsumerCursor_DomainEvent_FamilyId_LastAppliedEv~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LastAppliedEventId\") REFERENCES \"DomainEvent\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentConsumerCursor_DomainEvent_FamilyId_LastEventId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LastEventId\") REFERENCES \"DomainEvent\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentConsumerCursor_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentConsumerCursor_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_AssessmentConsumerCursor",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_AssessmentConsumerCursor_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentConsumerCursor_FamilyId\" ON public.\"AssessmentConsumerCursor\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_AssessmentConsumerCursor_FamilyId_LastAppliedEventId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentConsumerCursor_FamilyId_LastAppliedEventId\" ON public.\"AssessmentConsumerCursor\" USING btree (\"FamilyId\", \"LastAppliedEventId\")"
+        },
+        {
+          "name": "IX_AssessmentConsumerCursor_FamilyId_LastEventId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentConsumerCursor_FamilyId_LastEventId\" ON public.\"AssessmentConsumerCursor\" USING btree (\"FamilyId\", \"LastEventId\")"
+        },
+        {
+          "name": "IX_AssessmentConsumerCursor_FamilyId_LastReceiptId_StudentId_L~",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentConsumerCursor_FamilyId_LastReceiptId_StudentId_L~\" ON public.\"AssessmentConsumerCursor\" USING btree (\"FamilyId\", \"LastReceiptId\", \"StudentId\", \"LastEventId\", \"GenerationId\", \"InputHash\")"
+        },
+        {
+          "name": "IX_AssessmentConsumerCursor_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentConsumerCursor_FamilyId_StudentId\" ON public.\"AssessmentConsumerCursor\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_AssessmentConsumerCursor_StudentId_ConsumerName",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentConsumerCursor_StudentId_ConsumerName\" ON public.\"AssessmentConsumerCursor\" USING btree (\"StudentId\", \"ConsumerName\")"
+        },
+        {
+          "name": "PK_AssessmentConsumerCursor",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_AssessmentConsumerCursor\" ON public.\"AssessmentConsumerCursor\" USING btree (\"Id\")"
         }
       ]
     },
@@ -3840,6 +4047,14 @@
       ],
       "constraints": [
         {
+          "name": "AK_ConsumerReceipt_FamilyId_Id_StudentId_EventId_GenerationId_~",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\", \"StudentId\", \"EventId\", \"GenerationId\", \"InputHash\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_ConsumerReceipt_AssessmentCheckpoint_FamilyId_CheckpointId_~",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"CheckpointId\", \"StudentId\", \"GenerationId\") REFERENCES \"AssessmentCheckpoint\"(\"FamilyId\", \"Id\", \"StudentId\", \"GenerationId\") ON DELETE CASCADE",
@@ -3905,6 +4120,12 @@
         }
       ],
       "indexes": [
+        {
+          "name": "AK_ConsumerReceipt_FamilyId_Id_StudentId_EventId_GenerationId_~",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_ConsumerReceipt_FamilyId_Id_StudentId_EventId_GenerationId_~\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"Id\", \"StudentId\", \"EventId\", \"GenerationId\", \"InputHash\")"
+        },
         {
           "name": "IX_ConsumerReceipt_ConsumerName_EventId",
           "unique": true,
