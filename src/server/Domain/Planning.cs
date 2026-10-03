@@ -5,7 +5,7 @@ public record PlanOption(string Key, string Title, string Type, int Minutes, boo
 public record PlanSelection(PlanOption[] Selected, object[] Rejected, int Overflow);
 public static class Planning
 {
-    public const string RuleVersion="plan/2";
+    public const string RuleVersion="plan/3";
     public static int Charge(StudyTask t) => t.Status=="Completed" ? t.ActualMinutes??t.Minutes : t.Status=="InProgress" ? Math.Max(t.Minutes,t.ActualMinutes??0) : t.Minutes;
     public static PlanSelection Fit(IEnumerable<PlanOption> options, int budget, int fixedCharge, int fixedCount)
     {
@@ -25,6 +25,7 @@ public static class Planning
         if (s.ActiveReleaseId==null) throw new ApiError(422,"NO_CONTENT","请先审核发布内容，并绑定学生。");
         var release=await db.Releases.SingleAsync(r => r.Id==s.ActiveReleaseId && r.FamilyId==s.FamilyId && !r.Withdrawn);
         var content=Json.Read<Catalog>(release.Payload);
+        var projection=await PlanProjection.Capture(db,s);
         var plan=await db.Plans.SingleOrDefaultAsync(p => p.StudentId==s.Id && p.Date==date);
         if (plan==null) { plan=new Plan { FamilyId=s.FamilyId,StudentId=s.Id,Date=date }; db.Plans.Add(plan); }
         var revisions=await db.PlanRevisions.Where(r => r.PlanId==plan.Id).OrderBy(r => r.Number).ToListAsync();
@@ -46,13 +47,13 @@ public static class Planning
         var quotaTaskIds=completedGoalTasks.Select(t=>t.Id).ToArray();
         var answeredTaskIds=await (from attempt in db.Attempts join session in db.Sessions on attempt.SessionId equals session.Id where attempt.StudentId==s.Id && attempt.Number==1 && quotaTaskIds.Contains(session.TaskId) select session.TaskId).Distinct().ToArrayAsync();
         var goals=allGoals.Where(g=>Goals.Scheduled(g,date) && Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)<g.TargetValue && Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds,true)==0).ToArray();
-        var mastery=await db.Masteries.Where(m => m.StudentId==s.Id && m.GenerationId==s.ActiveGenerationId).ToListAsync();
-        var reviews=await db.Reviews.Where(r => r.StudentId==s.Id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=date).ToListAsync();
+        var mastery=projection.Conservative?[]:await db.Masteries.Where(m => m.StudentId==s.Id && m.GenerationId==s.ActiveGenerationId).ToListAsync();
+        var reviews=projection.Conservative?[]:await db.Reviews.Where(r => r.StudentId==s.Id && r.GenerationId==s.ActiveGenerationId && r.Status=="Pending" && r.DueDate<=date).ToListAsync();
         var history=await (from a in db.Attempts join session in db.Sessions on a.SessionId equals session.Id where a.StudentId==s.Id && a.Number==1 select new {session.QuestionId,a.CreatedAt}).ToListAsync();
-        var evidence=await db.Evidence.Where(e=>e.StudentId==s.Id && e.GenerationId==s.ActiveGenerationId && e.Weight>0).OrderBy(e=>e.OccurredAt).ToListAsync();
+        var evidence=projection.Conservative?[]:await db.Evidence.Where(e=>e.StudentId==s.Id && e.GenerationId==s.ActiveGenerationId && e.Weight>0).OrderBy(e=>e.OccurredAt).ToListAsync();
         var options=new List<PlanOption>(); var warnings=new List<string>();
-        var pending=await db.Outbox.CountAsync(o=>o.StudentId==s.Id && o.ProcessedAt==null);
-        if(pending>0)warnings.Add($"PROJECTION_PENDING: {pending} 个结果尚未处理，可等待后台追平后重新生成");
+        if(projection.Conservative)warnings.Add($"PROJECTION_LAG: {projection.Pending.Length} 个学习结果尚未同步完成，本草稿保留已安排任务，只依据学校进度和家长目标补充练习；暂停按旧掌握状态推荐复习或弱项任务。请等待结果同步，或核对失败任务后重新生成。");
+        else if(projection.Pending.Length>0)warnings.Add($"PROJECTION_PENDING: {projection.Pending.Length} 个结果尚未处理，可等待后台追平后重新生成");
         var goalOptions=new List<(Goal Goal,string Key)>();
         foreach(var goal in goals)
         {
@@ -88,8 +89,8 @@ public static class Planning
             var q=content.Questions.Where(q => q.Policy=="SingleKC" && q.Mappings.Any(x => x.KCId==kcId && x.Mode=="WholeItem")).OrderBy(q => history.Count(h => h.QuestionId==q.Id)).ThenBy(q => q.Id).FirstOrDefault();
             if (q==null) { warnings.Add($"MISSING_CONTENT: {kc.Name} 缺少可测题，请家长补充"); continue; }
             var today=progress.Any(p => p.LessonId==lesson.Id && p.Date==date);
-            var reason=m?.NeedsRecheck==true ? "RECHECK" : today ? "SCHOOL_CURRENT" : m==null || m.Status=="Unknown" ? "LOW_EVIDENCE" : "WEAK_CONFIRMED";
-            options.Add(new($"question:{q.Id}",kc.Name,m?.NeedsRecheck==true ? "Review" : "Practice",5,false,today?40:m?.NeedsRecheck==true?30:18,reason,today?"今天学校刚学，做一道题巩固":m?.NeedsRecheck==true?"需要两道独立诊断确认":"当前学习范围内，补充独立作答证据",kcId,q.Id,SchoolSequence:lesson.Sequence));
+            var reason=projection.Conservative?"SCHOOL_CONSERVATIVE":m?.NeedsRecheck==true ? "RECHECK" : today ? "SCHOOL_CURRENT" : m==null || m.Status=="Unknown" ? "LOW_EVIDENCE" : "WEAK_CONFIRMED";
+            options.Add(new($"question:{q.Id}",kc.Name,m?.NeedsRecheck==true ? "Review" : "Practice",5,false,today?40:m?.NeedsRecheck==true?30:18,reason,projection.Conservative?"依据已确认学校进度安排基础练习，学习结果同步后再调整":today?"今天学校刚学，做一道题巩固":m?.NeedsRecheck==true?"需要两道独立诊断确认":"当前学习范围内，补充独立作答证据",kcId,q.Id,SchoolSequence:lesson.Sequence));
             if(m is {Probability:<.6m,Confidence:"Medium" or "High"})
             foreach(var pre in content.Relations.Where(r=>r.Type=="Prerequisite" && r.To==kcId))
             {
@@ -106,12 +107,13 @@ public static class Planning
             if(count+possible<goal.TargetValue)warnings.Add($"GOAL_QUOTA_GAP: 目标 {goal.Title} 本周期还差 {goal.TargetValue-count} 次，可安排日期不足；不自动超出预算补齐");
         }
         var remainingOptions=options.Where(o => !fixedTasks.Any(t => t.QuestionId!=null && t.QuestionId==o.QuestionId || t.ReviewTargetId!=null && t.ReviewTargetId==o.ReviewTargetId || Json.Read<GoalSnapshot[]>(t.GoalSnapshots).Any(snapshot=>goalOptions.Any(g=>g.Key==o.Key && g.Goal.Id==snapshot.Id && Goals.Snapshot(g.Goal).Scope==snapshot.Scope)))).ToArray();
-        var hash=Content.Hash(Json.Write(new { date,release.Id,budget,reserved,progress,allGoals,goalCounts=allGoals.Select(g=>new{g.Id,count=Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)}).ToArray(),goals,mastery,reviews,fixedTasks,retiredTasks,options=remainingOptions,rule=RuleVersion }));
+        var hash=Content.Hash(Json.Write(new { date,release.Id,budget,reserved,progress,allGoals,goalCounts=allGoals.Select(g=>new{g.Id,count=Goals.Completed(g,date,s.TimeZone,completedGoalTasks,answeredTaskIds)}).ToArray(),goals,mastery,reviews,fixedTasks,retiredTasks,options=remainingOptions,projection=PlanProjection.Input(projection),rule=RuleVersion }));
         var same=revisions.LastOrDefault(r => r.InputHash==hash && (r.Status=="Draft" || r.Id==plan.ActiveRevisionId)); if (same!=null) return same;
         var selection=Fit(remainingOptions,Math.Max(0,budget-reserved),fixedTasks.Sum(Charge),fixedTasks.Count);
         foreach(var goal in goalOptions.Where(g=>!selection.Selected.Any(o=>o.Key==g.Key) && !fixedTasks.Any(t=>Json.Read<GoalSnapshot[]>(t.GoalSnapshots).Any(snapshot=>snapshot.Id==g.Goal.Id))))warnings.Add($"GOAL_QUOTA_GAP: 目标 {goal.Goal.Title} 未能进入本次计划，请调整预算或优先级");
         if (selection.Overflow>0) warnings.Add($"MANDATORY_OVERFLOW: 必做/已执行任务超出预算 {selection.Overflow} 分钟");
-        var rev=new PlanRevision { RuleVersion=RuleVersion,FamilyId=s.FamilyId,PlanId=plan.Id,ReleaseId=release.Id,Number=(revisions.LastOrDefault()?.Number??0)+1,Budget=budget,Reserved=reserved,Overflow=selection.Overflow,InputHash=hash,Candidates=Json.Write(selection.Rejected),Warnings=Json.Write(warnings) };
+        var projectionPayload=Json.Write(projection);
+        var rev=new PlanRevision { ProjectionSnapshot=projectionPayload,ProjectionSnapshotHash=Content.Hash(projectionPayload),RuleVersion=RuleVersion,FamilyId=s.FamilyId,PlanId=plan.Id,ReleaseId=release.Id,Number=(revisions.LastOrDefault()?.Number??0)+1,Budget=budget,Reserved=reserved,Overflow=selection.Overflow,InputHash=hash,Candidates=Json.Write(selection.Rejected),Warnings=Json.Write(warnings) };
         db.PlanRevisions.Add(rev);
         var index=0;
         foreach (var t in fixedTasks.OrderBy(t => old.FindIndex(p => p.TaskId==t.Id))) db.Placements.Add(new() { FamilyId=s.FamilyId,RevisionId=rev.Id,TaskId=t.Id,Sequence=index++ });

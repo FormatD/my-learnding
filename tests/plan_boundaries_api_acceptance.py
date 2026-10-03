@@ -57,7 +57,7 @@ def main():
                 subprocess.run(['psql','-v','ON_ERROR_STOP=1','-c',query],env=env,check=True,stdout=subprocess.DEVNULL)
                 c.request('/students/'+sid2+'/availability/'+TODAY,{'minutes':15,'reserved':0},method='PUT');view=generate(sid2);assert [t['id'] for t in view['tasks']]==ids
                 rows={t['id']:t for t in view['tasks']};assert rows[completed['id']]['status']=='Completed' and rows[completed['id']]['actualMinutes']==8;assert rows[running['id']]['status']=='InProgress' and rows[running['id']]['actualMinutes']==9 and rows[running['id']]['trackedSeconds']==120;assert rows[locked['id']]['status']=='Ready' and rows[locked['id']]['locked']
-                assert view['revision']['ruleVersion']=='plan/2' and view['revision']['overflow']==7 and any('MANDATORY_OVERFLOW' in w for w in json.loads(view['revision']['warnings']))
+                assert view['revision']['ruleVersion']=='plan/3' and view['revision']['overflow']==7 and any('MANDATORY_OVERFLOW' in w for w in json.loads(view['revision']['warnings']))
                 again=generate(sid2);assert again['revision']['id']==view['revision']['id'];c.request('/plans/'+view['revision']['id']+':adjust',{'taskIds':[completed['id'],locked['id']],'lockedIds':[locked['id']],'reason':'不得移除进行中任务'},expected=422)
                 c.request('/plans/'+view['revision']['id']+':publish',{'previewHash':view['revision']['inputHash']},expected=422);publish(view)
                 print('PASS AT26 三种固定任务身份及状态保留，已完成8/进行中9/锁定5共22分钟，预算15超载7且不加可选')

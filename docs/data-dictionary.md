@@ -60,6 +60,7 @@
 | 20261003182502_IncrementalAssessmentCheckpoints | 10.0.4 |
 | 20261003191349_OnlineAssessmentAppend | 10.0.4 |
 | 20261003195858_AssessmentConsumptionCursor | 10.0.4 |
+| 20261003205749_PlanProjectionSnapshot | 10.0.4 |
 
 ## Accounts
 
@@ -2014,7 +2015,7 @@
 
 ## PlanRevisions
 
-计划草稿/发布修订、预算与规则版本。
+计划草稿/发布修订、预算与规则版本；新计划保存不可修改的实际评估进度/待处理来源快照，旧未知字段不补造。
 
 | 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
 |---|---|---|---|
@@ -2032,10 +2033,13 @@
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | RuleVersion | text | 否 | 'legacy/unknown'::text |
+| ProjectionSnapshot | text | 是 | 无 |
+| ProjectionSnapshotHash | text | 是 | 无 |
 
 约束：
 
 - `AK_PlanRevisions_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_PlanRevision_ProjectionSnapshot`：`CHECK ("ProjectionSnapshot" IS NULL AND "ProjectionSnapshotHash" IS NULL OR "ProjectionSnapshot" IS NOT NULL AND length("ProjectionSnapshotHash") = 64 AND "ProjectionSnapshotHash" IS NOT NULL)`
 - `FK_PlanRevisions_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_PlanRevisions_Plans_FamilyId_PlanId`：`FOREIGN KEY ("FamilyId", "PlanId") REFERENCES "Plans"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_PlanRevisions`：`PRIMARY KEY ("Id")`

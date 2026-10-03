@@ -142,7 +142,7 @@ public static class Endpoints
         {
             var a=ctx.Actor();a.Require("Parent");var revision=await Owned<PlanRevision>(db,a,id);var plan=await Owned<Plan>(db,a,revision.PlanId);
             if (revision.InputHash!=input.PreviewHash) throw new ApiError(412,"PREVIEW_CHANGED","计划已变化，请重新确认。");
-            if (revision.Warnings!="[]" && !input.ConfirmWarnings) throw new ApiError(422,"WARNINGS_REQUIRE_CONFIRMATION","请先确认超载或内容缺口。");
+            if (revision.Warnings!="[]" && !input.ConfirmWarnings) throw new ApiError(422,"WARNINGS_REQUIRE_CONFIRMATION","请先确认待同步学习结果、超载或内容缺口等计划提示。");
             if (revision.Status!="Draft") throw new ApiError(409,"ALREADY_PUBLISHED","计划已经发布。");
             plan.ActiveRevisionId=id;plan.Status="Published";revision.Status="Published";
             var ids=await db.Placements.Where(p => p.RevisionId==id).Select(p => p.TaskId).ToArrayAsync();

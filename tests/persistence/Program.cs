@@ -11,6 +11,7 @@ Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
 if(args[0]=="assessment-source-loading"){await AssessmentSourceLoadingCases.Run(db);return;}
+if(args[0]=="plan-projection"){await PlanProjectionCases.Run(db);return;}
 if(args[0].StartsWith("cursor-")){await AssessmentConsumptionCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("online-")){await OnlineAssessmentCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("incremental-")){await IncrementalCheckpointCases.Run(db,args[0]);return;}
@@ -191,7 +192,7 @@ if(args[0]=="plan-rule-legacy")
     var id=Guid.NewGuid();var stamp=DateTimeOffset.UtcNow;
     await db.Database.ExecuteSqlInterpolatedAsync($"INSERT INTO \"PlanRevisions\" (\"Id\",\"FamilyId\",\"CreatedAt\",\"PlanId\",\"ReleaseId\",\"Number\",\"Budget\",\"Reserved\",\"Overflow\",\"Status\",\"InputHash\",\"Candidates\",\"Warnings\") VALUES ({id},{f.Id},{stamp},{plan.Id},{r.Id},1,13,2,0,'Published','legacy-rule-fixture','[]','[]')");
     await db.Database.MigrateAsync();db.ChangeTracker.Clear();var old=await db.PlanRevisions.SingleAsync();Assert(old.RuleVersion=="legacy/unknown" && old.InputHash=="legacy-rule-fixture" && old.Budget==13 && old.Reserved==2 && old.Status=="Published","old plan rule inferred or original snapshot overwritten");
-    await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(f.Id);var current=await Planning.Generate(db,await db.Students.SingleAsync(),day);await db.SaveChangesAsync();await tx.CommitAsync();Assert(current.RuleVersion==Planning.RuleVersion && current.RuleVersion=="plan/2" && current.Number==2,"new plan rule version not persisted");Console.WriteLine("PASS 历史计划规则保持未记录且原快照不改；新计划持久化 plan/2");return;
+    await using var tx=await db.Database.BeginTransactionAsync();await db.Lock(f.Id);var current=await Planning.Generate(db,await db.Students.SingleAsync(),day);await db.SaveChangesAsync();await tx.CommitAsync();Assert(current.RuleVersion==Planning.RuleVersion && current.RuleVersion=="plan/3" && current.Number==2,"new plan rule version not persisted");Console.WriteLine("PASS 历史计划规则保持未记录且原快照不改；新计划持久化 plan/3");return;
 }
 if(args[0]=="seed")
 {

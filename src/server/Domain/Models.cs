@@ -122,6 +122,8 @@ public class Plan : Row
 }
 public class PlanRevision : Row
 {
+    public string? ProjectionSnapshot { get; set; }
+    public string? ProjectionSnapshotHash { get; set; }
     public string RuleVersion { get; set; } = "legacy/unknown";
     public Guid PlanId { get; set; }
     public Guid ReleaseId { get; set; }

@@ -47,6 +47,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Progress>().HasIndex(x => new { x.StudentId, x.Date, x.LessonId }).IsUnique();
         b.Entity<Plan>().HasIndex(x => new { x.StudentId, x.Date }).IsUnique();
         b.Entity<PlanRevision>().Property(x=>x.RuleVersion).HasDefaultValue("legacy/unknown");
+        b.Entity<PlanRevision>().ToTable(t=>t.HasCheckConstraint("CK_PlanRevision_ProjectionSnapshot","(\"ProjectionSnapshot\" IS NULL AND \"ProjectionSnapshotHash\" IS NULL) OR (\"ProjectionSnapshot\" IS NOT NULL AND length(\"ProjectionSnapshotHash\")=64 AND \"ProjectionSnapshotHash\" IS NOT NULL)"));
         b.Entity<PlanRevision>().HasIndex(x => new { x.PlanId, x.Number }).IsUnique();
         b.Entity<Placement>().HasIndex(x => new { x.RevisionId, x.TaskId }).IsUnique();
         b.Entity<Attempt>().HasIndex(x => new { x.StudentId, x.ClientSubmissionId }).IsUnique();

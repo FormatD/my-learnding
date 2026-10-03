@@ -5827,6 +5827,18 @@
             "format": "uuid",
             "type": "string"
           },
+          "projectionSnapshot": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "projectionSnapshotHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "releaseId": {
             "format": "uuid",
             "type": "string"

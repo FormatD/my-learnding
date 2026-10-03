@@ -117,6 +117,8 @@ def main():
                     verify_builder_protocol(client)
                     verify_builder_budget(client,env)
                     verify_jobs(client)
+                    from plan_projection_api_acceptance import verify as verify_plan_projection
+                    verify_plan_projection(client,env)
                 elif args.cancel_regression:
                     verify_cancellation(client,env)
                 elif args.rebuild_regression:
