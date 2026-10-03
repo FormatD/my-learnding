@@ -7,7 +7,7 @@ function shift(days:number){const value=new Date((props.summary?.end||localDate(
 const confidenceNames:Record<string,string>={Low:'低',Medium:'中',High:'高'};
 const coverageName=(value:string)=>value==='Basic'?'基础题':value;
 const masteryNames:Record<string,string>={Unknown:'未知',Learning:'学习中',CanDo:'初步会做',Mastered:'已掌握',Stable:'稳定保持'};
-const reviewReasons:Record<string,string>={TARGET_CHANGED:'测量目标已变化，请家长核对；本次未计原目标通过',PENDING_GRADING:'待判分，未进入分母',NOT_CORRECT:'首次答案未独立答对',ASSISTED:'使用提示或看过答案',ROLLING_24H:'24小时内重复原题',TRUSTED_INDEPENDENT:'已判分且独立通过'};
+const reviewReasons:Record<string,string>={TARGET_RETAINED:'家长确认保留原目标，本次未测量该目标',TRUSTED_TARGET_CONFIRMED:'家长确认实际目标的独立通过，原目标仍待复习',TARGET_CHANGED:'测量目标已变化，请家长核对；本次未计原目标通过',PENDING_GRADING:'待判分，未进入分母',NOT_CORRECT:'首次答案未独立答对',ASSISTED:'使用提示或看过答案',ROLLING_24H:'24小时内重复原题',TRUSTED_INDEPENDENT:'已判分且独立通过'};
 const names:Record<string,string>={Planned:'待发布',Ready:'准备开始',InProgress:'进行中',Completed:'已完成',Skipped:'已跳过',Deferred:'已延期',Abandoned:'已结束'};
 </script>
 <template>

@@ -18,10 +18,10 @@ public static class ReviewReporting
             if(day<start || day>end || taskMap[s.TaskId].Type!="Review")continue;
             var grade=latest.GetValueOrDefault(a.Id);var graded=grade?.Result is "Correct" or "Incorrect" or "Partial";
             var assisted=a.HintLevel>0 || a.AnswerShown || grade!=null && Json.Read<ObservedStep[]>(grade.Steps).Any(v=>v.HintLevel>0);
-            var target=taskMap[s.TaskId].ReviewTargetId;
-            var changed=target!=null && target!=s.QuestionId && effectiveInputs!=null && (!effectiveInputs.TryGetValue(a.Id,out var input) || !ReviewTargets.Measures(input.Question,target.Value));
+            var source=effectiveInputs?.GetValueOrDefault(a.Id);var target=source==null?taskMap[s.TaskId].ReviewTargetId:ReviewTargets.Target(source);
+            var changed=target!=null && target!=s.QuestionId && effectiveInputs!=null && (source==null || !ReviewTargets.Measures(source.Question,target.Value));
             var passed=graded && grade!.Result=="Correct" && !assisted && !duplicate && !changed;
-            var reason=changed?"TARGET_CHANGED":!graded?"PENDING_GRADING":grade!.Result!="Correct"?"NOT_CORRECT":assisted?"ASSISTED":duplicate?"ROLLING_24H":"TRUSTED_INDEPENDENT";
+            var reason=changed?(source?.ReviewConfirmation?.Action=="KeepOriginal"?"TARGET_RETAINED":"TARGET_CHANGED"):!graded?"PENDING_GRADING":grade!.Result!="Correct"?"NOT_CORRECT":assisted?"ASSISTED":duplicate?"ROLLING_24H":source?.ReviewConfirmation?.Action=="AdoptMeasuredTarget"?"TRUSTED_TARGET_CONFIRMED":"TRUSTED_INDEPENDENT";
             rows.Add(new(a.Id,s.Id,s.TaskId,s.QuestionId,a.CreatedAt,grade?.Id,grade?.CreatedAt,grade?.Result??"Pending",graded,passed,reason));
         }
         var count=rows.Count(r=>r.Graded);var independent=rows.Count(r=>r.IndependentlyPassed);

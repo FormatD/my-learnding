@@ -181,6 +181,7 @@ Test("调用用量区分未知、确认费用与本地免费，不接受错误�
 Test("预算预留跨日保留未知值，明确返回结算，旧缺口不补造",BuilderBudgetCases.Calculate);
 Test("独立增量状态逐前缀与全量一致，持久快照恢复、迟滞/诊断/复习/限额金标及拒绝错误后缀",IncrementalAssessmentCases.Run);
 Test("复习仅匹配实际可测目标推进，映射迁移/未知步骤/步骤提示/非复习任务不冒充原目标通过",ReviewTargetCases.Run);
+Test("家长明确选择实际目标后才核对复测；原目标/任务关联/证据保持，旧映射或外属确认不沿用",ReviewConfirmationCases.Run);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

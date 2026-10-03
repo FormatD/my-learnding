@@ -308,6 +308,7 @@ public static class Endpoints
         Privacy.Map(api);
         Files.Map(api);
         Corrections.Map(api);
+        ReviewTargetConfirmations.Map(api);
         Deferral.Map(api);
     }
     static void ValidateStudent(StudentInput input)

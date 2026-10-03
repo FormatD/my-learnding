@@ -67,6 +67,14 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<Evidence>().HasIndex(x => new { x.GenerationId, x.AttemptId, x.KCId, x.Part }).IsUnique();
         b.Entity<Mastery>().HasIndex(x => new { x.GenerationId, x.KCId }).IsUnique();
         b.Entity<Review>().HasIndex(x => new { x.GenerationId, x.TargetType, x.TargetId }).IsUnique();
+        b.Entity<ReviewTargetConfirmation>().Property(x=>x.Sequence).UseIdentityAlwaysColumn();
+        b.Entity<ReviewTargetConfirmation>().HasIndex(x=>new{x.AttemptId,x.Sequence}).IsUnique();
+        b.Entity<ReviewTargetConfirmation>().ToTable(t=>t.HasCheckConstraint("CK_ReviewTargetConfirmation_Decision","\"Action\" IN ('KeepOriginal','AdoptMeasuredTarget') AND length(\"Reason\") BETWEEN 1 AND 1000 AND length(\"MeasurementHash\")=64 AND length(\"PreviewHash\")=64 AND jsonb_typeof(\"MeasurementSnapshot\"::jsonb)='object' AND ((\"Action\"='KeepOriginal' AND \"ConfirmedTargetId\"=\"OriginalTargetId\") OR (\"Action\"='AdoptMeasuredTarget' AND \"ConfirmedTargetId\"<>\"OriginalTargetId\"))"));
+        b.Entity<Attempt>().HasAlternateKey(x=>new{x.FamilyId,x.Id,x.StudentId});
+        b.Entity<StudyTask>().HasAlternateKey(x=>new{x.FamilyId,x.Id,x.StudentId});
+        b.Entity<ReviewTargetConfirmation>().HasOne<Attempt>().WithMany().HasForeignKey(x=>new{x.FamilyId,x.AttemptId,x.StudentId}).HasPrincipalKey(x=>new{x.FamilyId,x.Id,x.StudentId}).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<ReviewTargetConfirmation>().HasOne<StudyTask>().WithMany().HasForeignKey(x=>new{x.FamilyId,x.TaskId,x.StudentId}).HasPrincipalKey(x=>new{x.FamilyId,x.Id,x.StudentId}).OnDelete(DeleteBehavior.Cascade);
+        Foreign<Student,ReviewTargetConfirmation>(b,"StudentId");Foreign<Account,ReviewTargetConfirmation>(b,"ConfirmedBy");Foreign<ContentIdentity,ReviewTargetConfirmation>(b,"OriginalTargetId");Foreign<ContentIdentity,ReviewTargetConfirmation>(b,"ConfirmedTargetId");Foreign<Release,ReviewTargetConfirmation>(b,"MappingReleaseId");Foreign<ContentRevision,ReviewTargetConfirmation>(b,"QuestionRevisionId");Foreign<MappingSetRevision,ReviewTargetConfirmation>(b,"MappingSetRevisionId");
         b.Entity<CommandRecord>().HasIndex(x => new { x.FamilyId, x.ActorId, x.Scope, x.Key }).IsUnique();
         b.Entity<Source>().HasIndex(x => new { x.FamilyId, x.Hash }).IsUnique();
         Foreign<Account, FamilyMembership>(b,"AccountId");

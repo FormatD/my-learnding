@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 68 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 69 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -61,6 +61,7 @@
 | 20261003191349_OnlineAssessmentAppend | 10.0.4 |
 | 20261003195858_AssessmentConsumptionCursor | 10.0.4 |
 | 20261003205749_PlanProjectionSnapshot | 10.0.4 |
+| 20261003220215_ReviewTargetConfirmations | 10.0.4 |
 
 ## Accounts
 
@@ -363,6 +364,7 @@
 约束：
 
 - `AK_Attempts_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `AK_Attempts_FamilyId_Id_StudentId`：`UNIQUE ("FamilyId", "Id", "StudentId")`
 - `FK_Attempts_ContentRevision_FamilyId_QuestionRevisionId`：`FOREIGN KEY ("FamilyId", "QuestionRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Attempts_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Attempts_MappingSetRevision_FamilyId_MappingSetRevisionId`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
@@ -373,6 +375,7 @@
 索引（包含约束自动创建的索引）：
 
 - `CREATE UNIQUE INDEX "AK_Attempts_FamilyId_Id" ON public."Attempts" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "AK_Attempts_FamilyId_Id_StudentId" ON public."Attempts" USING btree ("FamilyId", "Id", "StudentId")`
 - `CREATE INDEX "IX_Attempts_FamilyId" ON public."Attempts" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_Attempts_FamilyId_MappingSetRevisionId" ON public."Attempts" USING btree ("FamilyId", "MappingSetRevisionId")`
 - `CREATE INDEX "IX_Attempts_FamilyId_QuestionRevisionId" ON public."Attempts" USING btree ("FamilyId", "QuestionRevisionId")`
@@ -2255,6 +2258,61 @@
 - `CREATE INDEX "IX_Releases_FamilyId" ON public."Releases" USING btree ("FamilyId")`
 - `CREATE UNIQUE INDEX "PK_Releases" ON public."Releases" USING btree ("Id")`
 
+## ReviewTargetConfirmation
+
+家长对复习测量目标变化的追加确认：保留原目标或明确采用实际目标，固定原任务、题目/映射快照、确认说明与实际序号；旧确认不覆盖。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| Sequence | bigint | 否 | IDENTITY ALWAYS |
+| StudentId | uuid | 否 | 无 |
+| AttemptId | uuid | 否 | 无 |
+| TaskId | uuid | 否 | 无 |
+| OriginalTargetId | uuid | 否 | 无 |
+| ConfirmedTargetId | uuid | 否 | 无 |
+| MappingReleaseId | uuid | 否 | 无 |
+| QuestionRevisionId | uuid | 否 | 无 |
+| MappingSetRevisionId | uuid | 是 | 无 |
+| ConfirmedBy | uuid | 否 | 无 |
+| Action | text | 否 | 无 |
+| Reason | text | 否 | 无 |
+| MeasurementSnapshot | text | 否 | 无 |
+| MeasurementHash | text | 否 | 无 |
+| PreviewHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_ReviewTargetConfirmation_Decision`：`CHECK (("Action" = ANY (ARRAY['KeepOriginal'::text, 'AdoptMeasuredTarget'::text])) AND length("Reason") >= 1 AND length("Reason") <= 1000 AND length("MeasurementHash") = 64 AND length("PreviewHash") = 64 AND jsonb_typeof("MeasurementSnapshot"::jsonb) = 'object'::text AND ("Action" = 'KeepOriginal'::text AND "ConfirmedTargetId" = "OriginalTargetId" OR "Action" = 'AdoptMeasuredTarget'::text AND "ConfirmedTargetId" <> "OriginalTargetId"))`
+- `FK_ReviewTargetConfirmation_Accounts_FamilyId_ConfirmedBy`：`FOREIGN KEY ("FamilyId", "ConfirmedBy") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_Attempts_FamilyId_AttemptId_Studen~`：`FOREIGN KEY ("FamilyId", "AttemptId", "StudentId") REFERENCES "Attempts"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_ContentIdentity_FamilyId_Confirmed~`：`FOREIGN KEY ("FamilyId", "ConfirmedTargetId") REFERENCES "ContentIdentity"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_ContentIdentity_FamilyId_OriginalT~`：`FOREIGN KEY ("FamilyId", "OriginalTargetId") REFERENCES "ContentIdentity"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_ContentRevision_FamilyId_QuestionR~`：`FOREIGN KEY ("FamilyId", "QuestionRevisionId") REFERENCES "ContentRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_MappingSetRevision_FamilyId_Mappin~`：`FOREIGN KEY ("FamilyId", "MappingSetRevisionId") REFERENCES "MappingSetRevision"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_Releases_FamilyId_MappingReleaseId`：`FOREIGN KEY ("FamilyId", "MappingReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ReviewTargetConfirmation_Tasks_FamilyId_TaskId_StudentId`：`FOREIGN KEY ("FamilyId", "TaskId", "StudentId") REFERENCES "Tasks"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
+- `PK_ReviewTargetConfirmation`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_ReviewTargetConfirmation_AttemptId_Sequence" ON public."ReviewTargetConfirmation" USING btree ("AttemptId", "Sequence")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_AttemptId_StudentId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "AttemptId", "StudentId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_ConfirmedBy" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "ConfirmedBy")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_ConfirmedTargetId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "ConfirmedTargetId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_MappingReleaseId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "MappingReleaseId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_MappingSetRevisionId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "MappingSetRevisionId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_OriginalTargetId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "OriginalTargetId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_QuestionRevisionId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "QuestionRevisionId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_StudentId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "StudentId")`
+- `CREATE INDEX "IX_ReviewTargetConfirmation_FamilyId_TaskId_StudentId" ON public."ReviewTargetConfirmation" USING btree ("FamilyId", "TaskId", "StudentId")`
+- `CREATE UNIQUE INDEX "PK_ReviewTargetConfirmation" ON public."ReviewTargetConfirmation" USING btree ("Id")`
+
 ## Reviews
 
 评估世代内错题/能力复习阶段与到期日。
@@ -2423,6 +2481,7 @@
 约束：
 
 - `AK_Tasks_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `AK_Tasks_FamilyId_Id_StudentId`：`UNIQUE ("FamilyId", "Id", "StudentId")`
 - `FK_Tasks_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Tasks_Releases_FamilyId_ReleaseId`：`FOREIGN KEY ("FamilyId", "ReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Tasks_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
@@ -2431,6 +2490,7 @@
 索引（包含约束自动创建的索引）：
 
 - `CREATE UNIQUE INDEX "AK_Tasks_FamilyId_Id" ON public."Tasks" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "AK_Tasks_FamilyId_Id_StudentId" ON public."Tasks" USING btree ("FamilyId", "Id", "StudentId")`
 - `CREATE INDEX "IX_Tasks_FamilyId" ON public."Tasks" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_Tasks_FamilyId_ReleaseId" ON public."Tasks" USING btree ("FamilyId", "ReleaseId")`
 - `CREATE INDEX "IX_Tasks_FamilyId_StudentId" ON public."Tasks" USING btree ("FamilyId", "StudentId")`

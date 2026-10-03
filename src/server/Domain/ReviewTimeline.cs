@@ -5,12 +5,12 @@ public sealed class ReviewTimeline
 {
     public List<ReviewOccurrence> Items { get; }=[];
     readonly Dictionary<(string,Guid),int> active=[];
-    public void Observe(Attempt attempt,Question question,StudyTask task,DateOnly day)
+    public void Observe(Attempt attempt,Question question,StudyTask task,DateOnly day,Guid? confirmedTarget=null)
     {
         foreach(var index in active.Values.ToArray())
         {
             var row=Items[index];
-            var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && task.ReviewTargetId==row.TargetId && ReviewTargets.Measures(question,row.TargetId);
+            var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && (confirmedTarget??task.ReviewTargetId)==row.TargetId && ReviewTargets.Measures(question,row.TargetId);
             if(matches && day>=row.DueDate && row.ExecutedAt==null)Items[index]=row with {ExecutedAttemptId=attempt.Id,ExecutedAt=attempt.CreatedAt};
         }
     }

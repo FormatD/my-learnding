@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
-public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null,Guid? MappingSetRevisionId=null,Guid? GradingCorrectionBatchId=null,Guid? MappingCorrectionBatchId=null);
+public record AssessmentInput(Attempt Attempt, LearningSession Session, Question Question, Grading Grade, KC[] Kcs, StudyTask Task,Guid? MappingReleaseId=null,Guid? CorrectionBatchId=null,Guid? MappingSetRevisionId=null,Guid? GradingCorrectionBatchId=null,Guid? MappingCorrectionBatchId=null,ReviewTargetConfirmation? ReviewConfirmation=null);
 public record AssessmentOutput(List<Evidence> Evidence, List<Mastery> Masteries, List<Review> Reviews,List<ReviewOccurrence> ReviewHistory,List<MasteryEvent> MasteryHistory,List<AssessmentContext> Contexts);
 public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
@@ -10,7 +10,7 @@ public static class Assessment
     public const string InputHashVersion="assessment-input/2";
     public const string EvidenceRuleVersion="evidence/1.1";
     public const string MasteryModelVersion="mastery/1.1";
-    public const string ReviewRuleVersion="review/2";
+    public const string ReviewRuleVersion="review/3";
     public static async Task<AssessmentStatus> ReadStatus(Database db,Actor actor,Guid studentId,CancellationToken ct=default)
     {
         actor.Require("Parent");
@@ -59,7 +59,7 @@ public static class Assessment
             if (a.Number != 1) continue; // Never substitute a later retry for an ungraded first answer.
             var time=a.CreatedAt; var day=Local(time);
             // Execution is a submitted first answer, even if pending or assisted; it is not a pass.
-            timeline?.Observe(a,q,input.Task,day);
+            timeline?.Observe(a,q,input.Task,day,ReviewTargets.Target(input));
             var duplicate=encounters.TryGetValue(q.Id,out var prior) && time-prior < TimeSpan.FromHours(24);
             var novelty=encounters.ContainsKey(q.Id) ? .5m : q.VariantGroupId.HasValue && variants.Contains(q.VariantGroupId.Value) ? .8m : 1m;
             if (!duplicate) encounters[q.Id]=time;
@@ -83,7 +83,7 @@ public static class Assessment
                     }
                     else if (g.Result=="Correct") r.DueDate=day.AddDays(2);
                 }
-                if (!duplicate && input.Task.ReviewTargetId is Guid target && ReviewTargets.IndependentPass(input,target) && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
+                if (!duplicate && ReviewTargets.Target(input) is Guid target && ReviewTargets.IndependentPass(input,target) && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
                 { kr.Stage="LowFrequency"; kr.DueDate=day.AddDays(30); }
             }
             var mappings=q.Policy=="NoEvidence" ? [] : q.Mappings.Where(m => m.Mode!="None" && m.Role is not "Prerequisite" and not "Context").ToArray();
@@ -192,6 +192,7 @@ public static class Assessment
         var batchIds=grades.Where(g=>g.CorrectionBatchId!=null).Select(g=>g.CorrectionBatchId!.Value).Concat(corrections.Select(c=>c.BatchId)).Distinct().ToArray();
         var batches=await db.Set<CorrectionBatch>().Where(b=>b.FamilyId==student.FamilyId && b.StudentId==student.Id && batchIds.Contains(b.Id)).ToDictionaryAsync(b=>b.Id,ct);
         var gradingLookup=grades.ToLookup(g=>g.AttemptId);var correctionLookup=corrections.ToLookup(c=>c.AttemptId);
+        var confirmations=await db.Set<ReviewTargetConfirmation>().Where(c=>c.FamilyId==student.FamilyId && c.StudentId==student.Id && attemptIds.Contains(c.AttemptId)).OrderBy(c=>c.Sequence).ToArrayAsync(ct);var confirmationLookup=confirmations.ToLookup(c=>c.AttemptId);
         var inputs=attempts.Select(a=>
         {
             var session=sessions[a.SessionId];var correction=correctionLookup[a.Id].LastOrDefault();var mappingRelease=correction?.MappingReleaseId??session.ReleaseId;
@@ -216,7 +217,8 @@ public static class Assessment
             }
             var grade=gradingLookup[a.Id].Last();var cause=correction?.BatchId;
             if(grade.CorrectionBatchId is {} gradingBatch && (cause==null || batches[gradingBatch].CreatedAt>batches[cause.Value].CreatedAt))cause=gradingBatch;
-            return new AssessmentInput(a,session,question,grade,catalog.Kcs,tasks[session.TaskId],mappingRelease,cause,mapping,grade.CorrectionBatchId,correction?.BatchId);
+            var input=new AssessmentInput(a,session,question,grade,catalog.Kcs,tasks[session.TaskId],mappingRelease,cause,mapping,grade.CorrectionBatchId,correction?.BatchId);var decision=confirmationLookup[a.Id].LastOrDefault();
+            return ReviewTargetConfirmations.Applies(input,decision)?input with{ReviewConfirmation=decision}:input;
         }).ToArray();
         var teaching=tasks.Values.Where(t=>t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null).Select(t=>new TeachingAnchor(t.KCId!.Value,t.CompletedAt!.Value)).OrderBy(t=>t.Time).ThenBy(t=>t.KCId).ToArray();
         return(inputs,teaching);

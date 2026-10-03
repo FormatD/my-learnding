@@ -31,6 +31,9 @@ python3 tests/job_cancellation_acceptance.py
 python3 tests/incremental_checkpoint_persistence_acceptance.py
 python3 tests/incremental_checkpoint_fault_acceptance.py
 python3 tests/review_rule_upgrade_acceptance.py
+python3 tests/review_target_confirmation_acceptance.py
+python3 tests/review_target_confirmation_api_acceptance.py
+python3 tests/review_target_confirmation_fault_acceptance.py
 
 # Online active-generation append and real rollback/recovery.
 python3 tests/online_assessment_acceptance.py

@@ -44,6 +44,11 @@ public static class DomainEvents
             using var doc=JsonDocument.Parse(row.Payload);var p=doc.RootElement;
             if(p.GetProperty("eventId").GetGuid()!=row.Id || p.GetProperty("familyId").GetGuid()!=row.FamilyId || p.GetProperty("studentId").GetGuid()!=row.StudentId || p.GetProperty("aggregateId").GetGuid()!=row.AggregateId || p.GetProperty("aggregateType").GetString()!=row.AggregateType || p.GetProperty("eventSequence").GetInt64()!=row.EventSequence || p.GetProperty("eventType").GetString()!=row.EventType || p.GetProperty("payloadVersion").GetInt32()!=row.PayloadVersion || p.GetProperty("occurredAt").GetDateTimeOffset()!=row.OccurredAt || p.GetProperty("data").ValueKind!=JsonValueKind.Object)throw Invalid();
             var data=p.GetProperty("data");if(data.GetProperty("attemptId").GetGuid()!=outbox.AttemptId)throw Invalid();
+            if(data.TryGetProperty("reviewTargetConfirmationId",out var confirmationId))
+            {
+                var id=confirmationId.GetGuid();var original=data.GetProperty("originalTargetId").GetGuid();var confirmed=data.GetProperty("confirmedTargetId").GetGuid();var action=data.GetProperty("action").GetString();var hash=data.GetProperty("measurementHash").GetString();
+                if(row.EventType!="CorrectionConfirmed" || !await db.Set<ReviewTargetConfirmation>().AnyAsync(c=>c.Id==id && c.FamilyId==outbox.FamilyId && c.StudentId==outbox.StudentId && c.AttemptId==outbox.AttemptId && c.OriginalTargetId==original && c.ConfirmedTargetId==confirmed && c.Action==action && c.MeasurementHash==hash,ct))throw Invalid();
+            }
             if(row.EventType is "AttemptSubmitted" or "GradingConfirmed")
             {
                 var gradingId=data.GetProperty("gradingId").GetGuid();if(!await db.Gradings.AnyAsync(g=>g.Id==gradingId && g.FamilyId==outbox.FamilyId && g.AttemptId==outbox.AttemptId,ct))throw Invalid();

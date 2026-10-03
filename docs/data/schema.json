@@ -176,6 +176,10 @@
     {
       "id": "20261003205749_PlanProjectionSnapshot",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003220215_ReviewTargetConfirmations",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1746,6 +1750,14 @@
           "initiallyDeferred": false
         },
         {
+          "name": "AK_Attempts_FamilyId_Id_StudentId",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\", \"StudentId\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_Attempts_ContentRevision_FamilyId_QuestionRevisionId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"QuestionRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
@@ -1800,6 +1812,12 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"AK_Attempts_FamilyId_Id\" ON public.\"Attempts\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "AK_Attempts_FamilyId_Id_StudentId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_Attempts_FamilyId_Id_StudentId\" ON public.\"Attempts\" USING btree (\"FamilyId\", \"Id\", \"StudentId\")"
         },
         {
           "name": "IX_Attempts_FamilyId",
@@ -11126,6 +11144,327 @@
       ]
     },
     {
+      "name": "ReviewTargetConfirmation",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Sequence",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "a",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AttemptId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "TaskId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OriginalTargetId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ConfirmedTargetId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MappingReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "QuestionRevisionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MappingSetRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ConfirmedBy",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Action",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MeasurementSnapshot",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MeasurementHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PreviewHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_ReviewTargetConfirmation_Decision",
+          "kind": "c",
+          "definition": "CHECK ((\"Action\" = ANY (ARRAY['KeepOriginal'::text, 'AdoptMeasuredTarget'::text])) AND length(\"Reason\") >= 1 AND length(\"Reason\") <= 1000 AND length(\"MeasurementHash\") = 64 AND length(\"PreviewHash\") = 64 AND jsonb_typeof(\"MeasurementSnapshot\"::jsonb) = 'object'::text AND (\"Action\" = 'KeepOriginal'::text AND \"ConfirmedTargetId\" = \"OriginalTargetId\" OR \"Action\" = 'AdoptMeasuredTarget'::text AND \"ConfirmedTargetId\" <> \"OriginalTargetId\"))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_Accounts_FamilyId_ConfirmedBy",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ConfirmedBy\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_Attempts_FamilyId_AttemptId_Studen~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"AttemptId\", \"StudentId\") REFERENCES \"Attempts\"(\"FamilyId\", \"Id\", \"StudentId\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_ContentIdentity_FamilyId_Confirmed~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ConfirmedTargetId\") REFERENCES \"ContentIdentity\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_ContentIdentity_FamilyId_OriginalT~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"OriginalTargetId\") REFERENCES \"ContentIdentity\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_ContentRevision_FamilyId_QuestionR~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"QuestionRevisionId\") REFERENCES \"ContentRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_MappingSetRevision_FamilyId_Mappin~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingSetRevisionId\") REFERENCES \"MappingSetRevision\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_Releases_FamilyId_MappingReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"MappingReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ReviewTargetConfirmation_Tasks_FamilyId_TaskId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"TaskId\", \"StudentId\") REFERENCES \"Tasks\"(\"FamilyId\", \"Id\", \"StudentId\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_ReviewTargetConfirmation",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_ReviewTargetConfirmation_AttemptId_Sequence",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_ReviewTargetConfirmation_AttemptId_Sequence\" ON public.\"ReviewTargetConfirmation\" USING btree (\"AttemptId\", \"Sequence\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_AttemptId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_AttemptId_StudentId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"AttemptId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_ConfirmedBy",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_ConfirmedBy\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"ConfirmedBy\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_ConfirmedTargetId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_ConfirmedTargetId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"ConfirmedTargetId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_MappingReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_MappingReleaseId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"MappingReleaseId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_MappingSetRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_MappingSetRevisionId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"MappingSetRevisionId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_OriginalTargetId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_OriginalTargetId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"OriginalTargetId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_QuestionRevisionId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_QuestionRevisionId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"QuestionRevisionId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_StudentId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_ReviewTargetConfirmation_FamilyId_TaskId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ReviewTargetConfirmation_FamilyId_TaskId_StudentId\" ON public.\"ReviewTargetConfirmation\" USING btree (\"FamilyId\", \"TaskId\", \"StudentId\")"
+        },
+        {
+          "name": "PK_ReviewTargetConfirmation",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_ReviewTargetConfirmation\" ON public.\"ReviewTargetConfirmation\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
       "name": "Reviews",
       "columns": [
         {
@@ -11981,6 +12320,14 @@
           "initiallyDeferred": false
         },
         {
+          "name": "AK_Tasks_FamilyId_Id_StudentId",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\", \"StudentId\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_Tasks_Families_FamilyId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
@@ -12019,6 +12366,12 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"AK_Tasks_FamilyId_Id\" ON public.\"Tasks\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "AK_Tasks_FamilyId_Id_StudentId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_Tasks_FamilyId_Id_StudentId\" ON public.\"Tasks\" USING btree (\"FamilyId\", \"Id\", \"StudentId\")"
         },
         {
           "name": "IX_Tasks_FamilyId",

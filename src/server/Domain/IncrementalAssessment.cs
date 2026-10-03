@@ -55,9 +55,9 @@ public sealed class IncrementalAssessment
         if(reviews.TryGetValue((type,target),out var old))return old;
         var row=new Review{FamilyId=family,StudentId=student,GenerationId=generation,TargetType=type,TargetId=target,KCId=kc,DueDate=day.AddDays(2)};reviews.Add((type,target),row);return row;
     }
-    void ObserveHistory(Attempt attempt,Question question,StudyTask task,DateOnly day)
+    void ObserveHistory(Attempt attempt,Question question,StudyTask task,DateOnly day,Guid? confirmedTarget)
     {
-        foreach(var i in activeHistory.Values.ToArray()){var row=reviewHistory[i];var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && task.ReviewTargetId==row.TargetId && ReviewTargets.Measures(question,row.TargetId);if(matches && day>=row.DueDate && row.ExecutedAt==null)reviewHistory[i]=row with{ExecutedAttemptId=attempt.Id,ExecutedAt=attempt.CreatedAt};}
+        foreach(var i in activeHistory.Values.ToArray()){var row=reviewHistory[i];var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && (confirmedTarget??task.ReviewTargetId)==row.TargetId && ReviewTargets.Measures(question,row.TargetId);if(matches && day>=row.DueDate && row.ExecutedAt==null)reviewHistory[i]=row with{ExecutedAttemptId=attempt.Id,ExecutedAt=attempt.CreatedAt};}
     }
     void SynchronizeHistory(Attempt attempt)
     {
@@ -78,7 +78,7 @@ public sealed class IncrementalAssessment
             if (a.Number != 1) return; // Never substitute a later retry for an ungraded first answer.
             var time=a.CreatedAt; var day=Local(time);
             // Execution is a submitted first answer, even if pending or assisted; it is not a pass.
-            ObserveHistory(a,q,input.Task,day);
+            ObserveHistory(a,q,input.Task,day,ReviewTargets.Target(input));
             var duplicate=encounters.TryGetValue(q.Id,out var prior) && time-prior < TimeSpan.FromHours(24);
             var novelty=encounters.ContainsKey(q.Id) ? .5m : q.VariantGroupId.HasValue && variants.Contains(q.VariantGroupId.Value) ? .8m : 1m;
             if (!duplicate) encounters[q.Id]=time;
@@ -102,7 +102,7 @@ public sealed class IncrementalAssessment
                     }
                     else if (g.Result=="Correct") r.DueDate=day.AddDays(2);
                 }
-                if (!duplicate && input.Task.ReviewTargetId is Guid target && ReviewTargets.IndependentPass(input,target) && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
+                if (!duplicate && ReviewTargets.Target(input) is Guid target && ReviewTargets.IndependentPass(input,target) && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
                 { kr.Stage="LowFrequency"; kr.DueDate=day.AddDays(30); }
             }
             var mappings=q.Policy=="NoEvidence" ? [] : q.Mappings.Where(m => m.Mode!="None" && m.Role is not "Prerequisite" and not "Context").ToArray();
