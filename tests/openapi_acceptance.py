@@ -32,6 +32,7 @@ from job_lease_api_acceptance import verify as verify_jobs
 from builder_protocol_acceptance import verify as verify_builder_protocol
 from learning_reference_acceptance import verify as verify_learning_references
 from independent_mapping_acceptance import verify as verify_independent_mappings
+from mapping_job_api_acceptance import verify as verify_mapping_jobs
 from evidence_revocation_acceptance import verify as verify_revocations
 
 
@@ -42,7 +43,9 @@ def main():
     parser.add_argument("--regression", action="store_true", help="Run core API, version/PDF, content authoring and observed-step suites in the same disposable service.")
     parser.add_argument("--export-schema", action="store_true", help="Explicitly regenerate the schema dictionary from this migrated disposable database.")
     parser.add_argument("--paper-regression",action="store_true",help="Run paper confirmation in a separate disposable service from core regression (keeps real login limit intact).")
+    parser.add_argument("--mapping-regression",action="store_true",help="Run queued mapping work in its own disposable service to retain real auth rate limits.")
     args = parser.parse_args()
+    if args.mapping_regression and (args.regression or args.paper_regression):parser.error("Run mapping regression in its own service.")
     if args.paper_regression and args.regression:parser.error("Run paper regression separately from core regression to respect the real login limit.")
     env = os.environ.copy()
     env["PATH"] = "/opt/homebrew/opt/postgresql@16/bin:" + env["PATH"]
@@ -89,24 +92,27 @@ def main():
                     raise AssertionError("Disposable API did not become ready.")
                 api_acceptance.BASE = origin + "/api/v1"
                 client = Client()
-                registered=client.request("/auth/register", {"userName": "contract-" + uuid.uuid4().hex[:12],
-                               "password": secrets.token_hex(24)}, expected=201)
+                credentials={"userName":"contract-"+uuid.uuid4().hex[:12],"password":secrets.token_hex(24)}
+                registered=client.request("/auth/register",credentials,expected=201)
                 document = canonical(client.request("/openapi.json"))
                 assert document["openapi"].startswith("3.") and document["paths"]
                 schemas = document["components"]["schemas"]
                 assert "WeeklySummary" in schemas and "ParentBurdenSummary" in schemas
-                verify(document,client,registered)
-                verify_budget(document,client)
-                verify_resources(document,client)
-                verify_mappings(document,client)
-                verify_content_reviews(document,client)
-                verify_published_mappings(document,client)
-                verify_revocations(document,client)
-                verify_independent_mappings(document,client)
-                verify_learning_references(document,client,env)
-                verify_builder_protocol(client)
-                verify_builder_budget(client,env)
-                verify_jobs(client)
+                if not args.mapping_regression:
+                    verify(document,client,registered)
+                    verify_budget(document,client)
+                    verify_resources(document,client)
+                    verify_mappings(document,client)
+                    verify_content_reviews(document,client)
+                    verify_published_mappings(document,client)
+                    verify_revocations(document,client)
+                    verify_independent_mappings(document,client)
+                    verify_learning_references(document,client,env)
+                    verify_builder_protocol(client)
+                    verify_builder_budget(client,env)
+                    verify_jobs(client)
+                else:
+                    client.request('/me');fixture=client.request('/content/fixture',{});client.request('/content/drafts/'+fixture['id']+':review',{});preview=client.request('/content/drafts/'+fixture['id']+'/preview');client.request('/content/drafts/'+fixture['id']+':publish',{'previewHash':preview['hash']});verify_mapping_jobs(client,env,credentials)
                 encoded = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
                 if args.export:
                     args.export.parent.mkdir(parents=True, exist_ok=True)
@@ -132,7 +138,7 @@ def main():
                 if args.paper_regression:
                     import paper_learning_api_acceptance
                     paper_learning_api_acceptance.main()
-                verify_failures(document,client,env)
+                if not args.mapping_regression:verify_failures(document,client,env)
                 verify_rate(document)
             finally:
                 if child is not None and child.poll() is None:

@@ -148,6 +148,10 @@
     {
       "id": "20261003011422_TypedDomainEvents",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003161120_MappingPreparationJobs",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -6877,6 +6881,221 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_KnowledgeMigration\" ON public.\"KnowledgeMigration\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "MappingPreparation",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "JobId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RunId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceDraftId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RequestedBy",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceTitle",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Snapshot",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SnapshotHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_MappingPreparation_Snapshot",
+          "kind": "c",
+          "definition": "CHECK (jsonb_typeof(\"Snapshot\"::jsonb) = 'object'::text AND length(\"SnapshotHash\") = 64 AND length(\"InputHash\") = 64 AND \"RunId\" <> '00000000-0000-0000-0000-000000000000'::uuid)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingPreparation_Accounts_FamilyId_RequestedBy",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"RequestedBy\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingPreparation_BackgroundJob_FamilyId_JobId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingPreparation_Drafts_FamilyId_SourceDraftId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SourceDraftId\") REFERENCES \"Drafts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingPreparation_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_MappingPreparation_Releases_FamilyId_LibraryReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LibraryReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_MappingPreparation",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_MappingPreparation_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingPreparation_FamilyId\" ON public.\"MappingPreparation\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_MappingPreparation_FamilyId_InputHash",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingPreparation_FamilyId_InputHash\" ON public.\"MappingPreparation\" USING btree (\"FamilyId\", \"InputHash\")"
+        },
+        {
+          "name": "IX_MappingPreparation_FamilyId_JobId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingPreparation_FamilyId_JobId\" ON public.\"MappingPreparation\" USING btree (\"FamilyId\", \"JobId\")"
+        },
+        {
+          "name": "IX_MappingPreparation_FamilyId_LibraryReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingPreparation_FamilyId_LibraryReleaseId\" ON public.\"MappingPreparation\" USING btree (\"FamilyId\", \"LibraryReleaseId\")"
+        },
+        {
+          "name": "IX_MappingPreparation_FamilyId_RequestedBy",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingPreparation_FamilyId_RequestedBy\" ON public.\"MappingPreparation\" USING btree (\"FamilyId\", \"RequestedBy\")"
+        },
+        {
+          "name": "IX_MappingPreparation_FamilyId_SourceDraftId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_MappingPreparation_FamilyId_SourceDraftId\" ON public.\"MappingPreparation\" USING btree (\"FamilyId\", \"SourceDraftId\")"
+        },
+        {
+          "name": "IX_MappingPreparation_JobId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingPreparation_JobId\" ON public.\"MappingPreparation\" USING btree (\"JobId\")"
+        },
+        {
+          "name": "IX_MappingPreparation_RunId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_MappingPreparation_RunId\" ON public.\"MappingPreparation\" USING btree (\"RunId\")"
+        },
+        {
+          "name": "PK_MappingPreparation",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_MappingPreparation\" ON public.\"MappingPreparation\" USING btree (\"Id\")"
         }
       ]
     },

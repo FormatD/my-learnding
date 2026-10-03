@@ -104,6 +104,7 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<ContentReviewRecord>().HasIndex(r=>new{r.DraftId,r.DraftVersion});
         Foreign<ContentDraft, IndependentMappingDraft>(b,"SourceDraftId");Foreign<MappingSetRevision, IndependentMappingDraft>(b,"SetRevisionId");Foreign<Release, IndependentMappingDraft>(b,"LibraryReleaseId");Foreign<Account, IndependentMappingDraft>(b,"SubmittedBy");
         b.Entity<IndependentMappingDraft>().HasIndex(d=>d.SetRevisionId).IsUnique();
+        Foreign<ContentDraft,MappingPreparation>(b,"SourceDraftId");Foreign<Release,MappingPreparation>(b,"LibraryReleaseId");Foreign<Account,MappingPreparation>(b,"RequestedBy");Foreign<BackgroundJob,MappingPreparation>(b,"JobId");b.Entity<MappingPreparation>().HasIndex(p=>new{p.FamilyId,p.InputHash}).IsUnique();b.Entity<MappingPreparation>().HasIndex(p=>p.JobId).IsUnique();b.Entity<MappingPreparation>().HasIndex(p=>p.RunId).IsUnique();b.Entity<MappingPreparation>().ToTable(t=>t.HasCheckConstraint("CK_MappingPreparation_Snapshot","jsonb_typeof(\"Snapshot\"::jsonb)='object' AND length(\"SnapshotHash\")=64 AND length(\"InputHash\")=64 AND \"RunId\"<>'00000000-0000-0000-0000-000000000000'::uuid"));
         Foreign<ContentDraft, MappingRun>(b,"SourceDraftId"); Foreign<Release, MappingRun>(b,"LibraryReleaseId");
         b.Entity<MappingRun>().HasIndex(r=>new{r.FamilyId,r.InputHash}).IsUnique();
         Foreign<MappingRun, MappingSuggestion>(b,"RunId");

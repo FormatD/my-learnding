@@ -63,6 +63,7 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                 await using var scope=scopes.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<Database>();
                 try{await ProcessOne(db,ct);}catch(Exception ex)when(ex is not OperationCanceledException){logger.LogError(ex,"Projection processing failed");db.ChangeTracker.Clear();}
                 await Builder.ProcessOne(db,ct,logger);
+                await MappingJobs.ProcessOne(db,ct);
             }
             catch(OperationCanceledException)when(ct.IsCancellationRequested){break;}
             catch(Exception ex){logger.LogError(ex,"Projection worker failed");}

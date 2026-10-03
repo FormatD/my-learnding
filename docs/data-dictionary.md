@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 63 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 64 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -54,6 +54,7 @@
 | 20261003001038_BackgroundJobLeases | 10.0.4 |
 | 20261003003523_ProjectionConsumerReceipts | 10.0.4 |
 | 20261003011422_TypedDomainEvents | 10.0.4 |
+| 20261003161120_MappingPreparationJobs | 10.0.4 |
 
 ## Accounts
 
@@ -1411,6 +1412,47 @@
 - `CREATE INDEX "IX_KnowledgeMigration_FamilyId_ToRevisionId" ON public."KnowledgeMigration" USING btree ("FamilyId", "ToRevisionId")`
 - `CREATE UNIQUE INDEX "IX_KnowledgeMigration_ProposalId_FromKCId_ToKCId" ON public."KnowledgeMigration" USING btree ("ProposalId", "FromKCId", "ToKCId")`
 - `CREATE UNIQUE INDEX "PK_KnowledgeMigration" ON public."KnowledgeMigration" USING btree ("Id")`
+
+## MappingPreparation
+
+后台映射准备的不可变原输入、请求人、固定输出运行标识及统一任务引用；建议成功提交后才产生运行和待审结果，不补造历史领取。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| JobId | uuid | 否 | 无 |
+| RunId | uuid | 否 | 无 |
+| SourceDraftId | uuid | 否 | 无 |
+| LibraryReleaseId | uuid | 否 | 无 |
+| RequestedBy | uuid | 否 | 无 |
+| SourceTitle | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| Snapshot | text | 否 | 无 |
+| SnapshotHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_MappingPreparation_Snapshot`：`CHECK (jsonb_typeof("Snapshot"::jsonb) = 'object'::text AND length("SnapshotHash") = 64 AND length("InputHash") = 64 AND "RunId" <> '00000000-0000-0000-0000-000000000000'::uuid)`
+- `FK_MappingPreparation_Accounts_FamilyId_RequestedBy`：`FOREIGN KEY ("FamilyId", "RequestedBy") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingPreparation_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingPreparation_Drafts_FamilyId_SourceDraftId`：`FOREIGN KEY ("FamilyId", "SourceDraftId") REFERENCES "Drafts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingPreparation_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingPreparation_Releases_FamilyId_LibraryReleaseId`：`FOREIGN KEY ("FamilyId", "LibraryReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingPreparation`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_MappingPreparation_FamilyId" ON public."MappingPreparation" USING btree ("FamilyId")`
+- `CREATE UNIQUE INDEX "IX_MappingPreparation_FamilyId_InputHash" ON public."MappingPreparation" USING btree ("FamilyId", "InputHash")`
+- `CREATE INDEX "IX_MappingPreparation_FamilyId_JobId" ON public."MappingPreparation" USING btree ("FamilyId", "JobId")`
+- `CREATE INDEX "IX_MappingPreparation_FamilyId_LibraryReleaseId" ON public."MappingPreparation" USING btree ("FamilyId", "LibraryReleaseId")`
+- `CREATE INDEX "IX_MappingPreparation_FamilyId_RequestedBy" ON public."MappingPreparation" USING btree ("FamilyId", "RequestedBy")`
+- `CREATE INDEX "IX_MappingPreparation_FamilyId_SourceDraftId" ON public."MappingPreparation" USING btree ("FamilyId", "SourceDraftId")`
+- `CREATE UNIQUE INDEX "IX_MappingPreparation_JobId" ON public."MappingPreparation" USING btree ("JobId")`
+- `CREATE UNIQUE INDEX "IX_MappingPreparation_RunId" ON public."MappingPreparation" USING btree ("RunId")`
+- `CREATE UNIQUE INDEX "PK_MappingPreparation" ON public."MappingPreparation" USING btree ("Id")`
 
 ## MappingReviewDecision
 
