@@ -7,7 +7,7 @@ from persistence_environment import environment,dotnet
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--browser',action='store_true');args=parser.parse_args()
-    root=Path(__file__).resolve().parents[1];database='learning_fault_'+uuid.uuid4().hex[:12];env=environment(database);sdk=dotnet(root);env['ConnectionStrings__Learning']=env['PERSISTENCE_TEST_CONNECTION'];env.pop('BackupConfigFile',None)
+    root=Path(__file__).resolve().parents[1];database='learning_fault_'+uuid.uuid4().hex[:12];env=environment(database);sdk=dotnet(root);env['ConnectionStrings__Learning']=env['PERSISTENCE_TEST_CONNECTION'];env['Builder__RetrievalTopK']='2';env.pop('BackupConfigFile',None)
     subprocess.run(['createdb',database],env=env,check=True);service=None
     try:
         with tempfile.TemporaryDirectory(prefix='candidate-review-') as temp:
@@ -41,9 +41,10 @@ def main():
                 for row in candidates:
                     context=c.request('/builder/candidates/'+row['id']+'/review-context');original[row['id']]=context;assert context['candidate']==row and context['run']['libraryReleaseId']==release['id'] and context['libraryNumber']==release['number']
                     assert context['protocol']==json.loads(row['protocolPayload']) and all(f['sourceId']==source['id'] for f in context['source']['fragments'])
+                    assert len(context['matches'])<=2 and json.loads(context['run']['modelConfigPayload'])['retrieval']['topK']==2
                     for match in context['matches']:
                         kc=next(k for k in catalog['kcs'] if k['id']==match['match']['kcId']);support=[q for q in catalog['questions'] if measured(q,kc['id'])];contrast=[q for q in catalog['questions'] if q['policy']!='NoEvidence' and not measured(q,kc['id'])]
-                        assert match['definition']==kc and match['supportCount']==len(support) and match['supportQuestions']==support[:3] and match['contrastQuestions']==contrast[:2]
+                        assert kc['type']==context['protocol']['kcType'] and match['definition']==kc and match['supportCount']==len(support) and match['supportQuestions']==support[:3] and match['contrastQuestions']==contrast[:2]
                 updated=copy.deepcopy(catalog);updated['kcs'][0]['name']+=' · 后续名称';updated['kcs'][0]['revisionId']=str(uuid.uuid4());publish(c.request('/content/drafts',{'title':'后续正式定义说明','catalog':updated}))
                 for row in candidates:assert c.request('/builder/candidates/'+row['id']+'/review-context')==original[row['id']]
                 print('PASS 实际候选核对完整原片段/结构输出、固定正式定义及实际测量题；后续发布不替换原审核上下文，无测量题对照不冒充能力证据')
@@ -68,7 +69,7 @@ def main():
                 sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/2\' WHERE "Id"=\'{rid}\';')
                 legacy=c.request('/builder/candidates/'+cid+'/review-context');assert legacy['protocol'] is None and '不补造' in legacy['notice'] and legacy['source']['fragments']
                 assert sql(f'SELECT "ProtocolPayload" IS NULL FROM "Candidates" WHERE "Id"=\'{cid}\';')=='t'
-                sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/3\' WHERE "Id"=\'{rid}\';')
+                sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/4\' WHERE "Id"=\'{rid}\';')
                 payload=json.loads(original_payload);payload['supportingQuotes'][0]=None;encoded=json.dumps(payload,ensure_ascii=False).replace("'","''")
                 sql(f'UPDATE "Candidates" SET "ProtocolPayload"=\'{encoded}\' WHERE "Id"=\'{cid}\';')
                 assert c.request('/builder/candidates/'+cid+'/review-context',expected=422)['code']=='BUILDER_SOURCE_INVALID'

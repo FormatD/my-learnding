@@ -42,4 +42,11 @@ public static class Retrieval
         return (decimal)a.Zip(b,(x,y)=>x*y).Sum();
     }
     public static Match[] TopK(string text,IEnumerable<KC> kcs) => kcs.Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(Vector(text),Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),Space),Space)).OrderByDescending(m=>m.Score).ThenBy(m=>m.KCId).Take(10).ToArray();
+    public static Match[] Candidates(BuilderCandidateOutput candidate,IEnumerable<KC> kcs,BuilderRetrievalConfiguration configuration)
+    {
+        configuration.Validate();
+        if(candidate.Subject!="MATH" || !new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(candidate.KcType))throw new ApiError(422,"BUILDER_SCHEMA_INVALID","候选学科或能力类型无效。");
+        var query=Vector(candidate.Name+" "+candidate.MeasurableBehavior+" "+candidate.Boundary);
+        return kcs.Where(k=>k.Type==candidate.KcType).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,configuration.Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),configuration.Space),configuration.Space)).OrderByDescending(m=>m.Score).ThenBy(m=>m.KCId).Take(configuration.TopK).ToArray();
+    }
 }

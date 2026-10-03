@@ -27,8 +27,8 @@ public static class Builder
             if (string.IsNullOrWhiteSpace(source.Text)) throw new ApiError(422,"SOURCE_NOT_READY","来源尚未解析完成，或没有文本层。");
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
             var configPayload=Json.Write(BuilderConfiguration.Current(configuration));var configHash=Content.Hash(configPayload);
-            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/3:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
-            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputVersion="builder-input/3",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
+            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/4:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
+            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputVersion="builder-input/4",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/runs/{id:guid}:retry",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>
         {
@@ -80,7 +80,7 @@ public static class Builder
         }
         else
         {
-            if(run.Type!="Candidates" || run.InputVersion is not ("builder-input/2" or "builder-input/3"))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
+            if(run.Type!="Candidates" || run.InputVersion is not ("builder-input/2" or "builder-input/3" or "builder-input/4"))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
             if(run.Provider!="Mock")throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
             if(run.Model!="fixture/1" || run.PromptVersion!="kc-candidate/1")throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
             BuilderConfiguration.Resolve(run);
@@ -144,17 +144,18 @@ public static class Builder
             run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;
         }
         var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).ToListAsync(ct);
-        if(run.InputVersion is not ("builder-input/2" or "builder-input/3"))
+        if(run.InputVersion is not ("builder-input/2" or "builder-input/3" or "builder-input/4"))
         {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;}
         var release=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
         var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,new MockBuilderCandidateProvider(),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
+        var retrieval=BuilderConfiguration.ResolveRetrieval(run);
         foreach (var candidate in output.Output.Candidates)
         {
             var chunk=chunks.Single(c=>c.Id==candidate.SourceChunkIds[0]);
-            db.Candidates.Add(new() { FamilyId=run.FamilyId,RunId=run.Id,ProtocolPayload=Json.Write(candidate),ChunkId=chunk.Id,Name=candidate.Name,Quote=candidate.SupportingQuotes[0],Behavior=candidate.MeasurableBehavior,Boundary=candidate.Boundary,Type=candidate.KcType,SuggestedAction="NeedsReview",Matches=Json.Write(Retrieval.TopK(chunk.Text,kcs)) });
+            db.Candidates.Add(new() { FamilyId=run.FamilyId,RunId=run.Id,ProtocolPayload=Json.Write(candidate),ChunkId=chunk.Id,Name=candidate.Name,Quote=candidate.SupportingQuotes[0],Behavior=candidate.MeasurableBehavior,Boundary=candidate.Boundary,Type=candidate.KcType,SuggestedAction="NeedsReview",Matches=Json.Write(retrieval==null?Retrieval.TopK(chunk.Text,kcs):Retrieval.Candidates(candidate,kcs,retrieval)) });
         }
         run.Status="Completed";run.Error=null;run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return output;
     }

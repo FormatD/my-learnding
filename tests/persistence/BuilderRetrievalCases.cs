@@ -1,0 +1,27 @@
+using Learning;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+public static class BuilderRetrievalPersistenceCases
+{
+    static void Check(bool value,string message){if(!value)throw new Exception(message);}
+    public static async Task Run(Database db,string mode="builder-retrieval")
+    {
+        await db.Database.MigrateAsync();var family=new Family();var account=new Account{FamilyId=family.Id,UserName=Environment.GetEnvironmentVariable("RETRIEVAL_USER")??"retrieval-"+Guid.NewGuid(),PasswordHash=Security.Password(Environment.GetEnvironmentVariable("RETRIEVAL_PASSWORD")??"retrieval-isolated-password")};db.AddRange(family,account,new FamilyMembership{FamilyId=family.Id,AccountId=account.Id,Roles="Parent,ContentEditor,Publisher"});var actor=new Actor(account.Id,family.Id,account.Id,null,"Parent","Parent,ContentEditor,Publisher");var catalog=Content.Fixture();var draft=new ContentDraft{FamilyId=family.Id,Title="固定检索正式库受控审核夹具",Payload=Json.Write(catalog)};db.Add(draft);await db.SaveChangesAsync();await ContentReviews.Approve(db,actor,draft,new ContentReviewInput(draft.Version,"隔离检索夹具整份审核"));await db.SaveChangesAsync();var review=await ContentReviews.ForPublish(db,draft);var release=new Release{FamilyId=family.Id,Number=1,Payload=draft.Payload,Hash=Content.Hash(draft.Payload)};db.Add(release);await Publishing.Register(db,release,review);review.PublishedReleaseId=release.Id;review.PublishedMappingVersion="mapping-container/1";draft.Status="Published";await db.SaveChangesAsync();
+        var text="独立计算混合运算，不能把应用建模当成计算能力。";var source=new Source{FamilyId=family.Id,Title="实际冻结检索来源",Text=text,Hash=Content.Hash(text)};var chunk=new Chunk{FamilyId=family.Id,SourceId=source.Id,Locator="段落1",Text=text};db.AddRange(source,chunk);await db.SaveChangesAsync();
+        async Task<BuilderRun> Prepare(string input,BuilderModelConfiguration configuration)
+        {
+            var payload=Json.Write(configuration);var hash=Content.Hash(payload);var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,LibraryReleaseId=release.Id,InputVersion=input,ModelConfigPayload=payload,ModelConfigHash=hash,InputHash=Content.Hash(source.Hash+":Mock:fixture/1:kc-candidate/1:"+input+":"+release.Hash+":"+hash)};db.Add(run);await db.SaveChangesAsync();return run;
+        }
+        var legacy=await Prepare("builder-input/3",new("builder-config/1","Mock","fixture/1","kc-candidate/1",Content.Hash(BuilderProtocol.Schema),new BuilderLimits()));var legacyOriginal=legacy.ModelConfigPayload;
+        var frozen=BuilderConfiguration.Current(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Builder:RetrievalTopK","2"}}).Build());var modern=await Prepare("builder-input/4",frozen);var original=modern.ModelConfigPayload;
+        if(mode=="builder-retrieval-api-seed"){Console.WriteLine(Json.Write(new{userName=account.UserName,sourceId=source.Id,legacyId=legacy.Id,modernId=modern.Id,modernPayload=original,legacyPayload=legacyOriginal,kcCount=catalog.Kcs.Length}));return;}
+        // The worker receives no current IConfiguration; the stored two-item profile controls the result.
+        Check(BuilderConfiguration.Current(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Builder:RetrievalTopK","1"}}).Build()).Retrieval!.TopK==1,"test current config missing");
+        await Builder.ProcessOne(db,CancellationToken.None);await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();
+        var oldCandidate=await db.Candidates.SingleAsync(c=>c.RunId==legacy.Id);var newCandidate=await db.Candidates.SingleAsync(c=>c.RunId==modern.Id);var newMatches=Json.Read<Match[]>(newCandidate.Matches);
+        Check(newMatches.Length==2 && newMatches.All(m=>catalog.Kcs.Single(k=>k.Id==m.KCId).Type=="Procedure"),"saved two-item compatible-type retrieval not applied");Check(Json.Read<Match[]>(oldCandidate.Matches).Length==catalog.Kcs.Length,"old source-based ten-item result reinterpreted");Check((await db.BuilderRuns.SingleAsync(r=>r.Id==modern.Id)).ModelConfigPayload==original && (await db.BuilderRuns.SingleAsync(r=>r.Id==legacy.Id)).ModelConfigPayload==legacyOriginal,"run snapshots changed during processing");
+        var oldBytes=Json.Write(oldCandidate);var newBytes=Json.Write(newCandidate);await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();Check(Json.Write(await db.Candidates.SingleAsync(c=>c.Id==oldCandidate.Id))==oldBytes && Json.Write(await db.Candidates.SingleAsync(c=>c.Id==newCandidate.Id))==newBytes,"repeated processing changed completed retrieval");Console.WriteLine("PASS 实际审核发布固定库经后台生成：新配置固定两项同类型结果，当前一项设置不替换原输入；旧配置保留原片段十项方式，重复处理原候选字节保持");
+        var bad=frozen with{Retrieval=frozen.Retrieval! with{Space="different-model-space"}};var invalid=await Prepare("builder-input/4",bad);await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();Check((await db.BuilderRuns.SingleAsync(r=>r.Id==invalid.Id)).Error=="BUILDER_CONFIGURATION_INVALID" && !await db.Candidates.AnyAsync(c=>c.RunId==invalid.Id) && !await db.Set<BuilderCall>().AnyAsync(c=>c.RunId==invalid.Id),"invalid frozen space called provider or produced results");Console.WriteLine("PASS 原配置空间矛盾在实际调用前明确失败，零候选/调用；不自动换成当前空间");
+        await db.Families.Where(f=>f.Id==family.Id).ExecuteDeleteAsync();Check(!await db.Candidates.AnyAsync() && !await db.Set<Embedding>().AnyAsync() && !await db.Set<BuilderCall>().AnyAsync(),"family deletion retained retrieval facts");Console.WriteLine("PASS 家庭删除清理候选、空间及调用记录");
+    }
+}

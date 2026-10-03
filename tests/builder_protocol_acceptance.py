@@ -4,8 +4,8 @@ import hashlib,json,time
 def verify(c):
     source=c.request('/content/sources',{'title':'结构协议验收','text':'先乘除后加减。\n遇到括号先算括号里面。'},expected=201)
     run=c.request('/builder/runs',{'sourceId':source['id']},expected=202)
-    assert run['inputVersion']=='builder-input/3' and hashlib.sha256(run['modelConfigPayload'].encode()).hexdigest()==run['modelConfigHash']
-    config=json.loads(run['modelConfigPayload']);assert config['version']=='builder-config/1' and config['limits']['timeoutMilliseconds']==30000 and config['limits']['repairAttempts']==1
+    assert run['inputVersion']=='builder-input/4' and hashlib.sha256(run['modelConfigPayload'].encode()).hexdigest()==run['modelConfigHash']
+    config=json.loads(run['modelConfigPayload']);assert config['version']=='builder-config/2' and config['limits']['timeoutMilliseconds']==30000 and config['limits']['repairAttempts']==1
     def finished(id):
         for _ in range(150):
             state=c.request('/builder');item=next(r for r in state['runs'] if r['id']==id)

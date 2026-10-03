@@ -14,7 +14,7 @@ public static class BuilderCandidateReviews
         BuilderCandidateOutput? protocol;
         try{protocol=candidate.ProtocolPayload==null?null:Json.Read<BuilderCandidateOutput>(candidate.ProtocolPayload);}
         catch(System.Text.Json.JsonException){throw new ApiError(422,"CANDIDATE_PROTOCOL_UNKNOWN","原候选结构输出无法读取，请核对运行记录。");}
-        if(protocol==null && run.InputVersion=="builder-input/3")throw new ApiError(422,"CANDIDATE_PROTOCOL_UNKNOWN","原候选缺少本次结构输出，请核对运行记录；不会补造年级或评分。");
+        if(protocol==null && run.InputVersion is "builder-input/3" or "builder-input/4")throw new ApiError(422,"CANDIDATE_PROTOCOL_UNKNOWN","原候选缺少本次结构输出，请核对运行记录；不会补造年级或评分。");
         if(protocol!=null && (protocol.SourceChunkIds==null || protocol.SourceChunkIds.Length==0))throw new ApiError(422,"BUILDER_SOURCE_INVALID","原候选缺少来源引用，请核对运行记录。");
         var ids=protocol?.SourceChunkIds??[candidate.ChunkId];
         var fragments=await db.Chunks.Where(c=>c.FamilyId==actor.FamilyId && c.SourceId==source.Id && ids.Contains(c.Id)).OrderBy(c=>c.Locator).ThenBy(c=>c.Id).ToArrayAsync(ct);
