@@ -10,7 +10,7 @@ public sealed class ReviewTimeline
         foreach(var index in active.Values.ToArray())
         {
             var row=Items[index];
-            var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && task.ReviewTargetId==row.TargetId;
+            var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && task.ReviewTargetId==row.TargetId && ReviewTargets.Measures(question,row.TargetId);
             if(matches && day>=row.DueDate && row.ExecutedAt==null)Items[index]=row with {ExecutedAttemptId=attempt.Id,ExecutedAt=attempt.CreatedAt};
         }
     }

@@ -30,6 +30,7 @@ python3 tests/job_cancellation_acceptance.py
 # Stateful incremental transitions, immutable persistence and suffix crash recovery.
 python3 tests/incremental_checkpoint_persistence_acceptance.py
 python3 tests/incremental_checkpoint_fault_acceptance.py
+python3 tests/review_rule_upgrade_acceptance.py
 
 # Online active-generation append and real rollback/recovery.
 python3 tests/online_assessment_acceptance.py

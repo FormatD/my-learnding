@@ -180,6 +180,7 @@ Test("Builder 固定配置摘要、受控限额与旧缺口不补造",BuilderPro
 Test("调用用量区分未知、确认费用与本地免费，不接受错误计费值",()=>{BuilderCallTracking.ValidateUsage(null);BuilderCallTracking.ValidateUsage(new(null,null,0,null,"LocalNoCharge"));BuilderCallTracking.ValidateUsage(new(10,20,.001m,"USD","Confirmed"));foreach(var usage in new[]{new BuilderUsage(-1,null,null,null),new BuilderUsage(null,null,1,null,"Unknown"),new BuilderUsage(null,null,-1,"USD","Confirmed"),new BuilderUsage(null,null,.0000001m,"USD","Confirmed"),new BuilderUsage(0,null,0,null,"LocalNoCharge")}){try{BuilderCallTracking.ValidateUsage(usage);throw new Exception("bad usage accepted");}catch(ApiError e){Eq(e.Code,"BUILDER_USAGE_INVALID");}}});
 Test("预算预留跨日保留未知值，明确返回结算，旧缺口不补造",BuilderBudgetCases.Calculate);
 Test("独立增量状态逐前缀与全量一致，持久快照恢复、迟滞/诊断/复习/限额金标及拒绝错误后缀",IncrementalAssessmentCases.Run);
+Test("复习仅匹配实际可测目标推进，映射迁移/未知步骤/步骤提示/非复习任务不冒充原目标通过",ReviewTargetCases.Run);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

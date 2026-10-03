@@ -67,7 +67,7 @@ def verify_coverage_correction(c,fixture):
     c.request('/attempts/'+original['id']+'/grading-revisions',{**body,'previewHash':preview['previewHash']},expected=202)
     report=c.request('/students/'+sid+'/weekly-summary')['reviewCoverage']
     assert report['dueSchedules']==0 and report['rate'] is None and report['items']==[]
-    assert report['ruleVersion']=='review/1'
+    assert report['ruleVersion']=='review/2'
     mastery=c.request('/students/'+sid+'/weekly-summary')['masteryChanges'];row=next(v for v in mastery['items'] if v['kcId']==fixture['kcId']);assert row['negativeWeight']<2 and mastery['evidenceParts']==2
     assert any(e['attemptId']==original['id'] and e['positive'] for e in row['evidence'])
     print('PASS correction of original wrong answer reconstructs due cohort; removed obligation stays unknown instead of fabricated 100%')

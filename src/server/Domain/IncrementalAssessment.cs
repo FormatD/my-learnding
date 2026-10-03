@@ -57,7 +57,7 @@ public sealed class IncrementalAssessment
     }
     void ObserveHistory(Attempt attempt,Question question,StudyTask task,DateOnly day)
     {
-        foreach(var i in activeHistory.Values.ToArray()){var row=reviewHistory[i];var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && task.ReviewTargetId==row.TargetId;if(matches && day>=row.DueDate && row.ExecutedAt==null)reviewHistory[i]=row with{ExecutedAttemptId=attempt.Id,ExecutedAt=attempt.CreatedAt};}
+        foreach(var i in activeHistory.Values.ToArray()){var row=reviewHistory[i];var matches=row.TargetType=="WrongQuestion"?row.TargetId==question.Id:task.Type=="Review" && task.ReviewTargetId==row.TargetId && ReviewTargets.Measures(question,row.TargetId);if(matches && day>=row.DueDate && row.ExecutedAt==null)reviewHistory[i]=row with{ExecutedAttemptId=attempt.Id,ExecutedAt=attempt.CreatedAt};}
     }
     void SynchronizeHistory(Attempt attempt)
     {
@@ -84,7 +84,7 @@ public sealed class IncrementalAssessment
             if (!duplicate) encounters[q.Id]=time;
             if (q.VariantGroupId.HasValue) variants.Add(q.VariantGroupId.Value);
             var trusted=g.Result is "Correct" or "Incorrect" or "Partial";
-            var independentlyCorrect=trusted && g.Result=="Correct" && a.HintLevel==0 && !a.AnswerShown && !duplicate;
+            var independentlyCorrect=trusted && ReviewTargets.WholeIndependent(input) && !duplicate;
             var primary=q.Mappings.FirstOrDefault(m => m.Mode!="None")?.KCId;
             if (trusted && !duplicate)
             {
@@ -102,7 +102,7 @@ public sealed class IncrementalAssessment
                     }
                     else if (g.Result=="Correct") r.DueDate=day.AddDays(2);
                 }
-                if (independentlyCorrect && input.Task.ReviewTargetId is Guid target && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
+                if (!duplicate && input.Task.ReviewTargetId is Guid target && ReviewTargets.IndependentPass(input,target) && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
                 { kr.Stage="LowFrequency"; kr.DueDate=day.AddDays(30); }
             }
             var mappings=q.Policy=="NoEvidence" ? [] : q.Mappings.Where(m => m.Mode!="None" && m.Role is not "Prerequisite" and not "Context").ToArray();

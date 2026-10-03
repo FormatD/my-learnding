@@ -10,7 +10,7 @@ public static class Assessment
     public const string InputHashVersion="assessment-input/2";
     public const string EvidenceRuleVersion="evidence/1.1";
     public const string MasteryModelVersion="mastery/1.1";
-    public const string ReviewRuleVersion="review/1";
+    public const string ReviewRuleVersion="review/2";
     public static async Task<AssessmentStatus> ReadStatus(Database db,Actor actor,Guid studentId,CancellationToken ct=default)
     {
         actor.Require("Parent");
@@ -65,7 +65,7 @@ public static class Assessment
             if (!duplicate) encounters[q.Id]=time;
             if (q.VariantGroupId.HasValue) variants.Add(q.VariantGroupId.Value);
             var trusted=g.Result is "Correct" or "Incorrect" or "Partial";
-            var independentlyCorrect=trusted && g.Result=="Correct" && a.HintLevel==0 && !a.AnswerShown && !duplicate;
+            var independentlyCorrect=trusted && ReviewTargets.WholeIndependent(input) && !duplicate;
             var primary=q.Mappings.FirstOrDefault(m => m.Mode!="None")?.KCId;
             if (trusted && !duplicate)
             {
@@ -83,7 +83,7 @@ public static class Assessment
                     }
                     else if (g.Result=="Correct") r.DueDate=day.AddDays(2);
                 }
-                if (independentlyCorrect && input.Task.ReviewTargetId is Guid target && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
+                if (!duplicate && input.Task.ReviewTargetId is Guid target && ReviewTargets.IndependentPass(input,target) && reviews.TryGetValue(("KC",target),out var kr) && day>=kr.DueDate)
                 { kr.Stage="LowFrequency"; kr.DueDate=day.AddDays(30); }
             }
             var mappings=q.Policy=="NoEvidence" ? [] : q.Mappings.Where(m => m.Mode!="None" && m.Role is not "Prerequisite" and not "Context").ToArray();
