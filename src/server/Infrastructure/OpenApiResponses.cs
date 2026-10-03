@@ -3,6 +3,8 @@ using Microsoft.OpenApi;
 namespace Learning;
 public record DownloadResponseMetadata(string[] MediaTypes);
 public record NullableResponseMetadata;
+// Additive fields may be absent when a client reads an older server response.
+public record OptionalResponseFieldsMetadata(params string[] Fields);
 public static class OpenApiResponses
 {
     public static void Configure(Microsoft.AspNetCore.OpenApi.OpenApiOptions options)
@@ -13,6 +15,10 @@ public static class OpenApiResponses
         options.AddOperationTransformer(async(operation,context,ct)=>
         {
             var metadata=context.Description.ActionDescriptor.EndpointMetadata;
+            if(metadata.OfType<OptionalResponseFieldsMetadata>().FirstOrDefault() is { } optional)
+                foreach(var response in operation.Responses!.Where(r=>r.Key.StartsWith('2')))
+                    if(response.Value.Content is { } content && content.TryGetValue("application/json",out var media) && media.Schema is OpenApiSchema schema)
+                        foreach(var field in optional.Fields) schema.Required?.Remove(field);
             if(metadata.OfType<DownloadResponseMetadata>().FirstOrDefault() is { } download)
             {
                 operation.Responses!["200"]=new OpenApiResponse

@@ -1,6 +1,12 @@
 namespace Learning;
 public class BuilderCall:Row
 {
+    public DateOnly? BudgetDay {get;set;}
+    public decimal? ReservedCost {get;set;}
+    public long? ReservedTokens {get;set;}
+    public string? QuotePayload {get;set;}
+    public string? BudgetSnapshot {get;set;}
+    public string? BudgetState {get;set;}
     public Guid RunId {get;set;}
     public Guid ExecutionId {get;set;}
     public int RetryRound {get;set;}

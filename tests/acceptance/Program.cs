@@ -178,6 +178,7 @@ Test("Builder 严格结构、真实引文与未知字段拒绝",BuilderProtocolC
 Test("Builder 一次受控修复、超时取消与输入上限",BuilderProtocolCases.Control);
 Test("Builder 固定配置摘要、受控限额与旧缺口不补造",BuilderProtocolCases.Configuration);
 Test("调用用量区分未知、确认费用与本地免费，不接受错误计费值",()=>{BuilderCallTracking.ValidateUsage(null);BuilderCallTracking.ValidateUsage(new(null,null,0,null,"LocalNoCharge"));BuilderCallTracking.ValidateUsage(new(10,20,.001m,"USD","Confirmed"));foreach(var usage in new[]{new BuilderUsage(-1,null,null,null),new BuilderUsage(null,null,1,null,"Unknown"),new BuilderUsage(null,null,-1,"USD","Confirmed"),new BuilderUsage(null,null,.0000001m,"USD","Confirmed"),new BuilderUsage(0,null,0,null,"LocalNoCharge")}){try{BuilderCallTracking.ValidateUsage(usage);throw new Exception("bad usage accepted");}catch(ApiError e){Eq(e.Code,"BUILDER_USAGE_INVALID");}}});
+Test("预算预留跨日保留未知值，明确返回结算，旧缺口不补造",BuilderBudgetCases.Calculate);
 var failed=0;
 foreach (var (name,action) in tests) { try { action();Console.WriteLine($"PASS {name}"); } catch(Exception ex) { failed++;Console.WriteLine($"FAIL {name}: {ex.Message}"); } }
 Console.WriteLine($"{tests.Count-failed}/{tests.Count} passed");return failed>0?1:0;

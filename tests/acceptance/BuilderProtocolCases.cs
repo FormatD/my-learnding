@@ -52,11 +52,13 @@ public static class BuilderProtocolCases
     sealed class Fake(params string[] outputs):IBuilderCandidateProvider
     {
         public List<BuilderProviderRequest> Requests {get;}=[];
+        public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
         public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){ct.ThrowIfCancellationRequested();Requests.Add(request);return Task.FromResult(new BuilderProviderResponse(outputs[Requests.Count-1]));}
     }
     sealed class Slow:IBuilderCandidateProvider
     {
         public int Calls;
+        public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
         public async Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){Calls++;await Task.Delay(Timeout.Infinite,ct);return new("{}");}
     }
 }

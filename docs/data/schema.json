@@ -132,6 +132,10 @@
     {
       "id": "20261002225131_BuilderCallLedger",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261002232840_BuilderBudgetReservations",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1466,6 +1470,290 @@
       ]
     },
     {
+      "name": "BuilderBudgetPolicy",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DailyCostLimit",
+          "type": "numeric(16,6)",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DailyTokenLimit",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PerCallCostLimit",
+          "type": "numeric(16,6)",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PerCallTokenLimit",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MaxConcurrentCalls",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Revision",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Currency",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_BuilderBudgetPolicy_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderBudgetPolicy",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_BuilderBudgetPolicy_FamilyId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderBudgetPolicy_FamilyId\" ON public.\"BuilderBudgetPolicy\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "PK_BuilderBudgetPolicy",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderBudgetPolicy\" ON public.\"BuilderBudgetPolicy\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BuilderBudgetReconciliation",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CallId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ActorId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ChargedCost",
+          "type": "numeric(16,6)",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Currency",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReceiptReference",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Source",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_BuilderBudgetReconciliation_Accounts_FamilyId_ActorId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ActorId\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderBudgetReconciliation_BuilderCall_FamilyId_CallId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CallId\") REFERENCES \"BuilderCall\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderBudgetReconciliation_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderBudgetReconciliation",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_BuilderBudgetReconciliation_CallId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderBudgetReconciliation_CallId\" ON public.\"BuilderBudgetReconciliation\" USING btree (\"CallId\")"
+        },
+        {
+          "name": "IX_BuilderBudgetReconciliation_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderBudgetReconciliation_FamilyId\" ON public.\"BuilderBudgetReconciliation\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BuilderBudgetReconciliation_FamilyId_ActorId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderBudgetReconciliation_FamilyId_ActorId\" ON public.\"BuilderBudgetReconciliation\" USING btree (\"FamilyId\", \"ActorId\")"
+        },
+        {
+          "name": "IX_BuilderBudgetReconciliation_FamilyId_CallId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderBudgetReconciliation_FamilyId_CallId\" ON public.\"BuilderBudgetReconciliation\" USING btree (\"FamilyId\", \"CallId\")"
+        },
+        {
+          "name": "PK_BuilderBudgetReconciliation",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderBudgetReconciliation\" ON public.\"BuilderBudgetReconciliation\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
       "name": "BuilderCall",
       "columns": [
         {
@@ -1659,9 +1947,65 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "BudgetDay",
+          "type": "date",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "BudgetSnapshot",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "BudgetState",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "QuotePayload",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReservedCost",
+          "type": "numeric(16,6)",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReservedTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "AK_BuilderCall_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "FK_BuilderCall_BuilderRuns_FamilyId_RunId",
           "kind": "f",
@@ -1688,6 +2032,12 @@
         }
       ],
       "indexes": [
+        {
+          "name": "AK_BuilderCall_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_BuilderCall_FamilyId_Id\" ON public.\"BuilderCall\" USING btree (\"FamilyId\", \"Id\")"
+        },
         {
           "name": "IX_BuilderCall_ExecutionId_CallNumber",
           "unique": true,

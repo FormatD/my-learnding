@@ -10,6 +10,7 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="builder-budget"){await BuilderBudgetPersistenceCases.Run(db);return;}
 if(args[0]=="builder-config")
 {
     await db.Database.MigrateAsync();var family=new Family();var source=new Source{FamilyId=family.Id,Title="固定配置数据库验收",Text="先乘除。\n后加减。",Hash=Content.Hash("先乘除。\n后加减。")};db.AddRange(family,source);db.AddRange(new Chunk{FamilyId=family.Id,SourceId=source.Id,Locator="段落1",Text="先乘除。"},new Chunk{FamilyId=family.Id,SourceId=source.Id,Locator="段落2",Text="后加减。"});await db.SaveChangesAsync();
@@ -202,7 +203,7 @@ if(args[0]=="crash")
 }
 if(args[0]=="builder-ledger-usage")
 {
-    await db.Database.MigrateAsync();var family=new Family();var source=new Source{FamilyId=family.Id,Title="受控计费响应夹具",Text="先乘除后加减。",Hash="usage-fixture"};var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,InputHash="usage-input"};var chunk=new Chunk{FamilyId=family.Id,SourceId=source.Id,Locator="段落1",Text=source.Text};db.AddRange(family,source,run,chunk);await db.SaveChangesAsync();var fragments=new[]{new BuilderFragment(chunk.Id,chunk.Text)};var valid=await new MockBuilderCandidateProvider().Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None);
+    await db.Database.MigrateAsync();var family=new Family();var source=new Source{FamilyId=family.Id,Title="受控计费响应夹具",Text="先乘除后加减。",Hash="usage-fixture"};var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,InputHash="usage-input"};var chunk=new Chunk{FamilyId=family.Id,SourceId=source.Id,Locator="段落1",Text=source.Text};db.AddRange(family,source,run,chunk);await db.SaveChangesAsync();db.Add(new BuilderBudgetPolicy{FamilyId=family.Id,DailyCostLimit=1,PerCallCostLimit=.001m,DailyTokenLimit=1000,PerCallTokenLimit=100});await db.SaveChangesAsync();var fragments=new[]{new BuilderFragment(chunk.Id,chunk.Text)};var valid=await new MockBuilderCandidateProvider().Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None);
     await using(var transaction=await db.Database.BeginTransactionAsync())
     {
         await db.Lock(family.Id);var tracker=new BuilderCallTracking(db,run,1,new UsageFixtureProvider(new("{invalid",new(11,22,.000123m,"USD","Confirmed")),new(valid.Output,new(13,24,.000456m,"USD","Confirmed"))));var result=await BuilderProtocol.Run(tracker,fragments,new BuilderLimits(),CancellationToken.None);Assert(result.Calls==2 && result.Repaired,"fixture did not repair once");await transaction.RollbackAsync();
@@ -221,7 +222,7 @@ if(args[0]=="builder-call-started-crash")
 }
 if(args[0]=="builder-call-started-recover")
 {
-    var priorCall=await db.Set<BuilderCall>().SingleAsync();Assert(priorCall.Status=="Started" && priorCall.BillingStatus=="Unknown" && priorCall.ChargedCost==null && priorCall.FinishedAt==null && priorCall.ElapsedMilliseconds==null,"unfinished call invented result or zero fee");await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();Assert(await db.Set<BuilderCall>().CountAsync()==2 && (await db.Set<BuilderCall>().SingleAsync(c=>c.Id==priorCall.Id)).Status=="Started" && await db.Candidates.CountAsync()==1,"retry overwrote unknown prior call");Console.WriteLine("PASS 调用开始保存后实际终止进程，结果和费用保持未知；恢复新调用不抹掉旧缺口");return;
+    var priorCall=await db.Set<BuilderCall>().SingleAsync();Assert(priorCall.Status=="Started" && priorCall.BillingStatus=="Unknown" && priorCall.ChargedCost==null && priorCall.FinishedAt==null && priorCall.ElapsedMilliseconds==null,"unfinished call invented result or zero fee");await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();Assert(await db.Set<BuilderCall>().CountAsync()==2 && (await db.Set<BuilderCall>().SingleAsync(c=>c.Id==priorCall.Id)).Status=="Started" && !await db.Candidates.AnyAsync() && (await db.BuilderRuns.SingleAsync()).Error=="BUILDER_CONCURRENCY_LIMIT","unknown physical call released its slot automatically");var actor=new Account{FamilyId=priorCall.FamilyId,UserName="budget-crash-fixture-"+Guid.NewGuid()};db.Add(actor);await db.SaveChangesAsync();db.Add(new BuilderBudgetReconciliation{FamilyId=priorCall.FamilyId,CallId=priorCall.Id,ActorId=actor.Id,ChargedCost=0,Reason="隔离夹具已实际终止原进程",ReceiptReference="observed test worker SIGKILL"});var pending=await db.BuilderRuns.SingleAsync();pending.Status="Queued";pending.Error=null;pending.RetryRound++;await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();Assert(await db.Set<BuilderCall>().CountAsync()==3 && (await db.Set<BuilderCall>().SingleAsync(c=>c.Id==priorCall.Id)).Status=="Started" && await db.Candidates.CountAsync()==1,"manual local termination reconciliation rewrote history or failed to release slot");Console.WriteLine("PASS 调用开始保存后实际终止进程，结果和费用保持未知；恢复新调用不抹掉旧缺口");return;
 }
 if(args[0]=="builder-call-crash-recover")
 {
@@ -324,10 +325,12 @@ sealed class PauseOutboxCount:DbCommandInterceptor
 
 sealed class PauseBuilderProvider:IBuilderCandidateProvider
 {
+    public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
     public async Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){Console.WriteLine("CALL_STARTED");Console.Out.Flush();await Task.Delay(Timeout.Infinite,ct);return new("{}");}
 }
 
 sealed class UsageFixtureProvider(params BuilderProviderResponse[] responses):IBuilderCandidateProvider
 {
+    public BuilderQuote Quote(BuilderProviderRequest request)=>new(.001m,100,"USD");
     int number;public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){ct.ThrowIfCancellationRequested();return Task.FromResult(responses[number++]);}
 }

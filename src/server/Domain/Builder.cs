@@ -9,7 +9,7 @@ public static class Builder
 {
     public static void Map(RouteGroupBuilder api)
     {
-        Provenance.Map(api);BuilderCallTracking.Map(api);
+        Provenance.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);
         api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
         api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
         {
@@ -35,7 +35,7 @@ public static class Builder
             var a=ctx.Actor();a.Require("ContentEditor");var run=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","找不到建库任务。");
             if(string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000)throw new ApiError(422,"REASON_REQUIRED","请填写重新处理的依据，最多4000字。");
             if(run.Status!="Failed")throw new ApiError(409,"RUN_NOT_FAILED","只可重新处理已停止的失败任务。");
-            if(run.Error!="BUILDER_PROCESSING_FAILED")throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
+            if(run.Error is not ("BUILDER_PROCESSING_FAILED" or "BUILDER_CONCURRENCY_LIMIT" or "BUILDER_USAGE_RECONCILIATION_REQUIRED" or "BUILDER_CALL_BUDGET_LIMIT" or "BUILDER_DAILY_BUDGET_LIMIT"))throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
             await ValidateRun(db,run);
             if(await db.Candidates.AnyAsync(c=>c.RunId==id) || run.Type=="ParsePDF" && await db.Chunks.AnyAsync(c=>c.SourceId==run.SourceId))throw new ApiError(422,"RUN_OUTPUT_EXISTS","已有输出不能再次生成；请检查原运行记录。");
             var before=Json.Write(run);run.Status="Queued";run.Retries=0;run.RetryRound++;run.NextAttemptAt=null;run.CompletedAt=null;run.Error=null;

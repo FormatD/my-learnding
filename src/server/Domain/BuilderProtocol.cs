@@ -8,6 +8,7 @@ public record BuilderEnvelope(string SchemaVersion,BuilderCandidateOutput[] Cand
 public record BuilderProviderRequest(BuilderFragment[] Fragments,string Schema,string? InvalidOutput=null,string? ValidationCode=null);
 public interface IBuilderCandidateProvider
 {
+    BuilderQuote Quote(BuilderProviderRequest request);
     Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct);
 }
 public record BuilderProtocolResult(BuilderEnvelope Output,int Calls,bool Repaired);
@@ -100,6 +101,7 @@ public static class BuilderProtocol
 // Local workflow fixture only. No external model or invented extraction quality.
 public sealed class MockBuilderCandidateProvider:IBuilderCandidateProvider
 {
+    public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
     static string Prefix(string value,int max){var length=Math.Min(max,value.Length);if(length<value.Length && char.IsHighSurrogate(value[length-1]))length--;return value[..length];}
     public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct)
     {

@@ -118,6 +118,8 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
         b.Entity<ReleaseMappingSet>().HasIndex(s=>new{s.ReleaseId,s.OwnerType,s.OwnerId}).IsUnique();
         Foreign<MappingSetRevision, MappingSetItem>(b,"SetRevisionId"); Foreign<ContentIdentity, MappingSetItem>(b,"KCId"); Foreign<ContentRevision, MappingSetItem>(b,"KCRevisionId");
         b.Entity<MappingSetItem>().HasIndex(i=>new{i.SetRevisionId,i.Sequence}).IsUnique();
+        b.Entity<BuilderBudgetPolicy>().HasIndex(p=>p.FamilyId).IsUnique();b.Entity<BuilderBudgetPolicy>().Property(p=>p.DailyCostLimit).HasPrecision(16,6);b.Entity<BuilderBudgetPolicy>().Property(p=>p.PerCallCostLimit).HasPrecision(16,6);b.Entity<BuilderCall>().Property(c=>c.ReservedCost).HasPrecision(16,6);
+        Foreign<BuilderCall,BuilderBudgetReconciliation>(b,"CallId");Foreign<Account,BuilderBudgetReconciliation>(b,"ActorId");b.Entity<BuilderBudgetReconciliation>().HasIndex(r=>r.CallId).IsUnique();b.Entity<BuilderBudgetReconciliation>().Property(r=>r.ChargedCost).HasPrecision(16,6);
         Foreign<BuilderRun,BuilderCall>(b,"RunId");b.Entity<BuilderCall>().HasIndex(c=>new{c.ExecutionId,c.CallNumber}).IsUnique();b.Entity<BuilderCall>().Property(c=>c.ChargedCost).HasPrecision(16,6);
         Foreign<BuilderRun, BuilderAttempt>(b,"RunId");b.Entity<BuilderAttempt>().HasIndex(a=>new{a.RunId,a.RetryRound,a.Number}).IsUnique();
         Foreign<Release, BuilderRun>(b,"LibraryReleaseId"); Foreign<ContentDraft, Candidate>(b,"CreatedDraftId"); Foreign<BuilderRun, Candidate>(b, "RunId"); Foreign<Chunk, Candidate>(b, "ChunkId");

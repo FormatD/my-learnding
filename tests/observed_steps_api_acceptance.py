@@ -48,7 +48,8 @@ def main():
         if c.request('/builder/calls?runId='+run['id'])['total']:break
         time.sleep(.05)
     else:raise AssertionError('scoped call ledger not visible to owner')
+    callid=c.request('/builder/calls?runId='+run['id'])['calls'][0]['id'];other.request('/builder/calls/'+callid+':reconcile',{'providerFinished':True,'chargedCost':0,'currency':None,'inputTokens':None,'outputTokens':None,'reason':'不能跨家庭核对','receiptReference':'fixture'},expected=404)
     c.request('/students/'+sid+'/child-sessions',{});c.request('/attempts/'+aid+'/grading-context',expected=403);c.request('/plans/'+rev['id']+'/questions',expected=403);c.request('/students/'+sid+'/assessment-contexts',expected=403);c.request('/students/'+sid+'/evidence-revocations',expected=403)
-    c.request('/builder/calls',expected=403);c.request('/content/mapping-sets',expected=403);c.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=403);c.request('/content/mapping-sets',direct,expected=403)
+    c.request('/builder/calls/'+callid+':reconcile',{'providerFinished':True,'chargedCost':0,'currency':None,'inputTokens':None,'outputTokens':None,'reason':'孩子不能核对','receiptReference':'fixture'},expected=403);c.request('/builder/budget',expected=403);c.request('/builder/budget',{'dailyCostLimit':0,'dailyTokenLimit':0,'perCallCostLimit':0,'perCallTokenLimit':0,'maxConcurrentCalls':1,'reason':'孩子不能修改预算'},method='PUT',expected=403);c.request('/builder/calls',expected=403);c.request('/content/mapping-sets',expected=403);c.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=403);c.request('/content/mapping-sets',direct,expected=403)
     print('PASS 独立映射真实草稿跨家庭404、列表隔离、孩子拒绝读写；孩子不能获取参考答案与家长观察判分上下文')
 if __name__=='__main__':main()

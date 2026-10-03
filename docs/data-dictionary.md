@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 57 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 59 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -50,6 +50,7 @@
 | 20261002222837_BuilderStructuredProtocol | 10.0.4 |
 | 20261002224110_BuilderFrozenConfiguration | 10.0.4 |
 | 20261002225131_BuilderCallLedger | 10.0.4 |
+| 20261002232840_BuilderBudgetReservations | 10.0.4 |
 
 ## Accounts
 
@@ -324,6 +325,67 @@
 - `CREATE UNIQUE INDEX "IX_BuilderAttempt_RunId_RetryRound_Number" ON public."BuilderAttempt" USING btree ("RunId", "RetryRound", "Number")`
 - `CREATE UNIQUE INDEX "PK_BuilderAttempt" ON public."BuilderAttempt" USING btree ("Id")`
 
+## BuilderBudgetPolicy
+
+家庭当前调用费用/Token上限与并发名额；独立预算锁保护预留与结算。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| DailyCostLimit | numeric(16,6) | 否 | 无 |
+| DailyTokenLimit | bigint | 否 | 无 |
+| PerCallCostLimit | numeric(16,6) | 否 | 无 |
+| PerCallTokenLimit | bigint | 否 | 无 |
+| MaxConcurrentCalls | integer | 否 | 无 |
+| Revision | integer | 否 | 无 |
+| Currency | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_BuilderBudgetPolicy_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderBudgetPolicy`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_BuilderBudgetPolicy_FamilyId" ON public."BuilderBudgetPolicy" USING btree ("FamilyId")`
+- `CREATE UNIQUE INDEX "PK_BuilderBudgetPolicy" ON public."BuilderBudgetPolicy" USING btree ("Id")`
+
+## BuilderBudgetReconciliation
+
+家庭负责人追加的调用结束和费用/用量核对，原调用事实不改写。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| CallId | uuid | 否 | 无 |
+| ActorId | uuid | 否 | 无 |
+| ChargedCost | numeric(16,6) | 否 | 无 |
+| Currency | text | 是 | 无 |
+| InputTokens | bigint | 是 | 无 |
+| OutputTokens | bigint | 是 | 无 |
+| Reason | text | 否 | 无 |
+| ReceiptReference | text | 否 | 无 |
+| Source | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_BuilderBudgetReconciliation_Accounts_FamilyId_ActorId`：`FOREIGN KEY ("FamilyId", "ActorId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderBudgetReconciliation_BuilderCall_FamilyId_CallId`：`FOREIGN KEY ("FamilyId", "CallId") REFERENCES "BuilderCall"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderBudgetReconciliation_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderBudgetReconciliation`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_BuilderBudgetReconciliation_CallId" ON public."BuilderBudgetReconciliation" USING btree ("CallId")`
+- `CREATE INDEX "IX_BuilderBudgetReconciliation_FamilyId" ON public."BuilderBudgetReconciliation" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderBudgetReconciliation_FamilyId_ActorId" ON public."BuilderBudgetReconciliation" USING btree ("FamilyId", "ActorId")`
+- `CREATE INDEX "IX_BuilderBudgetReconciliation_FamilyId_CallId" ON public."BuilderBudgetReconciliation" USING btree ("FamilyId", "CallId")`
+- `CREATE UNIQUE INDEX "PK_BuilderBudgetReconciliation" ON public."BuilderBudgetReconciliation" USING btree ("Id")`
+
 ## BuilderCall
 
 独立提交的逐次调用事实、执行身份、实际用量/费用或未知状态；候选回滚不删除，旧历史不补造。
@@ -354,15 +416,23 @@
 | ErrorCode | text | 是 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| BudgetDay | date | 是 | 无 |
+| BudgetSnapshot | text | 是 | 无 |
+| BudgetState | text | 是 | 无 |
+| QuotePayload | text | 是 | 无 |
+| ReservedCost | numeric(16,6) | 是 | 无 |
+| ReservedTokens | bigint | 是 | 无 |
 
 约束：
 
+- `AK_BuilderCall_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
 - `FK_BuilderCall_BuilderRuns_FamilyId_RunId`：`FOREIGN KEY ("FamilyId", "RunId") REFERENCES "BuilderRuns"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_BuilderCall_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `PK_BuilderCall`：`PRIMARY KEY ("Id")`
 
 索引（包含约束自动创建的索引）：
 
+- `CREATE UNIQUE INDEX "AK_BuilderCall_FamilyId_Id" ON public."BuilderCall" USING btree ("FamilyId", "Id")`
 - `CREATE UNIQUE INDEX "IX_BuilderCall_ExecutionId_CallNumber" ON public."BuilderCall" USING btree ("ExecutionId", "CallNumber")`
 - `CREATE INDEX "IX_BuilderCall_FamilyId" ON public."BuilderCall" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_BuilderCall_FamilyId_RunId" ON public."BuilderCall" USING btree ("FamilyId", "RunId")`
