@@ -50,6 +50,7 @@ jobs:
           npm ci --prefix src/web
           dotnet restore src/server --locked-mode
           dotnet restore tests/acceptance --locked-mode
+          dotnet restore tests/persistence --locked-mode
       - name: Read previous contract without modifying it
         run: |
           python3 - <<'PY'

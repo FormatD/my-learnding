@@ -3,6 +3,7 @@ set -eu
 task_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$task_root"
 sh scripts/check.sh
+if test -x .tools/dotnet/dotnet; then .tools/dotnet/dotnet build tests/persistence --no-restore; else dotnet build tests/persistence --no-restore; fi
 python3 tests/openapi_contract_acceptance.py
 if test "$#" -gt 0; then
     python3 tests/openapi_acceptance.py --baseline "$1"
@@ -27,3 +28,7 @@ python3 tests/job_cancellation_acceptance.py
 # Stateful incremental transitions, immutable persistence and suffix crash recovery.
 python3 tests/incremental_checkpoint_persistence_acceptance.py
 python3 tests/incremental_checkpoint_fault_acceptance.py
+
+# Online active-generation append and real rollback/recovery.
+python3 tests/online_assessment_acceptance.py
+python3 tests/online_assessment_fault_acceptance.py

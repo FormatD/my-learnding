@@ -23,7 +23,8 @@ def verify(c,sid):
             envelope=json.loads(fact['payload'])
             assert fact['studentId']==sid and fact['aggregateId']==event['attemptId'] and fact['dispatchTarget']=='assessment/1' and row['domainEventId']==fact['id'] and envelope['eventType']==fact['eventType']
             assert any(e['id']==fact['id'] for e in individual['domainEvents'])
-        assert event['studentId']==sid and event['processedAt'] and job['studentId']==sid and job['targetGenerationId'] and gen['studentId']==sid and gen['inputHash']==row['inputHash']
+        assert event['studentId']==sid and event['processedAt'] and job['studentId']==sid and job['targetGenerationId'] and gen['studentId']==sid
+        checkpoint=next(x for x in data['AssessmentCheckpoint'] if x['id']==row['checkpointId']);assert checkpoint['studentId']==sid and checkpoint['familyId']==row['familyId'] and checkpoint['generationId']==gen['id'] and checkpoint['inputHash']==row['inputHash']
         assert any(r['id']==row['id'] for r in data['ConsumerReceipt'])
         assert any(r['id']==row['id'] for r in individual['consumerReceipts']) and any(o['id']==row['eventId'] for o in individual['outbox']) and any(j['id']==row['jobId'] for j in individual['backgroundJobs'])
     print('PASS real assessment receipts bind private event/student/job/result hash and export without inventing prior history')

@@ -58,6 +58,7 @@
 | 20261003165910_AssessmentRebuildRequests | 10.0.4 |
 | 20261003171507_AssessmentInputHashVersion | 10.0.4 |
 | 20261003182502_IncrementalAssessmentCheckpoints | 10.0.4 |
+| 20261003191349_OnlineAssessmentAppend | 10.0.4 |
 
 ## Accounts
 
@@ -130,9 +131,15 @@
 | PayloadHash | text | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| CalculationMode | text | 是 | 无 |
+| Cursor | bigint | 是 | 无 |
+| InputHash | text | 是 | 无 |
+| ProcessedInputCount | integer | 是 | 无 |
 
 约束：
 
+- `AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId`：`UNIQUE ("FamilyId", "Id", "StudentId", "GenerationId")`
+- `CK_AssessmentCheckpoint_Application`：`CHECK ("InputHash" IS NULL AND "Cursor" IS NULL AND "CalculationMode" IS NULL AND "ProcessedInputCount" IS NULL OR "InputHash" IS NOT NULL AND length("InputHash") = 64 AND "Cursor" IS NOT NULL AND "Cursor" >= 0 AND "CalculationMode" IS NOT NULL AND ("CalculationMode" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text, 'OnlineAppend'::text])) AND "ProcessedInputCount" IS NOT NULL AND "ProcessedInputCount" >= 0 AND "ProcessedInputCount" <= "InputCount")`
 - `CK_AssessmentCheckpoint_State`：`CHECK ("InputCount" >= 0 AND length("PrefixHash") = 64 AND length("PayloadHash") = 64 AND jsonb_typeof("Payload"::jsonb) = 'object'::text)`
 - `FK_AssessmentCheckpoint_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_AssessmentCheckpoint_Generations_FamilyId_GenerationId_Stud~`：`FOREIGN KEY ("FamilyId", "GenerationId", "StudentId") REFERENCES "Generations"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
@@ -141,10 +148,11 @@
 
 索引（包含约束自动创建的索引）：
 
+- `CREATE UNIQUE INDEX "AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "Id", "StudentId", "GenerationId")`
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId" ON public."AssessmentCheckpoint" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_GenerationId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "GenerationId", "StudentId")`
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "StudentId")`
-- `CREATE UNIQUE INDEX "IX_AssessmentCheckpoint_GenerationId" ON public."AssessmentCheckpoint" USING btree ("GenerationId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentCheckpoint_GenerationId_InputCount" ON public."AssessmentCheckpoint" USING btree ("GenerationId", "InputCount")`
 - `CREATE UNIQUE INDEX "PK_AssessmentCheckpoint" ON public."AssessmentCheckpoint" USING btree ("Id")`
 
 ## AssessmentContext
@@ -264,9 +272,11 @@
 | ReusedGeneration | boolean | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| CheckpointId | uuid | 是 | 无 |
 
 约束：
 
+- `FK_AssessmentRebuildResult_AssessmentCheckpoint_FamilyId_Check~`：`FOREIGN KEY ("FamilyId", "CheckpointId", "StudentId", "GenerationId") REFERENCES "AssessmentCheckpoint"("FamilyId", "Id", "StudentId", "GenerationId") ON DELETE CASCADE`
 - `FK_AssessmentRebuildResult_AssessmentRebuildRequest_FamilyId_R~`：`FOREIGN KEY ("FamilyId", "RequestId") REFERENCES "AssessmentRebuildRequest"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_AssessmentRebuildResult_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_AssessmentRebuildResult_DomainEvent_FamilyId_AppliedEventId`：`FOREIGN KEY ("FamilyId", "AppliedEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
@@ -280,6 +290,7 @@
 - `CREATE UNIQUE INDEX "IX_AssessmentRebuildResult_AppliedEventId" ON public."AssessmentRebuildResult" USING btree ("AppliedEventId")`
 - `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId" ON public."AssessmentRebuildResult" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_AppliedEventId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "AppliedEventId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_CheckpointId_StudentId_Gen~" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "CheckpointId", "StudentId", "GenerationId")`
 - `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_GenerationId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "GenerationId")`
 - `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_JobId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "JobId")`
 - `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_RequestId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "RequestId")`
@@ -765,9 +776,11 @@
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | DomainEventId | uuid | 是 | 无 |
+| CheckpointId | uuid | 是 | 无 |
 
 约束：
 
+- `FK_ConsumerReceipt_AssessmentCheckpoint_FamilyId_CheckpointId_~`：`FOREIGN KEY ("FamilyId", "CheckpointId", "StudentId", "GenerationId") REFERENCES "AssessmentCheckpoint"("FamilyId", "Id", "StudentId", "GenerationId") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_DomainEvent_FamilyId_DomainEventId`：`FOREIGN KEY ("FamilyId", "DomainEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
@@ -780,6 +793,7 @@
 
 - `CREATE UNIQUE INDEX "IX_ConsumerReceipt_ConsumerName_EventId" ON public."ConsumerReceipt" USING btree ("ConsumerName", "EventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId" ON public."ConsumerReceipt" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId_CheckpointId_StudentId_GenerationId" ON public."ConsumerReceipt" USING btree ("FamilyId", "CheckpointId", "StudentId", "GenerationId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_DomainEventId" ON public."ConsumerReceipt" USING btree ("FamilyId", "DomainEventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_EventId" ON public."ConsumerReceipt" USING btree ("FamilyId", "EventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_GenerationId" ON public."ConsumerReceipt" USING btree ("FamilyId", "GenerationId")`
@@ -1203,7 +1217,7 @@
 
 - `AK_Generations_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
 - `AK_Generations_FamilyId_Id_StudentId`：`UNIQUE ("FamilyId", "Id", "StudentId")`
-- `CK_Generations_Incremental`：`CHECK ("CalculationMode" IS NULL AND "ProcessedInputCount" IS NULL AND "IncrementalBaseGenerationId" IS NULL OR "CalculationMode" IS NOT NULL AND ("CalculationMode" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text])) AND "ProcessedInputCount" IS NOT NULL AND "ProcessedInputCount" >= 0 AND ("CalculationMode" = 'IncrementalAppend'::text AND "IncrementalBaseGenerationId" IS NOT NULL AND "IncrementalBaseGenerationId" <> "Id" OR "CalculationMode" <> 'IncrementalAppend'::text AND "IncrementalBaseGenerationId" IS NULL))`
+- `CK_Generations_Incremental`：`CHECK ("CalculationMode" IS NULL AND "ProcessedInputCount" IS NULL AND "IncrementalBaseGenerationId" IS NULL OR "CalculationMode" IS NOT NULL AND ("CalculationMode" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text, 'OnlineAppend'::text])) AND "ProcessedInputCount" IS NOT NULL AND "ProcessedInputCount" >= 0 AND ("CalculationMode" = 'IncrementalAppend'::text AND "IncrementalBaseGenerationId" IS NOT NULL AND "IncrementalBaseGenerationId" <> "Id" OR "CalculationMode" <> 'IncrementalAppend'::text AND "IncrementalBaseGenerationId" IS NULL))`
 - `FK_Generations_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Generations_Generations_FamilyId_IncrementalBaseGenerationI~`：`FOREIGN KEY ("FamilyId", "IncrementalBaseGenerationId", "StudentId") REFERENCES "Generations"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
 - `FK_Generations_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`

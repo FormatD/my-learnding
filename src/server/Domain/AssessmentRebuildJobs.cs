@@ -13,6 +13,7 @@ public class AssessmentRebuildRequest:Row
 }
 public class AssessmentRebuildResult:Row
 {
+    public Guid? CheckpointId {get;set;}
     public Guid StudentId {get;set;}
     public Guid RequestId {get;set;}
     public Guid JobId {get;set;}
@@ -49,7 +50,7 @@ public static class AssessmentRebuildJobs
                 var r=await db.Set<AssessmentRebuildRequest>().SingleOrDefaultAsync(r=>r.Id==lease.Job.InputRef && r.FamilyId==lease.Job.FamilyId,ct)??throw new ApiError(422,"JOB_INPUT_MISSING","原重建请求不存在。");
                 if(r.JobId!=lease.Job.Id || r.StudentId!=lease.Job.StudentId || r.TargetGenerationId!=lease.Job.TargetGenerationId || r.Snapshot!=lease.Job.InputPayload || r.SnapshotHash!=lease.Job.InputHash || Content.Hash(r.Snapshot)!=r.SnapshotHash)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","原重建请求与后台输入不一致。");
                 var existing=await db.Set<AssessmentRebuildResult>().SingleOrDefaultAsync(x=>x.RequestId==r.Id && x.FamilyId==r.FamilyId,ct);
-                if(existing!=null){if(existing.StudentId!=r.StudentId || existing.JobId!=r.JobId || !await db.Generations.AnyAsync(g=>g.Id==existing.GenerationId && g.FamilyId==r.FamilyId && g.StudentId==r.StudentId && g.InputHash==existing.InputHash && g.Cursor==existing.Cursor,ct) || !await db.Set<DomainEvent>().AnyAsync(e=>e.Id==existing.AppliedEventId && e.FamilyId==r.FamilyId && e.StudentId==r.StudentId && e.AggregateId==existing.GenerationId && e.EventType=="AssessmentApplied",ct))throw new ApiError(422,"REBUILD_RESULT_INVALID","原重建结果引用不完整，请核对记录。");await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return;}
+                if(existing!=null){if(existing.StudentId!=r.StudentId || existing.JobId!=r.JobId || !await AssessmentCheckpoints.ValidateResult(db,existing,ct) || !await db.Set<DomainEvent>().AnyAsync(e=>e.Id==existing.AppliedEventId && e.FamilyId==r.FamilyId && e.StudentId==r.StudentId && e.AggregateId==existing.GenerationId && e.EventType=="AssessmentApplied",ct))throw new ApiError(422,"REBUILD_RESULT_INVALID","原重建结果引用不完整，请核对记录。");await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return;}
                 if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","重建任务多次中断后已停止，请核对原请求后人工恢复。");
                 var f=Json.Read<RebuildDescriptor>(r.Snapshot);if(f.Version!="assessment-rebuild/1" || f.InputMode!="LatestCommittedUnderLock" || f.FamilyId!=r.FamilyId || f.StudentId!=r.StudentId || f.RequestedBy!=r.RequestedBy || f.TargetGenerationId!=r.TargetGenerationId || f.InputVersion!=Assessment.InputHashVersion || f.EvidenceRule!=Assessment.EvidenceRuleVersion || f.MasteryModel!=Assessment.MasteryModelVersion || f.ReviewRule!=Assessment.ReviewRuleVersion)throw new ApiError(422,"REBUILD_RULE_CHANGED","原评估规则已变化，请重新准备重建请求。");
                 var authorizedBy=r.RequestedBy;var authorized=lease.Job.RetryRound==0;
@@ -66,8 +67,8 @@ public static class AssessmentRebuildJobs
                 if(!new Actor(Guid.Empty,r.FamilyId,authorizedBy,null,"Parent",roles).Can("Parent"))throw new ApiError(422,"JOB_REQUESTER_FORBIDDEN","原家长权限已变化，请由有权限家长核对原请求后重新处理。");
                 var student=await db.Students.SingleAsync(s=>s.Id==r.StudentId && s.FamilyId==r.FamilyId,ct);if(student.TimeZone!=f.TimeZone)throw new ApiError(422,"REBUILD_STUDENT_CONFIG_CHANGED","学生时区已变化，请重新准备重建请求。");
                 var before=student.ActiveGenerationId;var applied=await AssessmentProjection.Apply(db,student,r.TargetGenerationId,lease.Job.Id,ct,f.ForceFull);var g=applied.Generation;
-                var ev=await DomainEvents.Append(db,r.FamilyId,r.StudentId,g.Id,"Generation","AssessmentApplied",new{origin="ParentRebuildJob",forceFull=f.ForceFull,requestId=r.Id,jobId=lease.Job.Id,targetGenerationId=r.TargetGenerationId,generationId=g.Id,g.InputHash,g.InputVersion,g.CalculationMode,g.ProcessedInputCount,g.IncrementalBaseGenerationId,g.Cursor,g.RuleVersion,g.ModelVersion,reusedGeneration=before==g.Id,originalRequestedBy=r.RequestedBy,authorizedBy,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
-                db.Add(new AssessmentRebuildResult{FamilyId=r.FamilyId,StudentId=r.StudentId,RequestId=r.Id,JobId=lease.Job.Id,GenerationId=g.Id,AppliedEventId=ev.Id,InputHash=g.InputHash,Cursor=g.Cursor,ReusedGeneration=before==g.Id});
+                var ev=await DomainEvents.Append(db,r.FamilyId,r.StudentId,g.Id,"Generation","AssessmentApplied",new{origin="ParentRebuildJob",forceFull=f.ForceFull,requestId=r.Id,jobId=lease.Job.Id,targetGenerationId=r.TargetGenerationId,checkpointId=applied.Checkpoint?.Id,generationId=g.Id,g.InputHash,g.InputVersion,g.CalculationMode,g.ProcessedInputCount,g.IncrementalBaseGenerationId,g.Cursor,g.RuleVersion,g.ModelVersion,reusedGeneration=before==g.Id,originalRequestedBy=r.RequestedBy,authorizedBy,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
+                db.Add(new AssessmentRebuildResult{FamilyId=r.FamilyId,StudentId=r.StudentId,RequestId=r.Id,JobId=lease.Job.Id,GenerationId=g.Id,CheckpointId=applied.Checkpoint?.Id,AppliedEventId=ev.Id,InputHash=g.InputHash,Cursor=g.Cursor,ReusedGeneration=before==g.Id});
                 await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);
             }
             catch(Exception ex)when(ex is not OperationCanceledException)

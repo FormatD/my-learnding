@@ -16,9 +16,9 @@ def verify(c,env):
 
     id=job();c.request('/students/'+student+'/mastery:full-rebuild',{'reason':'不能替换正在等待的普通请求'},expected=409);path='/background-jobs/'+id+':cancel';c.request(path,{'reason':''},expected=422)
     # Keep the real family work lock held; a cancellation must use its independent control transaction.
-    lock=subprocess.Popen(['psql','-At','-v','ON_ERROR_STOP=1'],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+    lock=subprocess.Popen(['psql','-qAt','-v','ON_ERROR_STOP=1'],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
-        lock.stdin.write(f"BEGIN; SELECT pg_advisory_xact_lock(hashtextextended('{family}',0));\n\\echo FAMILY_LOCK_HELD\nSELECT pg_sleep(10);\n");lock.stdin.flush();deadline=time.monotonic()+5
+        lock.stdin.write(f"BEGIN; SELECT 'FAMILY_LOCK_HELD' FROM pg_advisory_xact_lock(hashtextextended('{family}',0)); SELECT pg_sleep(10);\n");lock.stdin.flush();deadline=time.monotonic()+5
         while time.monotonic()<deadline:
             if select.select([lock.stdout],[],[],.2)[0] and lock.stdout.readline().strip()=='FAMILY_LOCK_HELD':break
         else:raise AssertionError('family work lock not confirmed')

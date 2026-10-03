@@ -164,6 +164,10 @@
     {
       "id": "20261003182502_IncrementalAssessmentCheckpoints",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003191349_OnlineAssessmentAppend",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -483,9 +487,57 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "CalculationMode",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Cursor",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ProcessedInputCount",
+          "type": "integer",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\", \"StudentId\", \"GenerationId\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_AssessmentCheckpoint_Application",
+          "kind": "c",
+          "definition": "CHECK (\"InputHash\" IS NULL AND \"Cursor\" IS NULL AND \"CalculationMode\" IS NULL AND \"ProcessedInputCount\" IS NULL OR \"InputHash\" IS NOT NULL AND length(\"InputHash\") = 64 AND \"Cursor\" IS NOT NULL AND \"Cursor\" >= 0 AND \"CalculationMode\" IS NOT NULL AND (\"CalculationMode\" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text, 'OnlineAppend'::text])) AND \"ProcessedInputCount\" IS NOT NULL AND \"ProcessedInputCount\" >= 0 AND \"ProcessedInputCount\" <= \"InputCount\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "CK_AssessmentCheckpoint_State",
           "kind": "c",
@@ -529,6 +581,12 @@
       ],
       "indexes": [
         {
+          "name": "AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\", \"Id\", \"StudentId\", \"GenerationId\")"
+        },
+        {
           "name": "IX_AssessmentCheckpoint_FamilyId",
           "unique": false,
           "valid": true,
@@ -547,10 +605,10 @@
           "definition": "CREATE INDEX \"IX_AssessmentCheckpoint_FamilyId_StudentId\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\", \"StudentId\")"
         },
         {
-          "name": "IX_AssessmentCheckpoint_GenerationId",
+          "name": "IX_AssessmentCheckpoint_GenerationId_InputCount",
           "unique": true,
           "valid": true,
-          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentCheckpoint_GenerationId\" ON public.\"AssessmentCheckpoint\" USING btree (\"GenerationId\")"
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentCheckpoint_GenerationId_InputCount\" ON public.\"AssessmentCheckpoint\" USING btree (\"GenerationId\", \"InputCount\")"
         },
         {
           "name": "PK_AssessmentCheckpoint",
@@ -1212,9 +1270,25 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "CheckpointId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "FK_AssessmentRebuildResult_AssessmentCheckpoint_FamilyId_Check~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CheckpointId\", \"StudentId\", \"GenerationId\") REFERENCES \"AssessmentCheckpoint\"(\"FamilyId\", \"Id\", \"StudentId\", \"GenerationId\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "FK_AssessmentRebuildResult_AssessmentRebuildRequest_FamilyId_R~",
           "kind": "f",
@@ -1290,6 +1364,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_AppliedEventId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"AppliedEventId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId_CheckpointId_StudentId_Gen~",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_CheckpointId_StudentId_Gen~\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"CheckpointId\", \"StudentId\", \"GenerationId\")"
         },
         {
           "name": "IX_AssessmentRebuildResult_FamilyId_GenerationId",
@@ -3748,9 +3828,25 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "CheckpointId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "FK_ConsumerReceipt_AssessmentCheckpoint_FamilyId_CheckpointId_~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CheckpointId\", \"StudentId\", \"GenerationId\") REFERENCES \"AssessmentCheckpoint\"(\"FamilyId\", \"Id\", \"StudentId\", \"GenerationId\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId",
           "kind": "f",
@@ -3820,6 +3916,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId_CheckpointId_StudentId_GenerationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId_CheckpointId_StudentId_GenerationId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"CheckpointId\", \"StudentId\", \"GenerationId\")"
         },
         {
           "name": "IX_ConsumerReceipt_FamilyId_DomainEventId",
@@ -5857,7 +5959,7 @@
         {
           "name": "CK_Generations_Incremental",
           "kind": "c",
-          "definition": "CHECK (\"CalculationMode\" IS NULL AND \"ProcessedInputCount\" IS NULL AND \"IncrementalBaseGenerationId\" IS NULL OR \"CalculationMode\" IS NOT NULL AND (\"CalculationMode\" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text])) AND \"ProcessedInputCount\" IS NOT NULL AND \"ProcessedInputCount\" >= 0 AND (\"CalculationMode\" = 'IncrementalAppend'::text AND \"IncrementalBaseGenerationId\" IS NOT NULL AND \"IncrementalBaseGenerationId\" <> \"Id\" OR \"CalculationMode\" <> 'IncrementalAppend'::text AND \"IncrementalBaseGenerationId\" IS NULL))",
+          "definition": "CHECK (\"CalculationMode\" IS NULL AND \"ProcessedInputCount\" IS NULL AND \"IncrementalBaseGenerationId\" IS NULL OR \"CalculationMode\" IS NOT NULL AND (\"CalculationMode\" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text, 'OnlineAppend'::text])) AND \"ProcessedInputCount\" IS NOT NULL AND \"ProcessedInputCount\" >= 0 AND (\"CalculationMode\" = 'IncrementalAppend'::text AND \"IncrementalBaseGenerationId\" IS NOT NULL AND \"IncrementalBaseGenerationId\" <> \"Id\" OR \"CalculationMode\" <> 'IncrementalAppend'::text AND \"IncrementalBaseGenerationId\" IS NULL))",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false

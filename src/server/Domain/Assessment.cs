@@ -217,15 +217,42 @@ public static class Assessment
         var teaching=tasks.Values.Where(t=>t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null).Select(t=>new TeachingAnchor(t.KCId!.Value,t.CompletedAt!.Value)).OrderBy(t=>t.Time).ThenBy(t=>t.KCId).ToArray();
         return(inputs,teaching);
     }
-    public static async Task Rebuild(Database db, Student student, CancellationToken ct=default,Guid? targetGenerationId=null,bool forceFull=false)
+    public static async Task Rebuild(Database db, Student student, CancellationToken ct=default,Guid? targetGenerationId=null,bool forceFull=false,bool online=false)
     {
         var (inputs,teaching)=await LoadInputs(db,student,ct);
         var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="assessment-context/1",inputVersion=InputHashVersion,timeZone=student.TimeZone,rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
         if (!forceFull && student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash && g.InputVersion==InputHashVersion,ct)) return;
         if(targetGenerationId!=null && await db.Generations.AnyAsync(g=>g.Id==targetGenerationId,ct))throw new ApiError(422,"GENERATION_TARGET_CONFLICT","固定重建目标已有不同结果，请核对消费记录。");
         var gen=new Generation { Id=targetGenerationId??Guid.NewGuid(),FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,InputVersion=InputHashVersion,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
+        IncrementalPreparation? prepared=null;
+        if(online && !forceFull && student.ActiveGenerationId is Guid activeId)
+        {
+            prepared=await AssessmentCheckpoints.Prepare(db,student,activeId,inputs,teaching,ct,online:true);
+            if(prepared.Mode=="OnlineAppend")
+            {
+                var current=await db.Generations.SingleAsync(g=>g.Id==activeId && g.FamilyId==student.FamilyId && g.StudentId==student.Id,ct);
+                if(current.Status!="Active")throw new ApiError(422,"INCREMENTAL_STATE_INVALID","学生活动指针与评估状态不一致。");
+                var appended=prepared.Engine.Output();
+                var contexts=await db.Set<AssessmentContext>().Where(c=>c.FamilyId==student.FamilyId && c.GenerationId==activeId).Select(c=>c.Id).ToArrayAsync(ct);
+                var evidence=await db.Evidence.Where(e=>e.FamilyId==student.FamilyId && e.GenerationId==activeId).Select(e=>e.Id).ToArrayAsync(ct);
+                var contextIds=contexts.ToHashSet();var evidenceIds=evidence.ToHashSet();
+                var outputContextIds=appended.Contexts.Select(c=>c.Id).ToHashSet();var outputEvidenceIds=appended.Evidence.Select(e=>e.Id).ToHashSet();
+                if(contexts.Length!=inputs.Length-prepared.ProcessedInputs || !contextIds.IsSubsetOf(outputContextIds) || !evidenceIds.IsSubsetOf(outputEvidenceIds) || appended.Evidence.Count(e=>e.ContextId is Guid contextId && contextIds.Contains(contextId))!=evidence.Length)throw new ApiError(422,"INCREMENTAL_STATE_INVALID","已提交评估与增量状态引用不一致。");
+                foreach(var c in appended.Contexts.Where(c=>!contextIds.Contains(c.Id))){c.ActivationStatus="Active";db.Add(c);}
+                db.Evidence.AddRange(appended.Evidence.Where(e=>!evidenceIds.Contains(e.Id)));
+                var masteries=await db.Masteries.Where(m=>m.FamilyId==student.FamilyId && m.GenerationId==activeId).ToDictionaryAsync(m=>m.Id,ct);
+                if(!masteries.Keys.ToHashSet().IsSubsetOf(appended.Masteries.Select(m=>m.Id).ToHashSet()))throw new ApiError(422,"INCREMENTAL_STATE_INVALID","掌握投影与增量状态引用不一致。");
+                foreach(var m in appended.Masteries){if(masteries.TryGetValue(m.Id,out var saved))db.Entry(saved).CurrentValues.SetValues(m);else db.Add(m);}
+                var reviews=await db.Reviews.Where(r=>r.FamilyId==student.FamilyId && r.GenerationId==activeId).ToDictionaryAsync(r=>r.Id,ct);
+                if(!reviews.Keys.ToHashSet().IsSubsetOf(appended.Reviews.Select(r=>r.Id).ToHashSet()))throw new ApiError(422,"INCREMENTAL_STATE_INVALID","复习投影与增量状态引用不一致。");
+                foreach(var r in appended.Reviews){if(reviews.TryGetValue(r.Id,out var saved))db.Entry(saved).CurrentValues.SetValues(r);else db.Add(r);}
+                current.InputHash=hash;current.Cursor=gen.Cursor;current.CalculationMode=prepared.Mode;current.ProcessedInputCount=prepared.ProcessedInputs;current.IncrementalBaseGenerationId=null;
+                AssessmentCheckpoints.Save(db,student,current,prepared);await db.SaveChangesAsync(ct);return;
+            }
+            prepared=prepared with{Engine=IncrementalAssessment.Fork(prepared.Engine.Freeze(),gen.Id)};
+        }
         db.Generations.Add(gen);
-        var prepared=await AssessmentCheckpoints.Prepare(db,student,gen.Id,inputs,teaching,ct,forceFull);var output=prepared.Engine.Output();gen.CalculationMode=prepared.Mode;gen.ProcessedInputCount=prepared.ProcessedInputs;gen.IncrementalBaseGenerationId=prepared.BaseGenerationId;
+        prepared??=await AssessmentCheckpoints.Prepare(db,student,gen.Id,inputs,teaching,ct,forceFull);var output=prepared.Engine.Output();gen.CalculationMode=prepared.Mode;gen.ProcessedInputCount=prepared.ProcessedInputs;gen.IncrementalBaseGenerationId=prepared.BaseGenerationId;
         await EvidenceRevocations.Apply(db,student,gen,output,ct);
         db.AddRange(output.Contexts);db.Evidence.AddRange(output.Evidence); db.Masteries.AddRange(output.Masteries); db.Reviews.AddRange(output.Reviews);
         if (student.ActiveGenerationId.HasValue)

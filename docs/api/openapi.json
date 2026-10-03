@@ -293,6 +293,13 @@
             "format": "uuid",
             "type": "string"
           },
+          "checkpointId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "createdAt": {
             "format": "date-time",
             "type": "string"
@@ -1841,6 +1848,13 @@
       },
       "ConsumerReceipt": {
         "properties": {
+          "checkpointId": {
+            "format": "uuid",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "consumerName": {
             "type": "string"
           },

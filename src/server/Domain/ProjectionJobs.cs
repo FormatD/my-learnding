@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Learning;
 public class ConsumerReceipt:Row
 {
+    public Guid? CheckpointId {get;set;}
     public Guid? DomainEventId {get;set;}
     public Guid StudentId {get;set;}
     public string ConsumerName {get;set;}="assessment/1";

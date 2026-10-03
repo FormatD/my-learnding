@@ -36,8 +36,8 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                 var student=await db.Students.SingleAsync(s=>s.Id==pending.StudentId && s.FamilyId==pending.FamilyId,ct);
                 // Catch-up deliberately reads the latest committed student inputs under the family lock.
                 // The target identity survives retries; new events are receipted only in this same result transaction.
-                var applied=await AssessmentProjection.Apply(db,student,lease.Job.TargetGenerationId.Value,lease.Job.Id,ct);var generation=applied.Generation;
-                await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{jobId=lease.Job.Id,generationId=generation.Id,generation.InputHash,generation.InputVersion,generation.CalculationMode,generation.ProcessedInputCount,generation.IncrementalBaseGenerationId,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
+                var applied=await AssessmentProjection.Apply(db,student,lease.Job.TargetGenerationId.Value,lease.Job.Id,ct,online:true);var generation=applied.Generation;
+                await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{jobId=lease.Job.Id,checkpointId=applied.Checkpoint?.Id,targetGenerationId=lease.Job.TargetGenerationId,generationId=generation.Id,generation.InputHash,generation.InputVersion,generation.CalculationMode,generation.ProcessedInputCount,generation.IncrementalBaseGenerationId,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
                 await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return true;
             }
             catch(Exception ex)when(ex is not OperationCanceledException)
