@@ -1548,6 +1548,75 @@
         },
         "type": "object"
       },
+      "BuilderCandidateOutput": {
+        "properties": {
+          "boundary": {
+            "type": "string"
+          },
+          "gradeMax": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "gradeMin": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "kcType": {
+            "type": "string"
+          },
+          "measurableBehavior": {
+            "type": "string"
+          },
+          "modelScore": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "sourceChunkIds": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "supportingQuotes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "subject",
+          "kcType",
+          "gradeMin",
+          "gradeMax",
+          "measurableBehavior",
+          "boundary",
+          "sourceChunkIds",
+          "supportingQuotes",
+          "modelScore"
+        ],
+        "type": "object"
+      },
       "BuilderReconciliationInput": {
         "properties": {
           "chargedCost": {
@@ -1794,6 +1863,137 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "CandidateReviewContext": {
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/Candidate"
+          },
+          "libraryNumber": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "libraryWithdrawn": {
+            "type": "boolean"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateReviewMatch"
+            },
+            "type": "array"
+          },
+          "notice": {
+            "type": "string"
+          },
+          "protocol": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuilderCandidateOutput"
+              }
+            ]
+          },
+          "run": {
+            "$ref": "#/components/schemas/BuilderRun"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CandidateReviewSource"
+          }
+        },
+        "required": [
+          "candidate",
+          "run",
+          "source",
+          "protocol",
+          "libraryNumber",
+          "libraryWithdrawn",
+          "matches",
+          "notice"
+        ],
+        "type": "object"
+      },
+      "CandidateReviewMatch": {
+        "properties": {
+          "contrastQuestions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": "array"
+          },
+          "definition": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/KC"
+              }
+            ]
+          },
+          "match": {
+            "$ref": "#/components/schemas/Match"
+          },
+          "supportCount": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "supportQuestions": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "match",
+          "definition",
+          "supportCount",
+          "supportQuestions",
+          "contrastQuestions"
+        ],
+        "type": "object"
+      },
+      "CandidateReviewSource": {
+        "properties": {
+          "fragments": {
+            "items": {
+              "$ref": "#/components/schemas/Chunk"
+            },
+            "type": "array"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "usageScope": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "usageScope",
+          "hash",
+          "fragments"
+        ],
         "type": "object"
       },
       "Catalog": {
@@ -5120,6 +5320,43 @@
           "delay7",
           "delay30",
           "reason"
+        ],
+        "type": "object"
+      },
+      "Match": {
+        "properties": {
+          "behavior": {
+            "type": "string"
+          },
+          "boundary": {
+            "type": "string"
+          },
+          "embeddingSpace": {
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "score": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "kcId",
+          "name",
+          "behavior",
+          "boundary",
+          "score",
+          "embeddingSpace"
         ],
         "type": "object"
       },
@@ -10240,6 +10477,137 @@
             }
           },
           "412": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "415": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FamilySession": []
+          }
+        ],
+        "tags": [
+          "Learning.Api"
+        ]
+      }
+    },
+    "/api/v1/builder/candidates/{id}/review-context": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateReviewContext"
+                }
+              }
+            },
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
             "content": {
               "application/problem+json": {
                 "schema": {

@@ -9,7 +9,7 @@ public static class Builder
 {
     public static void Map(RouteGroupBuilder api)
     {
-        Provenance.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);BackgroundJobs.Map(api);ProjectionJobs.Map(api);DomainEvents.Map(api);
+        Provenance.Map(api);BuilderCandidateReviews.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);BackgroundJobs.Map(api);ProjectionJobs.Map(api);DomainEvents.Map(api);
         api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
         api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
         {
@@ -45,7 +45,7 @@ public static class Builder
         {
             var a=ctx.Actor();a.Require("ContentEditor");var c=await db.Candidates.SingleOrDefaultAsync(c => c.Id==id && c.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","候选不存在。");
             if (c.Status!="Pending") throw new ApiError(409,"ALREADY_REVIEWED","此候选已经处理。");
-            if (string.IsNullOrWhiteSpace(input.Reason)) throw new ApiError(422,"REASON_REQUIRED","请填写审核依据。");
+            if (string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000) throw new ApiError(422,"REASON_REQUIRED","请填写1～4000字审核依据。");
             var chunk=await db.Chunks.SingleAsync(x=>x.Id==c.ChunkId && x.FamilyId==a.FamilyId);
             if(input.Decision!="Reject" && (string.IsNullOrWhiteSpace(c.Quote) || !chunk.Text.Contains(c.Quote,StringComparison.Ordinal)))throw new ApiError(422,"SOURCE_QUOTE_INVALID","候选引用与原始片段不符，不能接受或发布。");
             if (input.Decision=="Reject") c.Status="Rejected";

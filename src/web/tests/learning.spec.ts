@@ -152,12 +152,12 @@ test('建库候选保留引用，审核草稿可继续编辑并发布',async({pa
   await expect(budget.getByRole('status')).toContainText('预算已保存');await expect(budget.getByLabel('每日费用上限（USD）')).toHaveValue('0.2');
   const quote='有小括号时，先计算小括号里的加减，再计算除法。';
   await page.getByLabel('来源标题').fill('家长原创运算说明');await page.getByLabel('文本内容').fill(quote);await page.getByRole('button',{name:'保存来源'}).click();await page.getByRole('button',{name:'验证候选流程'}).click();
-  await expect(async()=>{await page.getByRole('button',{name:'刷新',exact:true}).click();await expect(page.getByRole('button',{name:'接受为新草稿'})).toBeVisible();}).toPass();
+  await expect(async()=>{await page.getByRole('button',{name:'刷新',exact:true}).click();await expect(page.getByRole('button',{name:'核对此候选'})).toBeVisible();}).toPass();
   await expect(page.getByText('Mock / fixture/1 · 已完成 · 生成时没有正式内容库',{exact:true})).toBeVisible();
   const ledger=page.getByRole('region',{name:'建库调用账本'});await ledger.getByRole('button',{name:'刷新调用账本'}).click();await expect(ledger.getByText('费用：本地模拟，不计费；输入/输出 Token：不适用')).toBeVisible();
   const jobs=page.getByRole('region',{name:'后台任务保护'});await jobs.getByRole('button',{name:'刷新后台任务'}).click();await expect(jobs.getByRole('heading',{name:'候选建库 · 已完成'})).toBeVisible();await jobs.getByText('查看领取记录',{exact:true}).click();await expect(jobs.getByText(/第 0 轮 · 第 1 次 · 已完成/)).toBeVisible();
   const records=page.getByRole('region',{name:'建库运行记录'});await expect(records.getByText(/创建时处理上限：100 个片段、100000 字；30 秒内完成；最多修复 1 次/)).toBeVisible();await records.getByText('查看每次尝试',{exact:true}).click();await expect(records.getByText(/结构与来源校验通过 · 本地模拟处理 1 次 · 首次通过/)).toBeVisible();
-  await page.getByLabel('名称',{exact:true}).fill('先算小括号');await page.getByLabel('可测行为',{exact:true}).fill('独立计算一层小括号内的加减，再计算除法');await page.getByLabel('能力边界').fill('不含嵌套，不推断建模能力');
+  await page.getByRole('button',{name:'核对此候选'}).click();await page.getByLabel('本次审核依据').fill('已核对原始片段与一层括号测量范围，接受为待审草稿。');await page.getByLabel('候选名称',{exact:true}).fill('先算小括号');await page.getByLabel('可测行为',{exact:true}).fill('独立计算一层小括号内的加减，再计算除法');await page.getByLabel('能力边界').fill('不含嵌套，不推断建模能力');
   await page.getByRole('button',{name:'接受为新草稿'}).click();await page.getByRole('button',{name:'查看引用与审核'}).click();
   const trace=page.getByRole('region',{name:'内容来源追溯'});
   // The named section may have an implicit region only when its accessible name is present.
