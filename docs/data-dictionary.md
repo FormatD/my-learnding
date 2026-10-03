@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 66 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 67 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -57,6 +57,7 @@
 | 20261003161120_MappingPreparationJobs | 10.0.4 |
 | 20261003165910_AssessmentRebuildRequests | 10.0.4 |
 | 20261003171507_AssessmentInputHashVersion | 10.0.4 |
+| 20261003182502_IncrementalAssessmentCheckpoints | 10.0.4 |
 
 ## Accounts
 
@@ -112,6 +113,39 @@
 - `CREATE INDEX "IX_Alias_FamilyId_CandidateId" ON public."Alias" USING btree ("FamilyId", "CandidateId")`
 - `CREATE UNIQUE INDEX "IX_Alias_FamilyId_KCId_Normalized" ON public."Alias" USING btree ("FamilyId", "KCId", "Normalized")`
 - `CREATE UNIQUE INDEX "PK_Alias" ON public."Alias" USING btree ("Id")`
+
+## AssessmentCheckpoint
+
+实际评估的增量状态、原输入前缀摘要与不可修改状态负载；旧世代不补造。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 否 | 无 |
+| GenerationId | uuid | 否 | 无 |
+| EngineVersion | text | 否 | 无 |
+| PrefixHash | text | 否 | 无 |
+| InputCount | bigint | 否 | 无 |
+| Payload | text | 否 | 无 |
+| PayloadHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_AssessmentCheckpoint_State`：`CHECK ("InputCount" >= 0 AND length("PrefixHash") = 64 AND length("PayloadHash") = 64 AND jsonb_typeof("Payload"::jsonb) = 'object'::text)`
+- `FK_AssessmentCheckpoint_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_AssessmentCheckpoint_Generations_FamilyId_GenerationId_Stud~`：`FOREIGN KEY ("FamilyId", "GenerationId", "StudentId") REFERENCES "Generations"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
+- `FK_AssessmentCheckpoint_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_AssessmentCheckpoint`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId" ON public."AssessmentCheckpoint" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_GenerationId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "GenerationId", "StudentId")`
+- `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentCheckpoint_GenerationId" ON public."AssessmentCheckpoint" USING btree ("GenerationId")`
+- `CREATE UNIQUE INDEX "PK_AssessmentCheckpoint" ON public."AssessmentCheckpoint" USING btree ("Id")`
 
 ## AssessmentContext
 
@@ -1161,18 +1195,26 @@
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | ModelVersion | text | 否 | ''::text |
 | InputVersion | text | 是 | 无 |
+| CalculationMode | text | 是 | 无 |
+| IncrementalBaseGenerationId | uuid | 是 | 无 |
+| ProcessedInputCount | integer | 是 | 无 |
 
 约束：
 
 - `AK_Generations_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `AK_Generations_FamilyId_Id_StudentId`：`UNIQUE ("FamilyId", "Id", "StudentId")`
+- `CK_Generations_Incremental`：`CHECK ("CalculationMode" IS NULL AND "ProcessedInputCount" IS NULL AND "IncrementalBaseGenerationId" IS NULL OR "CalculationMode" IS NOT NULL AND ("CalculationMode" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text])) AND "ProcessedInputCount" IS NOT NULL AND "ProcessedInputCount" >= 0 AND ("CalculationMode" = 'IncrementalAppend'::text AND "IncrementalBaseGenerationId" IS NOT NULL AND "IncrementalBaseGenerationId" <> "Id" OR "CalculationMode" <> 'IncrementalAppend'::text AND "IncrementalBaseGenerationId" IS NULL))`
 - `FK_Generations_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_Generations_Generations_FamilyId_IncrementalBaseGenerationI~`：`FOREIGN KEY ("FamilyId", "IncrementalBaseGenerationId", "StudentId") REFERENCES "Generations"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
 - `FK_Generations_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_Generations`：`PRIMARY KEY ("Id")`
 
 索引（包含约束自动创建的索引）：
 
 - `CREATE UNIQUE INDEX "AK_Generations_FamilyId_Id" ON public."Generations" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "AK_Generations_FamilyId_Id_StudentId" ON public."Generations" USING btree ("FamilyId", "Id", "StudentId")`
 - `CREATE INDEX "IX_Generations_FamilyId" ON public."Generations" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_Generations_FamilyId_IncrementalBaseGenerationId_StudentId" ON public."Generations" USING btree ("FamilyId", "IncrementalBaseGenerationId", "StudentId")`
 - `CREATE INDEX "IX_Generations_FamilyId_StudentId" ON public."Generations" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "PK_Generations" ON public."Generations" USING btree ("Id")`
 

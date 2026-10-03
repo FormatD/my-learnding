@@ -52,6 +52,12 @@ public static class FixtureCases
                 var actual=output.Reviews.Single(r=>r.TargetType==expected.TargetType && r.TargetId==target);
                 Require(actual.Stage==expected.Stage && actual.DueDate.ToString("yyyy-MM-dd")==expected.DueDate && actual.Status==expected.Status,scenario.Name+": review progression mismatch");
             }
+            var stream=new IncrementalAssessment(family,student,generation,scenario.TimeZone);
+            foreach(var input in inputs.OrderBy(i=>i.Attempt.Sequence).ThenBy(i=>i.Attempt.Id)){stream.Append(input);stream=IncrementalAssessment.Resume(stream.Freeze());}
+            var incremental=stream.Output();Require(incremental.Evidence.Count==scenario.EvidenceParts && incremental.Masteries.Count==scenario.Masteries.Length && incremental.Reviews.Count==scenario.Reviews.Length,scenario.Name+": incremental golden counts mismatch");
+            foreach(var expected in scenario.Masteries){var skill=catalog.Kcs.Single(k=>k.Code==expected.Code);var actual=incremental.Masteries.Single(m=>m.KCId==skill.Id);Require(actual.Alpha==expected.Alpha && actual.Beta==expected.Beta,scenario.Name+": incremental golden Beta mismatch");}
+            foreach(var expected in scenario.Reviews){var target=expected.TargetType=="WrongQuestion"?catalog.Questions[expected.QuestionIndex].Id:catalog.Questions[expected.QuestionIndex].Mappings[0].KCId;var actual=incremental.Reviews.Single(r=>r.TargetType==expected.TargetType && r.TargetId==target);Require(actual.Stage==expected.Stage && actual.DueDate.ToString("yyyy-MM-dd")==expected.DueDate && actual.Status==expected.Status,scenario.Name+": incremental golden dates mismatch");}
+            Require(Json.Write(inputs)==sourceSnapshot,scenario.Name+": incremental modified original source");
             var reversed=Assessment.Replay(family,student,generation,scenario.TimeZone,inputs.Reverse());
             Require(Json.Write(output.Masteries.Select(m=>new{m.KCId,m.Alpha,m.Beta,m.Status,m.NeedsRecheck}))==Json.Write(reversed.Masteries.Select(m=>new{m.KCId,m.Alpha,m.Beta,m.Status,m.NeedsRecheck})),scenario.Name+": event ordering mismatch");
         }

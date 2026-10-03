@@ -14,7 +14,7 @@ def verify(c,env):
         if id in requests:sql(f'''INSERT INTO "AssessmentRebuildRequest" ("Id","FamilyId","CreatedAt","StudentId","JobId","RequestedBy","TargetGenerationId","Snapshot","SnapshotHash","Reason") VALUES ('{ref}','{family}',clock_timestamp(),'{student}','{id}','{account}','{target}','{payload}','{hash}','controlled queued cancellation request')''')
         return id
 
-    id=job();path='/background-jobs/'+id+':cancel';c.request(path,{'reason':''},expected=422)
+    id=job();c.request('/students/'+student+'/mastery:full-rebuild',{'reason':'不能替换正在等待的普通请求'},expected=409);path='/background-jobs/'+id+':cancel';c.request(path,{'reason':''},expected=422)
     # Keep the real family work lock held; a cancellation must use its independent control transaction.
     lock=subprocess.Popen(['psql','-At','-v','ON_ERROR_STOP=1'],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:

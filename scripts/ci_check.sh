@@ -23,3 +23,7 @@ python3 tests/rebuild_job_fault_acceptance.py
 # Cancellation uses an independent job-control transaction and an actual running worker.
 python3 tests/openapi_acceptance.py --cancel-regression
 python3 tests/job_cancellation_acceptance.py
+
+# Stateful incremental transitions, immutable persistence and suffix crash recovery.
+python3 tests/incremental_checkpoint_persistence_acceptance.py
+python3 tests/incremental_checkpoint_fault_acceptance.py

@@ -217,15 +217,15 @@ public static class Assessment
         var teaching=tasks.Values.Where(t=>t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null).Select(t=>new TeachingAnchor(t.KCId!.Value,t.CompletedAt!.Value)).OrderBy(t=>t.Time).ThenBy(t=>t.KCId).ToArray();
         return(inputs,teaching);
     }
-    public static async Task Rebuild(Database db, Student student, CancellationToken ct=default,Guid? targetGenerationId=null)
+    public static async Task Rebuild(Database db, Student student, CancellationToken ct=default,Guid? targetGenerationId=null,bool forceFull=false)
     {
         var (inputs,teaching)=await LoadInputs(db,student,ct);
         var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="assessment-context/1",inputVersion=InputHashVersion,timeZone=student.TimeZone,rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
-        if (student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash && g.InputVersion==InputHashVersion,ct)) return;
+        if (!forceFull && student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash && g.InputVersion==InputHashVersion,ct)) return;
         if(targetGenerationId!=null && await db.Generations.AnyAsync(g=>g.Id==targetGenerationId,ct))throw new ApiError(422,"GENERATION_TARGET_CONFLICT","固定重建目标已有不同结果，请核对消费记录。");
         var gen=new Generation { Id=targetGenerationId??Guid.NewGuid(),FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,InputVersion=InputHashVersion,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
         db.Generations.Add(gen);
-        var output=Replay(student.FamilyId,student.Id,gen.Id,student.TimeZone,inputs,teaching);
+        var prepared=await AssessmentCheckpoints.Prepare(db,student,gen.Id,inputs,teaching,ct,forceFull);var output=prepared.Engine.Output();gen.CalculationMode=prepared.Mode;gen.ProcessedInputCount=prepared.ProcessedInputs;gen.IncrementalBaseGenerationId=prepared.BaseGenerationId;
         await EvidenceRevocations.Apply(db,student,gen,output,ct);
         db.AddRange(output.Contexts);db.Evidence.AddRange(output.Evidence); db.Masteries.AddRange(output.Masteries); db.Reviews.AddRange(output.Reviews);
         if (student.ActiveGenerationId.HasValue)
@@ -235,6 +235,7 @@ public static class Assessment
         }
         foreach(var context in output.Contexts)context.ActivationStatus="Active";
         gen.Status="Active"; student.ActiveGenerationId=gen.Id;
+        AssessmentCheckpoints.Save(db,student,gen,prepared);
         await db.SaveChangesAsync(ct); // Binding and all projections are committed by the outer family transaction.
     }
 }

@@ -160,6 +160,10 @@
     {
       "id": "20261003171507_AssessmentInputHashVersion",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003182502_IncrementalAssessmentCheckpoints",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -394,6 +398,165 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Alias\" ON public.\"Alias\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "AssessmentCheckpoint",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "GenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EngineVersion",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PrefixHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputCount",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Payload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PayloadHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_AssessmentCheckpoint_State",
+          "kind": "c",
+          "definition": "CHECK (\"InputCount\" >= 0 AND length(\"PrefixHash\") = 64 AND length(\"PayloadHash\") = 64 AND jsonb_typeof(\"Payload\"::jsonb) = 'object'::text)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentCheckpoint_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentCheckpoint_Generations_FamilyId_GenerationId_Stud~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"GenerationId\", \"StudentId\") REFERENCES \"Generations\"(\"FamilyId\", \"Id\", \"StudentId\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentCheckpoint_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_AssessmentCheckpoint",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_AssessmentCheckpoint_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentCheckpoint_FamilyId\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_AssessmentCheckpoint_FamilyId_GenerationId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentCheckpoint_FamilyId_GenerationId_StudentId\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\", \"GenerationId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_AssessmentCheckpoint_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentCheckpoint_FamilyId_StudentId\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_AssessmentCheckpoint_GenerationId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentCheckpoint_GenerationId\" ON public.\"AssessmentCheckpoint\" USING btree (\"GenerationId\")"
+        },
+        {
+          "name": "PK_AssessmentCheckpoint",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_AssessmentCheckpoint\" ON public.\"AssessmentCheckpoint\" USING btree (\"Id\")"
         }
       ]
     },
@@ -5648,6 +5811,30 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "CalculationMode",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "IncrementalBaseGenerationId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ProcessedInputCount",
+          "type": "integer",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -5660,9 +5847,33 @@
           "initiallyDeferred": false
         },
         {
+          "name": "AK_Generations_FamilyId_Id_StudentId",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\", \"StudentId\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_Generations_Incremental",
+          "kind": "c",
+          "definition": "CHECK (\"CalculationMode\" IS NULL AND \"ProcessedInputCount\" IS NULL AND \"IncrementalBaseGenerationId\" IS NULL OR \"CalculationMode\" IS NOT NULL AND (\"CalculationMode\" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text])) AND \"ProcessedInputCount\" IS NOT NULL AND \"ProcessedInputCount\" >= 0 AND (\"CalculationMode\" = 'IncrementalAppend'::text AND \"IncrementalBaseGenerationId\" IS NOT NULL AND \"IncrementalBaseGenerationId\" <> \"Id\" OR \"CalculationMode\" <> 'IncrementalAppend'::text AND \"IncrementalBaseGenerationId\" IS NULL))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "FK_Generations_Families_FamilyId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_Generations_Generations_FamilyId_IncrementalBaseGenerationI~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"IncrementalBaseGenerationId\", \"StudentId\") REFERENCES \"Generations\"(\"FamilyId\", \"Id\", \"StudentId\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -5692,10 +5903,22 @@
           "definition": "CREATE UNIQUE INDEX \"AK_Generations_FamilyId_Id\" ON public.\"Generations\" USING btree (\"FamilyId\", \"Id\")"
         },
         {
+          "name": "AK_Generations_FamilyId_Id_StudentId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_Generations_FamilyId_Id_StudentId\" ON public.\"Generations\" USING btree (\"FamilyId\", \"Id\", \"StudentId\")"
+        },
+        {
           "name": "IX_Generations_FamilyId",
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Generations_FamilyId\" ON public.\"Generations\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_Generations_FamilyId_IncrementalBaseGenerationId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Generations_FamilyId_IncrementalBaseGenerationId_StudentId\" ON public.\"Generations\" USING btree (\"FamilyId\", \"IncrementalBaseGenerationId\", \"StudentId\")"
         },
         {
           "name": "IX_Generations_FamilyId_StudentId",

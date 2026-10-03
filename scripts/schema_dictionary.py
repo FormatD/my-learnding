@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "AssessmentCheckpoint": "实际评估的增量状态、原输入前缀摘要与不可修改状态负载；旧世代不补造。",
     "AssessmentRebuildRequest": "家长后台重建的不可修改请求，固定学生、规则版本、时区和目标世代；基线为提交时已完成结果，处理时追平最新已提交输入。",
     "AssessmentRebuildResult": "实际后台重建结果回执，关联原请求、任务、实际世代和应用事件；与评估及事件消费同事务提交。",
     "MappingPreparation": "后台映射准备的不可变原输入、请求人、固定输出运行标识及统一任务引用；建议成功提交后才产生运行和待审结果，不补造历史领取。",

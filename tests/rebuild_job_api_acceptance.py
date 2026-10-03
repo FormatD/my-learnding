@@ -26,5 +26,11 @@ def verify(c):
         assert job['status']=='Succeeded' and job['type']=='AssessmentRebuild' and job['studentId']==sid and job['targetGenerationId']==saved['targetGenerationId']==f['targetGenerationId'] and job['inputPayload']==saved['snapshot'] and job['inputHash']==saved['snapshotHash'] and f['inputMode']=='LatestCommittedUnderLock'
         assert event['studentId']==sid and event['aggregateId']==result['generationId'] and json.loads(event['payload'])['data']['requestId']==request['id']
         assert any(a['jobId']==job['id'] and a['status']=='Succeeded' for a in data['JobLeaseAttempt'])
-    c.request(path+'/child-sessions',{});c.request(path+'/rebuild-requests',expected=403);c.request(path+'/rebuild-requests/'+first['id'],expected=403);c.request(path+'/mastery:rebuild',{'reason':'孩子不能重建'},expected=403)
+    c.request(path+'/mastery:full-rebuild',{'reason':''},expected=422)
+    full=c.request(path+'/mastery:full-rebuild',{'reason':'明确从原始记录完整核对'},expected=202);complete=settled(full)['result'];assert not complete['reusedGeneration'] and complete['generationId']==full['targetGenerationId'] and complete['generationId']!=actual['generationId'] and complete['inputHash']==actual['inputHash']
+    after=c.request(path+'/export');assert len(after['generations'])==2 and len(after['assessmentCheckpoints'])==2
+    request=next(r for r in after['rebuildRequests'] if r['id']==full['id']);assert json.loads(request['snapshot'])['forceFull']
+    current=next(g for g in after['generations'] if g['id']==complete['generationId']);assert current['calculationMode']=='FullStream' and current['processedInputCount']==0 and current['incrementalBaseGenerationId'] is None
+    print('PASS explicit complete source rebuild creates real new result despite identical input hash, fixed force descriptor and private checkpoint export; original snapshots retained')
+    c.request(path+'/child-sessions',{});c.request(path+'/rebuild-requests',expected=403);c.request(path+'/rebuild-requests/'+first['id'],expected=403);c.request(path+'/mastery:rebuild',{'reason':'孩子不能重建'},expected=403);c.request(path+'/mastery:full-rebuild',{'reason':'孩子不能完整重建'},expected=403)
     print('PASS actual 202 rebuild/result/event/claim links and exports, identical inputs reuse generation, completed retry rejected and family/child isolation')

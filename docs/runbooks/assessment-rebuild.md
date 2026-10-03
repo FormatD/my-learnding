@@ -16,3 +16,6 @@ AssessmentRebuildRequest与BackgroundJob及排队审计同请求事务保存。�
 
 
 可选任务取消及明确恢复已接入，实际停止与提供者费用分别核对，见[取消手册](job-cancellation.md)。必需学习结果同步不会被取消。
+
+
+独立增量状态及明确完整源重算已接入：普通请求可复用不变输入/前缀；状态异常时不会静默覆盖。家长填写依据点击“从原始记录完整重建”，对应POST /students/{id}/mastery:full-rebuild，202排队并冻结ForceFull=true，实际完整计算并保存新目标，原快照保留。仍核对来源、规则、时区和权限；已有普通活动请求409，先取消原请求。详见[增量状态手册](incremental-assessment.md)，同一活动世代在线追加与独立事件游标继续开放。
