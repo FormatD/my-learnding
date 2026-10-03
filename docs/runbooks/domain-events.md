@@ -1,0 +1,15 @@
+# 领域事件与评估分派
+
+新事件使用独立 DomainEvent 日志，七种类型为 AttemptSubmitted、GradingConfirmed、AssessmentApplied、CorrectionConfirmed、TaskTransitioned、ProgressChanged、ContentReleasePublished。每条保存实际家庭/可空学生、聚合引用、服务器 EventSequence、PayloadVersion=1、UTC发生时间、原始文本JSON负载及SHA256摘要。事件与领域写入同事务；数据库拒绝更新事件记录，学生和家庭删除仍可按外键清除隐私数据。编号在当前事务内从数据库序列分配，回滚允许留空号，不能按连续号判断缺失事件；同家庭写入由原家庭事务锁串行化，不宣称全数据库序号是跨家庭事务提交时间。
+
+实际发布、进度变更、任务状态变更及确认更正均在执行时追加事件。重复确认已确认进度不重复追加；幂等作答仍返回原记录。规则/纸质首次明确判分另记 GradingConfirmed，初次 Pending 不记已确认判分；后续家长判分以 GradingConfirmed 分派重新评估。判分更正保留批次 CorrectionConfirmed，映射更正保留批次事实和每个受影响作答的分派事实，聚合类型与批次引用区分两者。
+
+DispatchTarget=assessment/1 的事件建立同ID Outbox引用；当前仅作答、后续确认判分和逐作答映射更正分派评估。其他事件为可查询日志，不凭日志存在宣称已有对应消费者。现代事件消费前校验不可修改负载摘要、版本、家庭/学生/作答引用以及固定判分记录；矛盾明确失败，不进入旧兼容路径。BackgroundJob仍固定事件引用描述和预定世代，消费回执另存实际DomainEventId及实际GenerationId。
+
+成功追平追加 AssessmentApplied，引用本次真实任务、世代、输入摘要、规则、模型、游标和此次覆盖的全部Outbox/现代事件ID；其与结果和回执同事务，重复消费不再生成事实。家长手动重建产生不同世代时也追加实际应用事件，固定输入复用原世代时不重复追加。此接口仍同步，后台化是独立开放项。
+
+历史Outbox和回执的DomainEventId保持NULL，旧任务描述序列化保持原样；不推断其类型、负载、发生时间或生成回执。新字段迁移不回填。GET /domain-events为Parent家庭内分页查询，默认20、上限50，可按学生筛选；其他家庭学生404、孩子403。学生learning-export/2追加domainEvents，全家ZIP自动包含DomainEvent；原字段保持兼容。
+
+目前评估仍按原固定作答序列全学生重放。新日志序号尚未代替独立增量算法的事件游标，进度/任务日志也尚未成为独立教学投影消费者；不能因此关闭设计§13的全部增量与重放要求。映射建议后台化、用户取消以及真实模型、教材审核、实体设备、长期试用条件继续开放。
+
+验证入口：domain_event_persistence_acceptance.py核对事务回滚、服务器顺序、旧描述兼容、新旧各自回执、重复消费、错误负载锚点拒绝且零部分结果、不可修改数据库约束与删除。observed_steps_api_acceptance.py与projection_receipt_api_acceptance.py核对七类真实操作事件、Pending后确认/映射更正、家庭隔离、孩子权限和隐私导出；api_acceptance.py核对复用固定世代不产生重复应用事件。实际浏览器assessment-context.spec.ts核对新旧评估、撤销、事件/回执导出和窄屏页面。

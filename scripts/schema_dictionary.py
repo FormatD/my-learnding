@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "DomainEvent": "关键领域事件的不可修改日志，保存服务器顺序、明确类型与版本、原始负载摘要及实际分派目标；历史缺失不补造。",
     "ConsumerReceipt": "按消费者/事件唯一的实际评估消费回执，与结果、队列及领取终态同事务提交，不补造旧历史。",
     "BackgroundJob": "后台工作固定输入、领取人/到期/心跳、尝试上限与当前状态；建库及PDF已接入。",
     "JobLeaseAttempt": "每次实际领取及中断/到期历史；结果与最终领取回执在同一事务提交。",

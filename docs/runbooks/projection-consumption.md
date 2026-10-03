@@ -26,4 +26,4 @@ GET /students/{id}/consumer-receipts供Parent分页读取，默认20/最多50，
 
 projection_receipt_persistence_acceptance.py验证合并两事件各自回执/同一个固定目标、另一领取及受控完成标记缺口不再建世代、原回执全部字段不改、数据库唯一键及学生删除闭合、受控耗尽状态零结果/回执及人工新轮次沿原目标恢复。worker_fault_acceptance.py实际终止进程，在短策略夹具下等待真实数据库租约到期后让两个消费者竞争，固定目标、一份回执及一组结果收敛。evidence_revocation_fault_acceptance.py实际中断判分更正，旧证据/上下文/撤销仍原子恢复。mastery_snapshot_acceptance.py继续核对活动结果与积压为同一数据库快照。
 
-目前仍为全学生重放算法，并未完成独立增量算法或增量/全量对照。Outbox仍保留原简化字段，明确EventSequence/EventType/PayloadVersion和完整事件载荷尚需补齐。手动重建API仍同步，映射建议后台化及用户取消协议仍开放；这些不因新增消费回执而关闭。真实模型/教材/实体设备/长期试用仍按完整V1条件核对。
+目前仍为全学生重放算法，并未完成独立增量算法或增量/全量对照。新DomainEvent日志及Outbox/回执的明确引用已补齐，详见[事件说明](domain-events.md)；日志序号尚未用于独立增量消费，非评估事件目前只记录事实。手动重建API仍同步，映射建议后台化及用户取消协议仍开放；这些不因新增消费回执而关闭。真实模型/教材/实体设备/长期试用仍按完整V1条件核对。

@@ -89,12 +89,14 @@ public static class Endpoints
             var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id); var release=await db.Releases.SingleOrDefaultAsync(r => r.Id==s.ActiveReleaseId && !r.Withdrawn);
             if (release==null || !Json.Read<Catalog>(release.Payload).Lessons.Any(l => l.Id==lessonId)) throw new ApiError(422,"LESSON_UNPUBLISHED","课时不在当前内容版本中。");
             var progress=await db.Progresses.SingleOrDefaultAsync(p => p.StudentId==id && p.Date==date && p.LessonId==lessonId);
+            var progressChanged=progress==null || progress.Status!="Confirmed";
             if (progress==null) { progress=new() { FamilyId=a.FamilyId,StudentId=id,Date=date,LessonId=lessonId,ReleaseId=release.Id }; db.Progresses.Add(progress); }
             else if(progress.Status!="Confirmed")
             {
                 var before=Json.Write(progress);progress.Status="Confirmed";progress.ReleaseId=release.Id;progress.Source="ParentReconfirmed";
                 db.Add(new ProgressChange {FamilyId=a.FamilyId,StudentId=id,OldProgressId=progress.Id,NewProgressId=progress.Id,Before=before,After=Json.Write(progress),Reason="家长重新确认学校进度",ConfirmedBy=a.Id});
             }
+            if(progressChanged)await DomainEvents.Append(db,a.FamilyId,id,progress.Id,"Progress","ProgressChanged",new{progressId=progress.Id,progress.LessonId,progress.Date,progress.Status,progress.ReleaseId,confirmedBy=a.Id});
             return TypedResults.Ok(progress);
         });
         Goals.Map(api);
@@ -129,7 +131,7 @@ public static class Endpoints
             if (Content.Hash(d.Payload+":"+d.Version)!=input.PreviewHash) throw new ApiError(412,"PREVIEW_CHANGED","草稿已变化，请重新预览。");
             var errors=Content.Validate(Json.Read<Catalog>(d.Payload));if (errors.Length>0) throw new ApiError(422,"CONTENT_INVALID",string.Join("；",errors));
             var review=await ContentReviews.ForPublish(db,d);
-            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release,review);review.PublishedReleaseId=release.Id;review.PublishedMappingVersion="mapping-container/1";d.Status="Published";return TypedResults.Ok(release);
+            var release=new Release { FamilyId=a.FamilyId,Payload=d.Payload,Hash=Content.Hash(d.Payload),Number=(await db.Releases.Where(r => r.FamilyId==a.FamilyId).MaxAsync(r => (int?)r.Number)??0)+1,PublishedBy=a.Id };db.Releases.Add(release);await Publishing.Register(db,release,review);review.PublishedReleaseId=release.Id;review.PublishedMappingVersion="mapping-container/1";d.Status="Published";await DomainEvents.Append(db,a.FamilyId,null,release.Id,"Release","ContentReleasePublished",new{releaseId=release.Id,release.Number,release.Hash,release.PublishedBy,reviewId=review.Id,review.PublishedMappingVersion});return TypedResults.Ok(release);
         });
         api.MapPost("/students/{id:guid}/content/{releaseId:guid}:bind",async (Guid id,Guid releaseId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var r=await Owned<Release>(db,a,releaseId);if (r.Withdrawn) throw new ApiError(422,"WITHDRAWN","该发布版本已撤回。");s.ActiveReleaseId=releaseId;return TypedResults.Ok(s); });
         api.MapPost("/content/releases/{id:guid}:withdraw",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Publisher");var release=await Owned<Release>(db,a,id);if(string.IsNullOrWhiteSpace(input.Reason))throw new ApiError(422,"REASON_REQUIRED","撤回需要原因。");release.Withdrawn=true;db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="ReleaseWithdrawal",Details=Json.Write(new {releaseId=id,input.Reason})});return TypedResults.Ok(new {release.Id,release.Withdrawn,notice="阻止新会话；已领取会话与历史证据保留。"});});
@@ -214,6 +216,7 @@ public static class Endpoints
                 if(input.Status=="Completed")t.CompletedAt=now;
             }
             db.Audits.Add(new(){FamilyId=a.FamilyId,StudentId=t.StudentId,ActorId=a.Id,Action="TaskTransition",Details=Json.Write(new TaskTransitionDetails(t.StudentId,t.Id,previousStatus,input.Status,input.Reason))});
+            await DomainEvents.Append(db,a.FamilyId,t.StudentId,t.Id,"StudyTask","TaskTransitioned",new{taskId=t.Id,from=previousStatus,to=input.Status,input.Reason,t.ActualMinutes,t.TrackedSeconds});
             await db.SaveChangesAsync();
             var plans=await (from p in db.Plans join place in db.Placements on p.ActiveRevisionId equals (Guid?)place.RevisionId where place.TaskId==id select p).ToListAsync();
             foreach(var plan in plans)
@@ -253,7 +256,9 @@ public static class Endpoints
             var attempt=new Attempt { FamilyId=a.FamilyId,StudentId=s.StudentId,SessionId=id,QuestionRevisionId=q.RevisionId,MappingSetRevisionId=s.MappingSetRevisionId,ClientSubmissionId=input.ClientSubmissionId,Number=count+1,Answer=input.Answer,HintLevel=s.HintLevel,AnswerShown=s.AnswerShown,AnswerSource=a.Role=="Child"?"Child":"ParentEntered" };
             var result=q.Type is "ShortAnswer" or "MultiStep" ? "Pending" : q.Type=="Numeric" ? decimal.TryParse(input.Answer,NumberStyles.Number,CultureInfo.InvariantCulture,out var value) && value==decimal.Parse(q.Answer,CultureInfo.InvariantCulture) ? "Correct" : "Incorrect" : input.Answer.Trim().Normalize()==q.Answer.Trim().Normalize() ? "Correct" : "Incorrect";
             var grade=new Grading { FamilyId=a.FamilyId,AttemptId=attempt.Id,Number=1,Result=result,Method=result=="Pending"?"ManualRequired":"Rule" };
-            db.Attempts.Add(attempt);db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=s.StudentId,AttemptId=attempt.Id });
+            db.Attempts.Add(attempt);db.Gradings.Add(grade);
+            await DomainEvents.Append(db,a.FamilyId,s.StudentId,attempt.Id,"Attempt","AttemptSubmitted",new{attemptId=attempt.Id,sessionId=id,gradingId=grade.Id,attempt.QuestionRevisionId,attempt.MappingSetRevisionId,attempt.AnswerSource},attempt.Id);
+            if(result!="Pending")await DomainEvents.Append(db,a.FamilyId,s.StudentId,grade.Id,"Grading","GradingConfirmed",new{attemptId=attempt.Id,gradingId=grade.Id,grade.Result,grade.Method});
             await db.SaveChangesAsync();
             return TypedResults.Created($"/api/v1/attempts/{attempt.Id}",new NewAttemptResponse(attempt,grade,"Pending",result=="Pending"?"已保存，等待家长确认":result=="Correct"?"这次做对了！":"已保存。先看看思路，再试一次。",q.Explanation));
         });
@@ -282,12 +287,14 @@ public static class Endpoints
                 if (input.PreviewHash!=expected) throw new ApiError(412,"GRADING_PREVIEW_CHANGED","请先预览更正影响；若新作答到达，请重新预览。");
             }
             var batch=new CorrectionBatch{FamilyId=a.FamilyId,StudentId=attempt.StudentId,ReleaseId=context.ReleaseId,Cause="Grading",AffectedAttemptIds=Json.Write(new[]{id}),SourceGradingRevisionId=oldGrade.Id,Reason=input.Reason,ConfirmedBy=a.Id,PreviewHash=input.PreviewHash??Content.Hash(Json.Write(new{attemptId=id,oldGrade.Id,input.Result,input.Reason,input.Steps}))};db.Add(batch);
-            var grade=new Grading {CorrectionBatchId=batch.Id, FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);db.Outbox.Add(new() { FamilyId=a.FamilyId,StudentId=attempt.StudentId,AttemptId=id });return TypedResults.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
+            var grade=new Grading {CorrectionBatchId=batch.Id, FamilyId=a.FamilyId,AttemptId=id,Number=await db.Gradings.CountAsync(g => g.AttemptId==id)+1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=a.Id,Steps=Json.Write(steps) };db.Gradings.Add(grade);
+            await DomainEvents.Append(db,a.FamilyId,attempt.StudentId,batch.Id,"CorrectionBatch","CorrectionConfirmed",new{batchId=batch.Id,batch.Cause,attemptIds=new[]{id},oldGradingId=oldGrade.Id,newGradingId=grade.Id,batch.ConfirmedBy});
+            await DomainEvents.Append(db,a.FamilyId,attempt.StudentId,id,"Attempt","GradingConfirmed",new{attemptId=id,gradingId=grade.Id,grade.Result,grade.Method,correctionBatchId=batch.Id},id);return TypedResults.Accepted($"/api/v1/students/{attempt.StudentId}/mastery",grade);
         });
         api.MapGet("/students/{id:guid}/mastery",async (Guid id,Database db,HttpContext ctx) => await Assessment.ReadStatus(db,ctx.Actor(),id,ctx.RequestAborted));
         api.MapGet("/students/{id:guid}/mastery/{kcId:guid}",async (Guid id,Guid kcId,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");await using var tx=await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);var s=await a.Student(db,id);var evidence=await db.Evidence.Where(e=>e.StudentId==id && e.GenerationId==s.ActiveGenerationId && e.KCId==kcId).OrderBy(e=>e.OccurredAt).ToListAsync();var result=new{mastery=await db.Masteries.SingleOrDefaultAsync(m=>m.StudentId==id && m.GenerationId==s.ActiveGenerationId && m.KCId==kcId),evidence};await tx.CommitAsync();return result; });
         api.MapGet("/students/{id:guid}/reviews",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);return await db.Reviews.Where(r => r.StudentId==id && r.GenerationId==s.ActiveGenerationId).OrderBy(r => r.DueDate).ToListAsync(); });
-        api.MapPost("/students/{id:guid}:rebuild",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);await Assessment.Rebuild(db,s);return TypedResults.Ok(new { generation=s.ActiveGenerationId }); });
+        api.MapPost("/students/{id:guid}:rebuild",async (Guid id,Database db,HttpContext ctx) => { var a=ctx.Actor();a.Require("Parent");var s=await a.Student(db,id);var before=s.ActiveGenerationId;await Assessment.Rebuild(db,s);if(before!=s.ActiveGenerationId){var g=await db.Generations.SingleAsync(g=>g.Id==s.ActiveGenerationId && g.FamilyId==a.FamilyId);await DomainEvents.Append(db,a.FamilyId,id,g.Id,"Generation","AssessmentApplied",new{generationId=g.Id,g.InputHash,g.Cursor,g.RuleVersion,g.ModelVersion,origin="ParentRebuild",confirmedBy=a.Id});}return TypedResults.Ok(new { generation=s.ActiveGenerationId }); });
         api.MapGet("/students/{id:guid}/weekly-summary",async(Guid id,DateOnly? end,Database db,HttpContext ctx)=>await WeeklyReporting.Read(db,ctx.Actor(),id,end,ctx.RequestAborted));
         api.MapGet("/audit",async (Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");return await db.Audits.Where(a => a.FamilyId==ctx.Actor().FamilyId).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(); });
         api.MapGet("/jobs",async (Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");return await db.Outbox.Where(j=>j.FamilyId==ctx.Actor().FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).Take(100).ToListAsync();});

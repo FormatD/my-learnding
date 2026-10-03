@@ -144,6 +144,10 @@
     {
       "id": "20261003003523_ProjectionConsumerReceipts",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003011422_TypedDomainEvents",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -3155,6 +3159,14 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "DomainEventId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -3162,6 +3174,14 @@
           "name": "FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ConsumerReceipt_DomainEvent_FamilyId_DomainEventId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"DomainEventId\") REFERENCES \"DomainEvent\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -3219,6 +3239,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId_DomainEventId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId_DomainEventId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"DomainEventId\")"
         },
         {
           "name": "IX_ConsumerReceipt_FamilyId_EventId",
@@ -4068,6 +4094,189 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_CorrectionItem\" ON public.\"CorrectionItem\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "DomainEvent",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AggregateId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AggregateType",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EventSequence",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "d",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EventType",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PayloadVersion",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Payload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PayloadHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OccurredAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DispatchTarget",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_DomainEvent_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_DomainEvent_Envelope",
+          "kind": "c",
+          "definition": "CHECK (\"EventSequence\" > 0 AND \"PayloadVersion\" = 1 AND \"AggregateId\" <> '00000000-0000-0000-0000-000000000000'::uuid AND \"AggregateType\" <> ''::text AND (\"EventType\" = ANY (ARRAY['AttemptSubmitted'::text, 'GradingConfirmed'::text, 'AssessmentApplied'::text, 'CorrectionConfirmed'::text, 'TaskTransitioned'::text, 'ProgressChanged'::text, 'ContentReleasePublished'::text])) AND jsonb_typeof(\"Payload\"::jsonb) = 'object'::text AND length(\"PayloadHash\") = 64 AND (\"DispatchTarget\" IS NULL OR \"DispatchTarget\" = 'assessment/1'::text))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_DomainEvent_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_DomainEvent_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_DomainEvent",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_DomainEvent_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_DomainEvent_FamilyId_Id\" ON public.\"DomainEvent\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_DomainEvent_EventSequence",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_DomainEvent_EventSequence\" ON public.\"DomainEvent\" USING btree (\"EventSequence\")"
+        },
+        {
+          "name": "IX_DomainEvent_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_DomainEvent_FamilyId\" ON public.\"DomainEvent\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_DomainEvent_FamilyId_StudentId_EventSequence",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_DomainEvent_FamilyId_StudentId_EventSequence\" ON public.\"DomainEvent\" USING btree (\"FamilyId\", \"StudentId\", \"EventSequence\")"
+        },
+        {
+          "name": "PK_DomainEvent",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_DomainEvent\" ON public.\"DomainEvent\" USING btree (\"Id\")"
         }
       ]
     },
@@ -7967,6 +8176,14 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "DomainEventId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -7982,6 +8199,14 @@
           "name": "FK_Outbox_Attempts_FamilyId_AttemptId",
           "kind": "f",
           "definition": "FOREIGN KEY (\"FamilyId\", \"AttemptId\") REFERENCES \"Attempts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_Outbox_DomainEvent_FamilyId_DomainEventId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"DomainEventId\") REFERENCES \"DomainEvent\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -8019,6 +8244,12 @@
           "definition": "CREATE UNIQUE INDEX \"AK_Outbox_FamilyId_Id\" ON public.\"Outbox\" USING btree (\"FamilyId\", \"Id\")"
         },
         {
+          "name": "IX_Outbox_DomainEventId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_Outbox_DomainEventId\" ON public.\"Outbox\" USING btree (\"DomainEventId\")"
+        },
+        {
           "name": "IX_Outbox_FamilyId",
           "unique": false,
           "valid": true,
@@ -8029,6 +8260,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_Outbox_FamilyId_AttemptId\" ON public.\"Outbox\" USING btree (\"FamilyId\", \"AttemptId\")"
+        },
+        {
+          "name": "IX_Outbox_FamilyId_DomainEventId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_Outbox_FamilyId_DomainEventId\" ON public.\"Outbox\" USING btree (\"FamilyId\", \"DomainEventId\")"
         },
         {
           "name": "IX_Outbox_FamilyId_StudentId",

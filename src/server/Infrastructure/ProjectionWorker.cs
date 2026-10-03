@@ -32,14 +32,17 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
             {
                 if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","评估任务多次中断后已停止，请核对原记录再人工恢复。");
                 if(lease.Job.StudentId!=pending.StudentId || lease.Job.TargetGenerationId==null || Content.Hash(lease.Job.InputPayload)!=lease.Job.InputHash || ProjectionJobs.Snapshot(pending)!=lease.Job.InputPayload)throw new ApiError(422,"PROJECTION_INPUT_CHANGED","评估任务原事件与学生引用不一致。");
+                await DomainEvents.Validate(db,pending,ct);
                 var student=await db.Students.SingleAsync(s=>s.Id==pending.StudentId && s.FamilyId==pending.FamilyId,ct);
                 // Catch-up deliberately reads the latest committed student inputs under the family lock.
                 // The target identity survives retries; new events are receipted only in this same result transaction.
                 await Assessment.Rebuild(db,student,ct,lease.Job.TargetGenerationId);
                 var generation=await db.Generations.SingleAsync(g=>g.Id==student.ActiveGenerationId && g.FamilyId==student.FamilyId && g.StudentId==student.Id,ct);
                 var all=await db.Outbox.Where(o=>o.FamilyId==student.FamilyId && o.StudentId==student.Id && o.ProcessedAt==null).ToArrayAsync(ct);
+                foreach(var item in all)await DomainEvents.Validate(db,item,ct);
                 var ids=all.Select(o=>o.Id).ToArray();var existing=(await db.Set<ConsumerReceipt>().Where(r=>r.FamilyId==student.FamilyId && r.ConsumerName==ProjectionJobs.Consumer && ids.Contains(r.EventId)).Select(r=>r.EventId).ToArrayAsync(ct)).ToHashSet();
-                foreach(var item in all){item.ProcessedAt=DateTimeOffset.UtcNow;if(!existing.Contains(item.Id))db.Add(new ConsumerReceipt{FamilyId=student.FamilyId,StudentId=student.Id,EventId=item.Id,JobId=lease.Job.Id,GenerationId=generation.Id,InputHash=generation.InputHash});}
+                foreach(var item in all){item.ProcessedAt=DateTimeOffset.UtcNow;if(!existing.Contains(item.Id))db.Add(new ConsumerReceipt{FamilyId=student.FamilyId,StudentId=student.Id,EventId=item.Id,DomainEventId=item.DomainEventId,JobId=lease.Job.Id,GenerationId=generation.Id,InputHash=generation.InputHash});}
+                await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{jobId=lease.Job.Id,generationId=generation.Id,generation.InputHash,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=ids,domainEventIds=all.Where(o=>o.DomainEventId!=null).Select(o=>o.DomainEventId!.Value).ToArray()},ct:ct);
                 await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return true;
             }
             catch(Exception ex)when(ex is not OperationCanceledException)

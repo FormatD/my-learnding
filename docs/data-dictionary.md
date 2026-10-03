@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 62 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 63 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -53,6 +53,7 @@
 | 20261002232840_BuilderBudgetReservations | 10.0.4 |
 | 20261003001038_BackgroundJobLeases | 10.0.4 |
 | 20261003003523_ProjectionConsumerReceipts | 10.0.4 |
+| 20261003011422_TypedDomainEvents | 10.0.4 |
 
 ## Accounts
 
@@ -647,10 +648,12 @@
 | InputHash | text | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| DomainEventId | uuid | 是 | 无 |
 
 约束：
 
 - `FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ConsumerReceipt_DomainEvent_FamilyId_DomainEventId`：`FOREIGN KEY ("FamilyId", "DomainEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_Generations_FamilyId_GenerationId`：`FOREIGN KEY ("FamilyId", "GenerationId") REFERENCES "Generations"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_ConsumerReceipt_Outbox_FamilyId_EventId`：`FOREIGN KEY ("FamilyId", "EventId") REFERENCES "Outbox"("FamilyId", "Id") ON DELETE CASCADE`
@@ -661,6 +664,7 @@
 
 - `CREATE UNIQUE INDEX "IX_ConsumerReceipt_ConsumerName_EventId" ON public."ConsumerReceipt" USING btree ("ConsumerName", "EventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId" ON public."ConsumerReceipt" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId_DomainEventId" ON public."ConsumerReceipt" USING btree ("FamilyId", "DomainEventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_EventId" ON public."ConsumerReceipt" USING btree ("FamilyId", "EventId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_GenerationId" ON public."ConsumerReceipt" USING btree ("FamilyId", "GenerationId")`
 - `CREATE INDEX "IX_ConsumerReceipt_FamilyId_JobId" ON public."ConsumerReceipt" USING btree ("FamilyId", "JobId")`
@@ -835,6 +839,42 @@
 - `CREATE INDEX "IX_CorrectionItem_FamilyId_MappingSetRevisionId" ON public."CorrectionItem" USING btree ("FamilyId", "MappingSetRevisionId")`
 - `CREATE INDEX "IX_CorrectionItem_FamilyId_QuestionRevisionId" ON public."CorrectionItem" USING btree ("FamilyId", "QuestionRevisionId")`
 - `CREATE UNIQUE INDEX "PK_CorrectionItem" ON public."CorrectionItem" USING btree ("Id")`
+
+## DomainEvent
+
+关键领域事件的不可修改日志，保存服务器顺序、明确类型与版本、原始负载摘要及实际分派目标；历史缺失不补造。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 是 | 无 |
+| AggregateId | uuid | 否 | 无 |
+| AggregateType | text | 否 | 无 |
+| EventSequence | bigint | 否 | IDENTITY BY DEFAULT |
+| EventType | text | 否 | 无 |
+| PayloadVersion | integer | 否 | 无 |
+| Payload | text | 否 | 无 |
+| PayloadHash | text | 否 | 无 |
+| OccurredAt | timestamp with time zone | 否 | 无 |
+| DispatchTarget | text | 是 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_DomainEvent_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_DomainEvent_Envelope`：`CHECK ("EventSequence" > 0 AND "PayloadVersion" = 1 AND "AggregateId" <> '00000000-0000-0000-0000-000000000000'::uuid AND "AggregateType" <> ''::text AND ("EventType" = ANY (ARRAY['AttemptSubmitted'::text, 'GradingConfirmed'::text, 'AssessmentApplied'::text, 'CorrectionConfirmed'::text, 'TaskTransitioned'::text, 'ProgressChanged'::text, 'ContentReleasePublished'::text])) AND jsonb_typeof("Payload"::jsonb) = 'object'::text AND length("PayloadHash") = 64 AND ("DispatchTarget" IS NULL OR "DispatchTarget" = 'assessment/1'::text))`
+- `FK_DomainEvent_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_DomainEvent_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_DomainEvent`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_DomainEvent_FamilyId_Id" ON public."DomainEvent" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "IX_DomainEvent_EventSequence" ON public."DomainEvent" USING btree ("EventSequence")`
+- `CREATE INDEX "IX_DomainEvent_FamilyId" ON public."DomainEvent" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_DomainEvent_FamilyId_StudentId_EventSequence" ON public."DomainEvent" USING btree ("FamilyId", "StudentId", "EventSequence")`
+- `CREATE UNIQUE INDEX "PK_DomainEvent" ON public."DomainEvent" USING btree ("Id")`
 
 ## Drafts
 
@@ -1620,11 +1660,13 @@
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | NextAttemptAt | timestamp with time zone | 是 | 无 |
 | RetryRound | integer | 是 | 无 |
+| DomainEventId | uuid | 是 | 无 |
 
 约束：
 
 - `AK_Outbox_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
 - `FK_Outbox_Attempts_FamilyId_AttemptId`：`FOREIGN KEY ("FamilyId", "AttemptId") REFERENCES "Attempts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_Outbox_DomainEvent_FamilyId_DomainEventId`：`FOREIGN KEY ("FamilyId", "DomainEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Outbox_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Outbox_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_Outbox`：`PRIMARY KEY ("Id")`
@@ -1632,8 +1674,10 @@
 索引（包含约束自动创建的索引）：
 
 - `CREATE UNIQUE INDEX "AK_Outbox_FamilyId_Id" ON public."Outbox" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "IX_Outbox_DomainEventId" ON public."Outbox" USING btree ("DomainEventId")`
 - `CREATE INDEX "IX_Outbox_FamilyId" ON public."Outbox" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_Outbox_FamilyId_AttemptId" ON public."Outbox" USING btree ("FamilyId", "AttemptId")`
+- `CREATE INDEX "IX_Outbox_FamilyId_DomainEventId" ON public."Outbox" USING btree ("FamilyId", "DomainEventId")`
 - `CREATE INDEX "IX_Outbox_FamilyId_StudentId" ON public."Outbox" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "PK_Outbox" ON public."Outbox" USING btree ("Id")`
 

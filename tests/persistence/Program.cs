@@ -11,6 +11,7 @@ Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
 if(args[0]=="job-lease"){await JobLeaseCases.Run(db);return;}
+if(args[0]=="domain-events"){await DomainEventCases.Run(db);return;}
 if(args[0]=="projection-receipt"){await ProjectionReceiptCases.Run(db);return;}
 if(args[0]=="builder-budget"){await BuilderBudgetPersistenceCases.Run(db);return;}
 if(args[0]=="builder-config")

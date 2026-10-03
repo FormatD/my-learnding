@@ -61,7 +61,9 @@ public static class PaperLearning
             var session=new LearningSession {FamilyId=actor.FamilyId,StudentId=p.Wrong.StudentId,TaskId=task.Id,ReleaseId=p.Release.Id,QuestionId=p.Question.Id,QuestionRevisionId=p.Question.RevisionId,MappingSetRevisionId=await PublishedMappings.Resolve(db,p.Release,p.Question),HintLevel=input.HintLevel,AnswerShown=input.AnswerShown};
             var attempt=new Attempt {FamilyId=actor.FamilyId,StudentId=p.Wrong.StudentId,SessionId=session.Id,QuestionRevisionId=session.QuestionRevisionId,MappingSetRevisionId=session.MappingSetRevisionId,ClientSubmissionId=p.Wrong.Id,Number=1,Answer=p.Wrong.Answer,AnswerSource="ParentPaperConfirmed",HintLevel=input.HintLevel,AnswerShown=input.AnswerShown};
             var grade=new Grading {FamilyId=actor.FamilyId,AttemptId=attempt.Id,Number=1,Result=input.Result,Method="ParentConfirmed",Reason=input.Reason,GradedBy=actor.Id,Steps=Json.Write(input.Steps??[])};
-            db.Tasks.Add(task);db.Sessions.Add(session);db.Attempts.Add(attempt);db.Gradings.Add(grade);db.Outbox.Add(new() {FamilyId=actor.FamilyId,StudentId=p.Wrong.StudentId,AttemptId=attempt.Id});
+            db.Tasks.Add(task);db.Sessions.Add(session);db.Attempts.Add(attempt);db.Gradings.Add(grade);
+            await DomainEvents.Append(db,actor.FamilyId,attempt.StudentId,attempt.Id,"Attempt","AttemptSubmitted",new{attemptId=attempt.Id,sessionId=session.Id,gradingId=grade.Id,attempt.QuestionRevisionId,attempt.MappingSetRevisionId,attempt.AnswerSource,paperWrongId=p.Wrong.Id},attempt.Id);
+            await DomainEvents.Append(db,actor.FamilyId,attempt.StudentId,grade.Id,"Grading","GradingConfirmed",new{attemptId=attempt.Id,gradingId=grade.Id,grade.Result,grade.Method});
             p.Wrong.Status="Confirmed";p.Wrong.QuestionId=p.Question.Id;p.Wrong.ReleaseId=p.Release.Id;p.Wrong.AttemptId=attempt.Id;p.Wrong.ConfirmedBy=actor.Id;p.Wrong.ConfirmedAt=DateTimeOffset.UtcNow;p.Wrong.ConfirmationReason=input.Reason;
             return TypedResults.Accepted("/api/v1/students/"+p.Wrong.StudentId+"/mastery",p.Wrong);
         });

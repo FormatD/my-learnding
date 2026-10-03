@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Learning;
 public class ConsumerReceipt:Row
 {
+    public Guid? DomainEventId {get;set;}
     public Guid StudentId {get;set;}
     public string ConsumerName {get;set;}="assessment/1";
     public Guid EventId {get;set;}
@@ -12,7 +13,7 @@ public class ConsumerReceipt:Row
 public static class ProjectionJobs
 {
     public const string Consumer="assessment/1";
-    public static string Snapshot(Outbox row)=>Json.Write(new{row.FamilyId,row.StudentId,row.AttemptId,eventId=row.Id,consumer=Consumer});
+    public static string Snapshot(Outbox row)=>row.DomainEventId==null?Json.Write(new{row.FamilyId,row.StudentId,row.AttemptId,eventId=row.Id,consumer=Consumer}):Json.Write(new{row.FamilyId,row.StudentId,row.AttemptId,eventId=row.Id,domainEventId=row.DomainEventId,consumer=Consumer});
     public static async Task Ensure(Database owner,Guid? selected=null,CancellationToken ct=default)
     {
         await using var db=BackgroundJobs.Open(owner);

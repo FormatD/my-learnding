@@ -95,7 +95,7 @@ def main():
         if m['generation']!=oldgen and m['pending']==0:break
         time.sleep(.2)
     check('AT19 更正切换评估世代，旧负证据不双计',m['masteries'][0]['beta']==2 and m['masteries'][0]['alpha']==3)
-    g=m['generation'];a.request('/students/'+s['id']+':rebuild',{})
+    g=m['generation'];event_count=a.request('/domain-events?studentId='+s['id'])['total'];a.request('/students/'+s['id']+':rebuild',{});assert a.request('/domain-events?studentId='+s['id'])['total']==event_count
     check('固定输入重复重算复用世代',a.request('/students/'+s['id']+'/mastery')['generation']==g)
     source=a.request('/content/sources',{'title':'受控验收文本','text':'先算乘除，再算加减。'},expected=201)
     a.request('/builder/runs',{'sourceId':source['id'],'provider':'Cloud'},expected=422)
@@ -114,6 +114,7 @@ def main():
     a.request('/builder/candidates/'+c['id']+':decide',{'decision':'Reject','reason':'重复审核'},expected=409)
     check('AT31 候选仅允许审核一次',True)
     a.request('/students/'+s['id']+'/child-sessions',{})
+    a.request('/domain-events',expected=403)
     a.request('/content',expected=403)
     a.request('/students/'+s['id']+'/mastery',expected=403)
     check('孩子会话无管理权限',True)

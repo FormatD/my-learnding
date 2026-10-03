@@ -53,6 +53,7 @@ public static class Corrections
             var a=ctx.Actor();a.Require("Parent");var p=await Preview(db,a,id,input);
             if(input.PreviewHash!=p.Hash)throw new ApiError(412,"CORRECTION_PREVIEW_CHANGED","作答或评估世代已变化，请重新预览。");
             var batch=new CorrectionBatch {FamilyId=a.FamilyId,StudentId=id,ReleaseId=p.Release.Id,PreviewHash=p.Hash,Reason=input.Reason,ConfirmedBy=a.Id,Cause="Mapping",AffectedAttemptIds=Json.Write(input.AttemptIds)};db.Add(batch);
+            await DomainEvents.Append(db,a.FamilyId,id,batch.Id,"CorrectionBatch","CorrectionConfirmed",new{batchId=batch.Id,batch.Cause,attemptIds=input.AttemptIds,batch.ReleaseId,batch.ConfirmedBy});
             foreach(var attemptId in input.AttemptIds)
             {
                 var attempt=await db.Attempts.SingleAsync(x=>x.Id==attemptId && x.FamilyId==a.FamilyId);
@@ -60,7 +61,7 @@ public static class Corrections
                 var question=Json.Read<Catalog>(p.Release.Payload).Questions.Single(q=>q.Id==session.QuestionId);
                 var mapping=await PublishedMappings.Resolve(db,p.Release,question);
                 db.Add(new CorrectionItem {FamilyId=a.FamilyId,BatchId=batch.Id,AttemptId=attemptId,MappingReleaseId=p.Release.Id,QuestionRevisionId=question.RevisionId,MappingSetRevisionId=mapping});
-                db.Outbox.Add(new() {FamilyId=a.FamilyId,StudentId=id,AttemptId=attemptId});
+                await DomainEvents.Append(db,a.FamilyId,id,attemptId,"Attempt","CorrectionConfirmed",new{attemptId,batchId=batch.Id,mappingReleaseId=p.Release.Id,questionRevisionId=question.RevisionId,mappingSetRevisionId=mapping},attemptId);
             }
             return TypedResults.Accepted("/api/v1/students/"+id+"/mastery",batch);
         });

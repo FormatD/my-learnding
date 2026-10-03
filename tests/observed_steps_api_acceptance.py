@@ -11,6 +11,9 @@ def main():
     def publish(catalog):
         d=c.request('/content/drafts',{'title':'步骤测量','catalog':catalog});c.request('/content/drafts/'+d['id']+':review',{});p=c.request('/content/drafts/'+d['id']+'/preview');return c.request('/content/drafts/'+d['id']+':publish',{'previewHash':p['hash']})
     r1=publish(cat);c.request('/students/'+sid+'/content/'+r1['id']+':bind',{})
+    progress_path='/students/'+sid+'/school-progress/'+TODAY+'/'+cat['lessons'][0]['id']
+    c.request(progress_path,{},method='PUT');before=c.request('/domain-events?studentId='+sid)['total'];c.request(progress_path,{},method='PUT');assert c.request('/domain-events?studentId='+sid)['total']==before
+    other.request('/domain-events?studentId='+sid,expected=404);assert not other.request('/domain-events')['events']
     rev=c.request('/students/'+sid+'/plans/'+TODAY+':generate',{});assert c.request('/plans/'+rev['id']+'/questions')[0]['id']==qid
     other.request('/plans/'+rev['id']+'/questions',expected=404);other.request('/students/'+sid+'/assessment-contexts',expected=404);other.request('/students/'+sid+'/evidence-revocations',expected=404)
     inp={'title':'家长观察两步过程','minutes':5,'resourceRef':'在纸上列式与计算，家长观察后确认','type':'Practice','questionId':qid}
@@ -51,7 +54,7 @@ def main():
     from projection_receipt_api_acceptance import verify as verify_projection_receipts
     verify_projection_receipts(c,sid);other.request('/students/'+sid+'/consumer-receipts',expected=404)
     callid=c.request('/builder/calls?runId='+run['id'])['calls'][0]['id'];other.request('/builder/calls/'+callid+':reconcile',{'providerFinished':True,'chargedCost':0,'currency':None,'inputTokens':None,'outputTokens':None,'reason':'不能跨家庭核对','receiptReference':'fixture'},expected=404)
-    assert all(j['familyId']!=c.request('/me')['family']['id'] for j in other.request('/background-jobs')['jobs']);c.request('/students/'+sid+'/child-sessions',{});c.request('/background-jobs',expected=403);c.request('/students/'+sid+'/consumer-receipts',expected=403);c.request('/attempts/'+aid+'/grading-context',expected=403);c.request('/plans/'+rev['id']+'/questions',expected=403);c.request('/students/'+sid+'/assessment-contexts',expected=403);c.request('/students/'+sid+'/evidence-revocations',expected=403)
+    assert all(j['familyId']!=c.request('/me')['family']['id'] for j in other.request('/background-jobs')['jobs']);c.request('/students/'+sid+'/child-sessions',{});c.request('/domain-events',expected=403);c.request('/background-jobs',expected=403);c.request('/students/'+sid+'/consumer-receipts',expected=403);c.request('/attempts/'+aid+'/grading-context',expected=403);c.request('/plans/'+rev['id']+'/questions',expected=403);c.request('/students/'+sid+'/assessment-contexts',expected=403);c.request('/students/'+sid+'/evidence-revocations',expected=403)
     c.request('/builder/calls/'+callid+':reconcile',{'providerFinished':True,'chargedCost':0,'currency':None,'inputTokens':None,'outputTokens':None,'reason':'孩子不能核对','receiptReference':'fixture'},expected=403);c.request('/builder/budget',expected=403);c.request('/builder/budget',{'dailyCostLimit':0,'dailyTokenLimit':0,'perCallCostLimit':0,'perCallTokenLimit':0,'maxConcurrentCalls':1,'reason':'孩子不能修改预算'},method='PUT',expected=403);c.request('/builder/calls',expected=403);c.request('/content/mapping-sets',expected=403);c.request('/content/mapping-sets/'+direct_saved['set']['id'],expected=403);c.request('/content/mapping-sets',direct,expected=403)
     print('PASS 独立映射真实草稿跨家庭404、列表隔离、孩子拒绝读写；孩子不能获取参考答案与家长观察判分上下文')
 if __name__=='__main__':main()
