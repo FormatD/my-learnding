@@ -36,3 +36,6 @@ python3 tests/online_assessment_fault_acceptance.py
 # Actual ordered source receipt progress and crash atomicity.
 python3 tests/assessment_consumption_acceptance.py
 python3 tests/assessment_consumption_fault_acceptance.py
+
+# Bound actual materialized sources to referenced records without changing input bytes.
+python3 tests/assessment_source_loading_acceptance.py

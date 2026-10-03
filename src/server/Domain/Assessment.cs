@@ -171,12 +171,13 @@ public static class Assessment
     }
     public static async Task<(AssessmentInput[] Inputs,TeachingAnchor[] Teaching)> LoadInputs(Database db,Student student,CancellationToken ct=default,ISet<Guid>? excludedCorrectionBatches=null)
     {
-        var attempts=await db.Attempts.Where(a => a.StudentId==student.Id).OrderBy(a => a.Sequence).ToListAsync(ct);
-        var sessions=await db.Sessions.Where(s => s.StudentId==student.Id).ToDictionaryAsync(s => s.Id,ct);
-        var grades=await db.Gradings.Where(g => g.FamilyId==student.FamilyId).OrderBy(g => g.Number).ToListAsync(ct);
-        var releases=await db.Releases.Where(r => r.FamilyId==student.FamilyId).ToDictionaryAsync(r => r.Id,ct);
-        var tasks=await db.Tasks.Where(t => t.StudentId==student.Id).ToDictionaryAsync(t => t.Id,ct);
-        var attemptIds=attempts.Select(a=>a.Id).ToArray();var corrections=await db.Set<CorrectionItem>().Where(c=>c.FamilyId==student.FamilyId && attemptIds.Contains(c.AttemptId)).OrderBy(c=>c.Sequence).ToListAsync(ct);
+        var attempts=await db.Attempts.Where(a => a.FamilyId==student.FamilyId && a.StudentId==student.Id).OrderBy(a => a.Sequence).ToListAsync(ct);
+        var attemptIds=attempts.Select(a=>a.Id).ToArray();var sessionIds=attempts.Select(a=>a.SessionId).Distinct().ToArray();
+        var sessions=await db.Sessions.Where(s => s.FamilyId==student.FamilyId && s.StudentId==student.Id && sessionIds.Contains(s.Id)).ToDictionaryAsync(s => s.Id,ct);
+        var taskIds=sessions.Values.Select(s=>s.TaskId).Distinct().ToArray();
+        var tasks=await db.Tasks.Where(t => t.FamilyId==student.FamilyId && t.StudentId==student.Id && (taskIds.Contains(t.Id) || t.Type=="Resource" && t.KCId!=null && t.CompletedAt!=null)).ToDictionaryAsync(t => t.Id,ct);
+        var grades=await db.Gradings.Where(g => g.FamilyId==student.FamilyId && attemptIds.Contains(g.AttemptId)).OrderBy(g => g.Number).ToListAsync(ct);
+        var corrections=await db.Set<CorrectionItem>().Where(c=>c.FamilyId==student.FamilyId && attemptIds.Contains(c.AttemptId)).OrderBy(c=>c.Sequence).ToListAsync(ct);
         if(excludedCorrectionBatches!=null){grades=grades.Where(g=>g.CorrectionBatchId==null || !excludedCorrectionBatches.Contains(g.CorrectionBatchId.Value)).ToList();corrections=corrections.Where(c=>!excludedCorrectionBatches.Contains(c.BatchId)).ToList();}
         var mappingIds=attempts.Where(a=>a.MappingSetRevisionId!=null).Select(a=>a.MappingSetRevisionId!.Value).Concat(corrections.Where(c=>c.MappingSetRevisionId!=null).Select(c=>c.MappingSetRevisionId!.Value)).Distinct().ToArray();
         var sets=await db.Set<MappingSetRevision>().Where(m=>m.FamilyId==student.FamilyId && mappingIds.Contains(m.Id)).ToDictionaryAsync(m=>m.Id,ct);
@@ -185,12 +186,15 @@ public static class Assessment
         var bindings=await db.Set<ReleaseMappingSet>().Where(b=>b.FamilyId==student.FamilyId && b.OwnerType=="Question" && mappingIds.Contains(b.SetRevisionId)).ToArrayAsync(ct);
         var bindingKeys=bindings.Select(b=>(b.ReleaseId,b.OwnerId,b.OwnerRevisionId,b.SetRevisionId)).ToHashSet();
         var usedReleases=attempts.Select(a=>sessions[a.SessionId].ReleaseId).Concat(corrections.Select(c=>c.MappingReleaseId)).Distinct().ToArray();
+        var releases=await db.Releases.Where(r => r.FamilyId==student.FamilyId && usedReleases.Contains(r.Id)).ToDictionaryAsync(r => r.Id,ct);
         var catalogs=usedReleases.ToDictionary(id=>id,id=>Json.Read<Catalog>(releases[id].Payload));
         var modernReleases=(await db.Set<ContentReviewRecord>().Where(r=>r.FamilyId==student.FamilyId && r.PublishedReleaseId!=null && usedReleases.Contains(r.PublishedReleaseId.Value) && r.PublishedMappingVersion=="mapping-container/1").Select(r=>r.PublishedReleaseId!.Value).ToArrayAsync(ct)).ToHashSet();
-        var batches=await db.Set<CorrectionBatch>().Where(b=>b.FamilyId==student.FamilyId && b.StudentId==student.Id).ToDictionaryAsync(b=>b.Id,ct);
+        var batchIds=grades.Where(g=>g.CorrectionBatchId!=null).Select(g=>g.CorrectionBatchId!.Value).Concat(corrections.Select(c=>c.BatchId)).Distinct().ToArray();
+        var batches=await db.Set<CorrectionBatch>().Where(b=>b.FamilyId==student.FamilyId && b.StudentId==student.Id && batchIds.Contains(b.Id)).ToDictionaryAsync(b=>b.Id,ct);
+        var gradingLookup=grades.ToLookup(g=>g.AttemptId);var correctionLookup=corrections.ToLookup(c=>c.AttemptId);
         var inputs=attempts.Select(a=>
         {
-            var session=sessions[a.SessionId];var correction=corrections.LastOrDefault(c=>c.AttemptId==a.Id);var mappingRelease=correction?.MappingReleaseId??session.ReleaseId;
+            var session=sessions[a.SessionId];var correction=correctionLookup[a.Id].LastOrDefault();var mappingRelease=correction?.MappingReleaseId??session.ReleaseId;
             var catalog=catalogs[mappingRelease];var question=catalog.Questions.Single(q=>q.Id==session.QuestionId);
             if(a.MappingSetRevisionId!=session.MappingSetRevisionId)throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","原作答与原会话的固定映射不一致。");
             var original=catalogs[session.ReleaseId].Questions.Single(q=>q.Id==session.QuestionId);
@@ -210,7 +214,7 @@ public static class Assessment
                 if(!sets.TryGetValue(mapping.Value,out var set))throw new ApiError(422,"MAPPING_SNAPSHOT_UNKNOWN","固定映射容器不可用。");
                 question=PublishedMappings.Project(catalog,question,set,itemLookup[set.Id].ToArray());
             }
-            var grade=grades.Last(g=>g.AttemptId==a.Id);var cause=correction?.BatchId;
+            var grade=gradingLookup[a.Id].Last();var cause=correction?.BatchId;
             if(grade.CorrectionBatchId is {} gradingBatch && (cause==null || batches[gradingBatch].CreatedAt>batches[cause.Value].CreatedAt))cause=gradingBatch;
             return new AssessmentInput(a,session,question,grade,catalog.Kcs,tasks[session.TaskId],mappingRelease,cause,mapping,grade.CorrectionBatchId,correction?.BatchId);
         }).ToArray();
