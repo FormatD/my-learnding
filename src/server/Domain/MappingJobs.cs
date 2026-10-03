@@ -32,6 +32,7 @@ public static class MappingJobs
     }
     public static async Task ProcessOne(Database db,CancellationToken stopping=default)
     {
+        db.ChangeTracker.Clear();
         await using var lease=await BackgroundJobs.Claim(db,stopping,[Type]);if(lease==null)return;var ct=lease.Token;
         try
         {

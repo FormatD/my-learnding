@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 64 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 66 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -55,6 +55,8 @@
 | 20261003003523_ProjectionConsumerReceipts | 10.0.4 |
 | 20261003011422_TypedDomainEvents | 10.0.4 |
 | 20261003161120_MappingPreparationJobs | 10.0.4 |
+| 20261003165910_AssessmentRebuildRequests | 10.0.4 |
+| 20261003171507_AssessmentInputHashVersion | 10.0.4 |
 
 ## Accounts
 
@@ -172,6 +174,84 @@
 - `CREATE UNIQUE INDEX "IX_AssessmentContext_GenerationId_AttemptId" ON public."AssessmentContext" USING btree ("GenerationId", "AttemptId")`
 - `CREATE UNIQUE INDEX "IX_AssessmentContext_GenerationId_AttemptId_GradingRevisionId_~" ON public."AssessmentContext" USING btree ("GenerationId", "AttemptId", "GradingRevisionId", "MappingSetRevisionId", "EvidenceRuleVersion")`
 - `CREATE UNIQUE INDEX "PK_AssessmentContext" ON public."AssessmentContext" USING btree ("Id")`
+
+## AssessmentRebuildRequest
+
+家长后台重建的不可修改请求，固定学生、规则版本、时区和目标世代；基线为提交时已完成结果，处理时追平最新已提交输入。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 否 | 无 |
+| JobId | uuid | 否 | 无 |
+| RequestedBy | uuid | 否 | 无 |
+| TargetGenerationId | uuid | 否 | 无 |
+| Snapshot | text | 否 | 无 |
+| SnapshotHash | text | 否 | 无 |
+| Reason | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_AssessmentRebuildRequest_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_AssessmentRebuildRequest_Snapshot`：`CHECK (jsonb_typeof("Snapshot"::jsonb) = 'object'::text AND length("SnapshotHash") = 64 AND length("Reason") >= 1 AND length("Reason") <= 4000)`
+- `FK_AssessmentRebuildRequest_Accounts_FamilyId_RequestedBy`：`FOREIGN KEY ("FamilyId", "RequestedBy") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildRequest_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildRequest_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildRequest_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_AssessmentRebuildRequest`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_AssessmentRebuildRequest_FamilyId_Id" ON public."AssessmentRebuildRequest" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_AssessmentRebuildRequest_FamilyId" ON public."AssessmentRebuildRequest" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_AssessmentRebuildRequest_FamilyId_JobId" ON public."AssessmentRebuildRequest" USING btree ("FamilyId", "JobId")`
+- `CREATE INDEX "IX_AssessmentRebuildRequest_FamilyId_RequestedBy" ON public."AssessmentRebuildRequest" USING btree ("FamilyId", "RequestedBy")`
+- `CREATE INDEX "IX_AssessmentRebuildRequest_FamilyId_StudentId" ON public."AssessmentRebuildRequest" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentRebuildRequest_JobId" ON public."AssessmentRebuildRequest" USING btree ("JobId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentRebuildRequest_TargetGenerationId" ON public."AssessmentRebuildRequest" USING btree ("TargetGenerationId")`
+- `CREATE UNIQUE INDEX "PK_AssessmentRebuildRequest" ON public."AssessmentRebuildRequest" USING btree ("Id")`
+
+## AssessmentRebuildResult
+
+实际后台重建结果回执，关联原请求、任务、实际世代和应用事件；与评估及事件消费同事务提交。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 否 | 无 |
+| RequestId | uuid | 否 | 无 |
+| JobId | uuid | 否 | 无 |
+| GenerationId | uuid | 否 | 无 |
+| AppliedEventId | uuid | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| Cursor | bigint | 否 | 无 |
+| ReusedGeneration | boolean | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_AssessmentRebuildResult_AssessmentRebuildRequest_FamilyId_R~`：`FOREIGN KEY ("FamilyId", "RequestId") REFERENCES "AssessmentRebuildRequest"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildResult_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildResult_DomainEvent_FamilyId_AppliedEventId`：`FOREIGN KEY ("FamilyId", "AppliedEventId") REFERENCES "DomainEvent"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildResult_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildResult_Generations_FamilyId_GenerationId`：`FOREIGN KEY ("FamilyId", "GenerationId") REFERENCES "Generations"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_AssessmentRebuildResult_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_AssessmentRebuildResult`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_AssessmentRebuildResult_AppliedEventId" ON public."AssessmentRebuildResult" USING btree ("AppliedEventId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId" ON public."AssessmentRebuildResult" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_AppliedEventId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "AppliedEventId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_GenerationId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "GenerationId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_JobId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "JobId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_RequestId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "RequestId")`
+- `CREATE INDEX "IX_AssessmentRebuildResult_FamilyId_StudentId" ON public."AssessmentRebuildResult" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "IX_AssessmentRebuildResult_RequestId" ON public."AssessmentRebuildResult" USING btree ("RequestId")`
+- `CREATE UNIQUE INDEX "PK_AssessmentRebuildResult" ON public."AssessmentRebuildResult" USING btree ("Id")`
 
 ## Attempts
 
@@ -339,6 +419,7 @@
 - `CREATE UNIQUE INDEX "AK_BackgroundJob_FamilyId_Id" ON public."BackgroundJob" USING btree ("FamilyId", "Id")`
 - `CREATE INDEX "IX_BackgroundJob_FamilyId" ON public."BackgroundJob" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_BackgroundJob_FamilyId_StudentId" ON public."BackgroundJob" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_StudentId_Type" ON public."BackgroundJob" USING btree ("FamilyId", "StudentId", "Type") WHERE (("Type" = 'AssessmentRebuild'::text) AND ("Status" = ANY (ARRAY['Queued'::text, 'Running'::text, 'Retrying'::text])))`
 - `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_Type_IdempotencyKey" ON public."BackgroundJob" USING btree ("FamilyId", "Type", "IdempotencyKey")`
 - `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_Type_InputRef" ON public."BackgroundJob" USING btree ("FamilyId", "Type", "InputRef")`
 - `CREATE INDEX "IX_BackgroundJob_Status_NextRunAt_LeaseExpiresAt" ON public."BackgroundJob" USING btree ("Status", "NextRunAt", "LeaseExpiresAt")`
@@ -1079,6 +1160,7 @@
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | ModelVersion | text | 否 | ''::text |
+| InputVersion | text | 是 | 无 |
 
 约束：
 

@@ -152,6 +152,14 @@
     {
       "id": "20261003161120_MappingPreparationJobs",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003165910_AssessmentRebuildRequests",
+      "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003171507_AssessmentInputHashVersion",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -755,6 +763,406 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_AssessmentContext\" ON public.\"AssessmentContext\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "AssessmentRebuildRequest",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "JobId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RequestedBy",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "TargetGenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Snapshot",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SnapshotHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_AssessmentRebuildRequest_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_AssessmentRebuildRequest_Snapshot",
+          "kind": "c",
+          "definition": "CHECK (jsonb_typeof(\"Snapshot\"::jsonb) = 'object'::text AND length(\"SnapshotHash\") = 64 AND length(\"Reason\") >= 1 AND length(\"Reason\") <= 4000)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildRequest_Accounts_FamilyId_RequestedBy",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"RequestedBy\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildRequest_BackgroundJob_FamilyId_JobId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildRequest_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildRequest_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_AssessmentRebuildRequest",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_AssessmentRebuildRequest_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_AssessmentRebuildRequest_FamilyId_Id\" ON public.\"AssessmentRebuildRequest\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildRequest_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildRequest_FamilyId\" ON public.\"AssessmentRebuildRequest\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildRequest_FamilyId_JobId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildRequest_FamilyId_JobId\" ON public.\"AssessmentRebuildRequest\" USING btree (\"FamilyId\", \"JobId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildRequest_FamilyId_RequestedBy",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildRequest_FamilyId_RequestedBy\" ON public.\"AssessmentRebuildRequest\" USING btree (\"FamilyId\", \"RequestedBy\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildRequest_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildRequest_FamilyId_StudentId\" ON public.\"AssessmentRebuildRequest\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildRequest_JobId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentRebuildRequest_JobId\" ON public.\"AssessmentRebuildRequest\" USING btree (\"JobId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildRequest_TargetGenerationId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentRebuildRequest_TargetGenerationId\" ON public.\"AssessmentRebuildRequest\" USING btree (\"TargetGenerationId\")"
+        },
+        {
+          "name": "PK_AssessmentRebuildRequest",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_AssessmentRebuildRequest\" ON public.\"AssessmentRebuildRequest\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "AssessmentRebuildResult",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RequestId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "JobId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "GenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AppliedEventId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Cursor",
+          "type": "bigint",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReusedGeneration",
+          "type": "boolean",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_AssessmentRebuildResult_AssessmentRebuildRequest_FamilyId_R~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"RequestId\") REFERENCES \"AssessmentRebuildRequest\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildResult_BackgroundJob_FamilyId_JobId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildResult_DomainEvent_FamilyId_AppliedEventId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"AppliedEventId\") REFERENCES \"DomainEvent\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildResult_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildResult_Generations_FamilyId_GenerationId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"GenerationId\") REFERENCES \"Generations\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentRebuildResult_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_AssessmentRebuildResult",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_AssessmentRebuildResult_AppliedEventId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentRebuildResult_AppliedEventId\" ON public.\"AssessmentRebuildResult\" USING btree (\"AppliedEventId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId_AppliedEventId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_AppliedEventId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"AppliedEventId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId_GenerationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_GenerationId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"GenerationId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId_JobId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_JobId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"JobId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId_RequestId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_RequestId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"RequestId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentRebuildResult_FamilyId_StudentId\" ON public.\"AssessmentRebuildResult\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_AssessmentRebuildResult_RequestId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_AssessmentRebuildResult_RequestId\" ON public.\"AssessmentRebuildResult\" USING btree (\"RequestId\")"
+        },
+        {
+          "name": "PK_AssessmentRebuildResult",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_AssessmentRebuildResult\" ON public.\"AssessmentRebuildResult\" USING btree (\"Id\")"
         }
       ]
     },
@@ -1572,6 +1980,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_BackgroundJob_FamilyId_StudentId\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "IX_BackgroundJob_FamilyId_StudentId_Type",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BackgroundJob_FamilyId_StudentId_Type\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\", \"StudentId\", \"Type\") WHERE ((\"Type\" = 'AssessmentRebuild'::text) AND (\"Status\" = ANY (ARRAY['Queued'::text, 'Running'::text, 'Retrying'::text])))"
         },
         {
           "name": "IX_BackgroundJob_FamilyId_Type_IdempotencyKey",
@@ -5226,6 +5640,14 @@
           "identity": "",
           "generated": "",
           "default": "''::text"
+        },
+        {
+          "name": "InputVersion",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [

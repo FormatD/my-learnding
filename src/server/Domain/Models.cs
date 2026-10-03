@@ -214,6 +214,7 @@ public class Outbox : Row
 }
 public class Generation : Row
 {
+    public string? InputVersion {get;set;}
     public string ModelVersion { get; set; } = "mastery/1";
     public Guid StudentId { get; set; }
     public string Status { get; set; } = "Shadow";

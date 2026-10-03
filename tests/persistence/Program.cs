@@ -10,6 +10,7 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0].StartsWith("rebuild-job")){await AssessmentRebuildCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("mapping-job")){await MappingJobCases.Run(db,args[0]);return;}
 if(args[0]=="job-lease"){await JobLeaseCases.Run(db);return;}
 if(args[0]=="domain-events"){await DomainEventCases.Run(db);return;}

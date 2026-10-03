@@ -36,13 +36,8 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                 var student=await db.Students.SingleAsync(s=>s.Id==pending.StudentId && s.FamilyId==pending.FamilyId,ct);
                 // Catch-up deliberately reads the latest committed student inputs under the family lock.
                 // The target identity survives retries; new events are receipted only in this same result transaction.
-                await Assessment.Rebuild(db,student,ct,lease.Job.TargetGenerationId);
-                var generation=await db.Generations.SingleAsync(g=>g.Id==student.ActiveGenerationId && g.FamilyId==student.FamilyId && g.StudentId==student.Id,ct);
-                var all=await db.Outbox.Where(o=>o.FamilyId==student.FamilyId && o.StudentId==student.Id && o.ProcessedAt==null).ToArrayAsync(ct);
-                foreach(var item in all)await DomainEvents.Validate(db,item,ct);
-                var ids=all.Select(o=>o.Id).ToArray();var existing=(await db.Set<ConsumerReceipt>().Where(r=>r.FamilyId==student.FamilyId && r.ConsumerName==ProjectionJobs.Consumer && ids.Contains(r.EventId)).Select(r=>r.EventId).ToArrayAsync(ct)).ToHashSet();
-                foreach(var item in all){item.ProcessedAt=DateTimeOffset.UtcNow;if(!existing.Contains(item.Id))db.Add(new ConsumerReceipt{FamilyId=student.FamilyId,StudentId=student.Id,EventId=item.Id,DomainEventId=item.DomainEventId,JobId=lease.Job.Id,GenerationId=generation.Id,InputHash=generation.InputHash});}
-                await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{jobId=lease.Job.Id,generationId=generation.Id,generation.InputHash,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=ids,domainEventIds=all.Where(o=>o.DomainEventId!=null).Select(o=>o.DomainEventId!.Value).ToArray()},ct:ct);
+                var applied=await AssessmentProjection.Apply(db,student,lease.Job.TargetGenerationId.Value,lease.Job.Id,ct);var generation=applied.Generation;
+                await DomainEvents.Append(db,student.FamilyId,student.Id,generation.Id,"Generation","AssessmentApplied",new{jobId=lease.Job.Id,generationId=generation.Id,generation.InputHash,generation.InputVersion,generation.Cursor,generation.RuleVersion,generation.ModelVersion,outboxIds=applied.OutboxIds,domainEventIds=applied.DomainEventIds},ct:ct);
                 await lease.Finish(db,"Succeeded",null,null,ct);await tx.CommitAsync(ct);return true;
             }
             catch(Exception ex)when(ex is not OperationCanceledException)
@@ -62,8 +57,12 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
             {
                 await using var scope=scopes.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<Database>();
                 try{await ProcessOne(db,ct);}catch(Exception ex)when(ex is not OperationCanceledException){logger.LogError(ex,"Projection processing failed");db.ChangeTracker.Clear();}
+                db.ChangeTracker.Clear();
                 await Builder.ProcessOne(db,ct,logger);
+                db.ChangeTracker.Clear();
                 await MappingJobs.ProcessOne(db,ct);
+                db.ChangeTracker.Clear();
+                await AssessmentRebuildJobs.ProcessOne(db,ct);
             }
             catch(OperationCanceledException)when(ct.IsCancellationRequested){break;}
             catch(Exception ex){logger.LogError(ex,"Projection worker failed");}

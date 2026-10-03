@@ -7,6 +7,7 @@ public record TeachingAnchor(Guid KCId,DateTimeOffset Time);
 public record AssessmentStatus(Guid? Generation, List<Mastery> Masteries, int Pending);
 public static class Assessment
 {
+    public const string InputHashVersion="assessment-input/2";
     public const string EvidenceRuleVersion="evidence/1.1";
     public const string MasteryModelVersion="mastery/1.1";
     public const string ReviewRuleVersion="review/1";
@@ -219,10 +220,10 @@ public static class Assessment
     public static async Task Rebuild(Database db, Student student, CancellationToken ct=default,Guid? targetGenerationId=null)
     {
         var (inputs,teaching)=await LoadInputs(db,student,ct);
-        var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="assessment-context/1",rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
-        if (student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash,ct)) return;
+        var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="assessment-context/1",inputVersion=InputHashVersion,timeZone=student.TimeZone,rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
+        if (student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash && g.InputVersion==InputHashVersion,ct)) return;
         if(targetGenerationId!=null && await db.Generations.AnyAsync(g=>g.Id==targetGenerationId,ct))throw new ApiError(422,"GENERATION_TARGET_CONFLICT","固定重建目标已有不同结果，请核对消费记录。");
-        var gen=new Generation { Id=targetGenerationId??Guid.NewGuid(),FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
+        var gen=new Generation { Id=targetGenerationId??Guid.NewGuid(),FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,InputVersion=InputHashVersion,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };
         db.Generations.Add(gen);
         var output=Replay(student.FamilyId,student.Id,gen.Id,student.TimeZone,inputs,teaching);
         await EvidenceRevocations.Apply(db,student,gen,output,ct);
