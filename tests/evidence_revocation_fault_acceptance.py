@@ -38,9 +38,17 @@ def main():
         assert sql('SELECT COUNT(*) FROM "Students" WHERE "ActiveGenerationId" IS NOT NULL')=='1'
         assert sql('SELECT COUNT(*) FROM "Generations"')=='1'
         child.kill();child.wait(timeout=10)
+        deadline=time.monotonic()+10
+        while sql('SELECT COUNT(*) FROM "BackgroundJob" WHERE "Type"=\'AssessmentProjection\' AND "Status"=\'Running\' AND "LeaseExpiresAt">clock_timestamp()')!='0':
+            assert time.monotonic()<deadline,'killed projection lease did not expire'
+            time.sleep(.1)
         subprocess.run(command+['revocation-recover'],env=env,check=True)
     finally:
         if child is not None and child.poll() is None:child.kill();child.wait(timeout=10)
+        deadline=time.monotonic()+10
+        while sql('SELECT COUNT(*) FROM "BackgroundJob" WHERE "Type"=\'AssessmentProjection\' AND "Status"=\'Running\' AND "LeaseExpiresAt">clock_timestamp()')!='0':
+            assert time.monotonic()<deadline,'killed projection lease did not expire'
+            time.sleep(.1)
         subprocess.run(['dropdb','--force',database],env=env,check=True)
 
 if __name__=='__main__':main()

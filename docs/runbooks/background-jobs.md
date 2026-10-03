@@ -1,6 +1,6 @@
 # 后台任务领取、心跳与中断恢复
 
-BackgroundJob采用设计§13.3的任务字段：Type/InputRef/IdempotencyKey、固定InputPayload/Hash、Queued/Running/Succeeded/Retrying/Failed/Cancelled、AttemptCount/MaxAttempts、NextRunAt、LeaseOwner/LeaseExpiresAt/HeartbeatAt和LastErrorCode。当前建库候选和本地PDF解析已实际接入；作答Outbox/评估投影及映射建议尚未统一接入，不把此阶段当作整个后台系统已完成。
+BackgroundJob采用设计§13.3的任务字段：Type/InputRef/IdempotencyKey、固定InputPayload/Hash、Queued/Running/Succeeded/Retrying/Failed/Cancelled、AttemptCount/MaxAttempts、NextRunAt、LeaseOwner/LeaseExpiresAt/HeartbeatAt和LastErrorCode。当前建库候选、本地PDF解析及作答Outbox/评估追平已实际接入；评估独立消费回执及固定目标见[评估消费手册](projection-consumption.md)。明确事件序列/载荷、手动重建后台化、映射建议和用户取消仍开放，不把此阶段当作整个后台系统已完成。
 
 ## 领取与提交
 
@@ -30,4 +30,4 @@ BackgroundJob和JobLeaseAttempt随全家ZIP/加密数据库快照导出，家庭
 
 job_lease_persistence_acceptance.py实际两连接领取竞争、心跳跨完整保护周期、结果与成功回执事务提交、到期换人/旧人真实写入结果后围栏拒绝且事务回滚、耗尽尝试仅失败清理、未来退避/Cancelled不领取、数据库缺领取人及重复任务约束。builder_call_crash_acceptance.py真实终止进程，在3秒/1秒短策略夹具下等待实际数据库保护期到期，不改写到期时间，再验证调用事实、两次领取与一份候选。原建库保存故障、有界退避/人工重试、全家导出及加密恢复/删除不复活继续通过。
 
-仍开放：Outbox/评估投影统一任务及ConsumerReceipt、固定重建GenerationId、映射建议后台化、用户取消协议、生产设备/负载及跨机器故障测试，真实付费提供者价格/请求Token与账单联调。当前本地一次性数据库与模拟提供者不能关闭这些条件。
+仍开放：Outbox明确事件序列/类型/载荷、独立增量/全量核对、手动重建和映射建议后台化、用户取消协议、生产设备/负载及跨机器故障测试，真实付费提供者价格/请求Token与账单联调。当前本地一次性数据库与模拟提供者不能关闭这些条件。

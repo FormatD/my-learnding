@@ -140,6 +140,10 @@
     {
       "id": "20261003001038_BackgroundJobLeases",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003003523_ProjectionConsumerReceipts",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1466,6 +1470,22 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "TargetGenerationId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -1510,6 +1530,14 @@
           "initiallyDeferred": false
         },
         {
+          "name": "FK_BackgroundJob_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
           "name": "PK_BackgroundJob",
           "kind": "p",
           "definition": "PRIMARY KEY (\"Id\")",
@@ -1532,6 +1560,12 @@
           "definition": "CREATE INDEX \"IX_BackgroundJob_FamilyId\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\")"
         },
         {
+          "name": "IX_BackgroundJob_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BackgroundJob_FamilyId_StudentId\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
           "name": "IX_BackgroundJob_FamilyId_Type_IdempotencyKey",
           "unique": true,
           "valid": true,
@@ -1548,6 +1582,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_BackgroundJob_Status_NextRunAt_LeaseExpiresAt\" ON public.\"BackgroundJob\" USING btree (\"Status\", \"NextRunAt\", \"LeaseExpiresAt\")"
+        },
+        {
+          "name": "IX_BackgroundJob_TargetGenerationId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BackgroundJob_TargetGenerationId\" ON public.\"BackgroundJob\" USING btree (\"TargetGenerationId\")"
         },
         {
           "name": "PK_BackgroundJob",
@@ -3038,6 +3078,177 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Commands\" ON public.\"Commands\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "ConsumerReceipt",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StudentId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ConsumerName",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "EventId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "JobId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "GenerationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ConsumerReceipt_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ConsumerReceipt_Generations_FamilyId_GenerationId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"GenerationId\") REFERENCES \"Generations\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ConsumerReceipt_Outbox_FamilyId_EventId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"EventId\") REFERENCES \"Outbox\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ConsumerReceipt_Students_FamilyId_StudentId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"StudentId\") REFERENCES \"Students\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_ConsumerReceipt",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_ConsumerReceipt_ConsumerName_EventId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_ConsumerReceipt_ConsumerName_EventId\" ON public.\"ConsumerReceipt\" USING btree (\"ConsumerName\", \"EventId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId_EventId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId_EventId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"EventId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId_GenerationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId_GenerationId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"GenerationId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId_JobId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId_JobId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"JobId\")"
+        },
+        {
+          "name": "IX_ConsumerReceipt_FamilyId_StudentId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ConsumerReceipt_FamilyId_StudentId\" ON public.\"ConsumerReceipt\" USING btree (\"FamilyId\", \"StudentId\")"
+        },
+        {
+          "name": "PK_ConsumerReceipt",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_ConsumerReceipt\" ON public.\"ConsumerReceipt\" USING btree (\"Id\")"
         }
       ]
     },
@@ -7748,9 +7959,25 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "RetryRound",
+          "type": "integer",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
+        {
+          "name": "AK_Outbox_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
         {
           "name": "FK_Outbox_Attempts_FamilyId_AttemptId",
           "kind": "f",
@@ -7785,6 +8012,12 @@
         }
       ],
       "indexes": [
+        {
+          "name": "AK_Outbox_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_Outbox_FamilyId_Id\" ON public.\"Outbox\" USING btree (\"FamilyId\", \"Id\")"
+        },
         {
           "name": "IX_Outbox_FamilyId",
           "unique": false,

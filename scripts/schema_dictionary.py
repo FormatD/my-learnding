@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "ConsumerReceipt": "按消费者/事件唯一的实际评估消费回执，与结果、队列及领取终态同事务提交，不补造旧历史。",
     "BackgroundJob": "后台工作固定输入、领取人/到期/心跳、尝试上限与当前状态；建库及PDF已接入。",
     "JobLeaseAttempt": "每次实际领取及中断/到期历史；结果与最终领取回执在同一事务提交。",
     "EvidenceRevocation": "已确认更正导致的错误历史证据撤销；原证据不改写，同一证据最多撤销一次。",

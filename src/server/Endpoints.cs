@@ -291,7 +291,7 @@ public static class Endpoints
         api.MapGet("/students/{id:guid}/weekly-summary",async(Guid id,DateOnly? end,Database db,HttpContext ctx)=>await WeeklyReporting.Read(db,ctx.Actor(),id,end,ctx.RequestAborted));
         api.MapGet("/audit",async (Database db,HttpContext ctx) => { ctx.Actor().Require("Parent");return await db.Audits.Where(a => a.FamilyId==ctx.Actor().FamilyId).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(); });
         api.MapGet("/jobs",async (Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");return await db.Outbox.Where(j=>j.FamilyId==ctx.Actor().FamilyId && j.ProcessedAt==null).OrderBy(j=>j.CreatedAt).Take(100).ToListAsync();});
-        api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);if(job.ProcessedAt!=null)throw new ApiError(409,"JOB_COMPLETED","结果已经处理，不需要再次重试。");job.Retries=0;job.NextAttemptAt=null;job.Error=null;return TypedResults.Accepted("/api/v1/jobs",job);});
+        api.MapPost("/jobs/{id:guid}:retry",async (Guid id,Database db,HttpContext ctx)=>{ctx.Actor().Require("Parent");var job=await Owned<Outbox>(db,ctx.Actor(),id);if(job.ProcessedAt!=null)throw new ApiError(409,"JOB_COMPLETED","结果已经处理，不需要再次重试。");job.Retries=0;job.RetryRound=(job.RetryRound??0)+1;job.NextAttemptAt=null;job.Error=null;return TypedResults.Accepted("/api/v1/jobs",job);});
         ParentBurden.Map(api);
         ProgressCorrections.Map(api);
         Builder.Map(api);

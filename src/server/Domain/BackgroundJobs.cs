@@ -3,6 +3,8 @@ namespace Learning;
 
 public class BackgroundJob:Row
 {
+    public Guid? StudentId {get;set;}
+    public Guid? TargetGenerationId {get;set;}
     public string Type {get;set;}="";
     public Guid InputRef {get;set;}
     public string IdempotencyKey {get;set;}="";
@@ -47,10 +49,10 @@ public static class BackgroundJobs
             await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"BackgroundJob\" SET \"NextRunAt\"={run.NextAttemptAt} WHERE \"FamilyId\"={run.FamilyId} AND \"InputRef\"={run.Id} AND \"Type\"={type} AND \"Status\"='Retrying' AND \"RetryRound\"={run.RetryRound}",ct);
         }
     }
-    public static async Task<JobLease?> Claim(Database owner,CancellationToken ct=default,string[]? types=null)
+    public static async Task<JobLease?> Claim(Database owner,CancellationToken ct=default,string[]? types=null,Guid? inputRef=null)
     {
         types??=["BuilderCandidates","ParsePDF"];await using var db=Open(owner);await using var tx=await db.Database.BeginTransactionAsync(ct);
-        var jobs=await db.Set<BackgroundJob>().FromSqlInterpolated($"SELECT * FROM \"BackgroundJob\" WHERE \"Type\"=ANY({types}) AND ((\"Status\" IN ('Queued','Retrying') AND (\"NextRunAt\" IS NULL OR \"NextRunAt\"<=clock_timestamp())) OR (\"Status\"='Running' AND \"LeaseExpiresAt\"<=clock_timestamp())) ORDER BY COALESCE(\"NextRunAt\",\"CreatedAt\"),\"Id\" FOR UPDATE SKIP LOCKED LIMIT 1").ToArrayAsync(ct);
+        var jobs=await db.Set<BackgroundJob>().FromSqlInterpolated($"SELECT * FROM \"BackgroundJob\" WHERE \"Type\"=ANY({types}) AND (\"InputRef\"={inputRef??Guid.Empty} OR {inputRef==null}) AND ((\"Status\" IN ('Queued','Retrying') AND (\"NextRunAt\" IS NULL OR \"NextRunAt\"<=clock_timestamp())) OR (\"Status\"='Running' AND \"LeaseExpiresAt\"<=clock_timestamp())) ORDER BY COALESCE(\"NextRunAt\",\"CreatedAt\"),\"Id\" FOR UPDATE SKIP LOCKED LIMIT 1").ToArrayAsync(ct);
         if(jobs.Length==0){await tx.CommitAsync(ct);return null;}var job=jobs[0];var now=await db.Database.SqlQuery<DateTimeOffset>($"SELECT clock_timestamp() AS \"Value\"").SingleAsync(ct);
         if(job.LeaseOwner!=null)
         {

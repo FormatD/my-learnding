@@ -11,6 +11,7 @@ Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
 if(args[0]=="job-lease"){await JobLeaseCases.Run(db);return;}
+if(args[0]=="projection-receipt"){await ProjectionReceiptCases.Run(db);return;}
 if(args[0]=="builder-budget"){await BuilderBudgetPersistenceCases.Run(db);return;}
 if(args[0]=="builder-config")
 {
@@ -188,11 +189,11 @@ if(args[0]=="seed")
 {
     await db.Database.MigrateAsync();var f=new Family();var c=Content.Fixture();var q=c.Questions[0];var r=new Release {FamilyId=f.Id,Number=1,Payload=Json.Write(c),Hash=Content.Hash(Json.Write(c))};var s=new Student {FamilyId=f.Id,ActiveReleaseId=r.Id,Name="Fault acceptance"};
     var t=new StudyTask {FamilyId=f.Id,StudentId=s.Id,ReleaseId=r.Id,QuestionId=q.Id,Status="InProgress"};var session=new LearningSession {FamilyId=f.Id,StudentId=s.Id,TaskId=t.Id,ReleaseId=r.Id,QuestionId=q.Id};var a=new Attempt {FamilyId=f.Id,StudentId=s.Id,SessionId=session.Id,ClientSubmissionId=Guid.NewGuid(),Number=1,Answer="999"};var g=new Grading {FamilyId=f.Id,AttemptId=a.Id,Number=1,Result="Incorrect"};var job=new Outbox {FamilyId=f.Id,StudentId=s.Id,AttemptId=a.Id};
-    db.AddRange(f,r,s,t,session,a,g,job);await db.SaveChangesAsync();await Publishing.Register(db,r);await db.SaveChangesAsync();Console.WriteLine("SEEDED");return;
+    db.AddRange(f,r,s,t,session,a,g,job);await db.SaveChangesAsync();await Publishing.Register(db,r);await db.SaveChangesAsync();await ProjectionJobs.Ensure(db);await db.Set<BackgroundJob>().Where(j=>j.Status=="Queued").ExecuteUpdateAsync(j=>j.SetProperty(x=>x.LeaseSeconds,3).SetProperty(x=>x.HeartbeatSeconds,1));Console.WriteLine("SEEDED");return;
 }
 if(args[0]=="revocation-seed")
 {
-    var s=await db.Students.SingleAsync();var a=await db.Attempts.SingleAsync();var old=await db.Gradings.SingleAsync();var batch=new CorrectionBatch{FamilyId=s.FamilyId,StudentId=s.Id,ReleaseId=s.ActiveReleaseId!.Value,Cause="Grading",AffectedAttemptIds=Json.Write(new[]{a.Id}),SourceGradingRevisionId=old.Id,Reason="一次性故障验收的明确判分更正",PreviewHash="fault-confirmed"};var g=new Grading{FamilyId=s.FamilyId,AttemptId=a.Id,Number=2,Result="Correct",Method="ParentConfirmed",Reason=batch.Reason,CorrectionBatchId=batch.Id};db.AddRange(batch,g,new Outbox{FamilyId=s.FamilyId,StudentId=s.Id,AttemptId=a.Id});await db.SaveChangesAsync();return;
+    var s=await db.Students.SingleAsync();var a=await db.Attempts.SingleAsync();var old=await db.Gradings.SingleAsync();var batch=new CorrectionBatch{FamilyId=s.FamilyId,StudentId=s.Id,ReleaseId=s.ActiveReleaseId!.Value,Cause="Grading",AffectedAttemptIds=Json.Write(new[]{a.Id}),SourceGradingRevisionId=old.Id,Reason="一次性故障验收的明确判分更正",PreviewHash="fault-confirmed"};var g=new Grading{FamilyId=s.FamilyId,AttemptId=a.Id,Number=2,Result="Correct",Method="ParentConfirmed",Reason=batch.Reason,CorrectionBatchId=batch.Id};db.AddRange(batch,g,new Outbox{FamilyId=s.FamilyId,StudentId=s.Id,AttemptId=a.Id});await db.SaveChangesAsync();await ProjectionJobs.Ensure(db);await db.Set<BackgroundJob>().Where(j=>j.Status=="Queued").ExecuteUpdateAsync(j=>j.SetProperty(x=>x.LeaseSeconds,3).SetProperty(x=>x.HeartbeatSeconds,1));return;
 }
 if(args[0]=="revocation-recover")
 {
@@ -280,8 +281,8 @@ if(args[0]=="builder")
     Assert(legacy.Status=="Failed" && legacy.Error=="INPUT_SNAPSHOT_UNKNOWN" && !await db.Candidates.AnyAsync(c=>c.RunId==legacy.Id),"unknown legacy input was guessed");
     Console.WriteLine("PASS 历史输入不明的排队任务明确失败，要求重新运行");return;
 }
-var student=await db.Students.SingleAsync();
-Assert(student.ActiveGenerationId==null && await db.Generations.CountAsync()==0 && await db.Evidence.CountAsync()==0 && (await db.Outbox.SingleAsync()).ProcessedAt==null,"crashed transaction leaked projection or receipt");
+var projectionRecoveryJob=await db.Set<BackgroundJob>().SingleAsync(j=>j.Type=="AssessmentProjection");var projectionWasAbandoned=projectionRecoveryJob.Status=="Running";var projectionReservedTarget=projectionRecoveryJob.TargetGenerationId;var student=await db.Students.SingleAsync();
+Assert(!await db.Set<ConsumerReceipt>().AnyAsync(),"crash leaked independent receipt");Assert(student.ActiveGenerationId==null && await db.Generations.CountAsync()==0 && await db.Evidence.CountAsync()==0 && (await db.Outbox.SingleAsync()).ProcessedAt==null,"crashed transaction leaked projection or receipt");
 Console.WriteLine("PASS AT12 证据写入后进程终止：活动绑定、证据和处理回执全部回滚");
 await using var first=Open();await using var second=Open();
 // Both consumers have actually selected the same unprocessed row before either takes the family lock.
@@ -291,7 +292,7 @@ Assert(results.Count(r=>r)==1,"two consumers both processed the selected event")
 db.ChangeTracker.Clear();student=await db.Students.SingleAsync();
 Assert(student.ActiveGenerationId!=null && await db.Generations.CountAsync()==1 && await db.Evidence.CountAsync()==1 && await db.Reviews.CountAsync()==1 && (await db.Masteries.SingleAsync()).Beta==3 && (await db.Outbox.SingleAsync()).ProcessedAt!=null,"retry did not converge exactly once");
 Assert(await db.Set<AssessmentContext>().CountAsync()==1 && (await db.Set<AssessmentContext>().SingleAsync()).ActivationStatus=="Active" && (await db.Evidence.SingleAsync()).ContextId==(await db.Set<AssessmentContext>().SingleAsync()).Id,"contexts did not converge atomically");
-Console.WriteLine("PASS AT23 双消费者重复领取：一个有效处理，一组证据和一个R1日程");
+Assert(student.ActiveGenerationId==projectionReservedTarget && (await db.Set<ConsumerReceipt>().SingleAsync()).GenerationId==projectionReservedTarget && await db.Set<JobLeaseAttempt>().CountAsync(a=>a.Status=="LeaseExpired")== (projectionWasAbandoned?1:0),"fixed target or durable receipt lost");Console.WriteLine("PASS AT23 到期后双消费者竞争：原固定目标、一份消费回执、一组证据与R1日程，旧领取历史保留");
 await using var again=Open();Assert(!await ProjectionWorker.Consume(again,await again.Outbox.SingleAsync()),"processed event handled again");Assert(await again.Generations.CountAsync()==1,"duplicate replay created generation");
 Console.WriteLine("PASS 崩溃后重试及重复消费不增加评估世代或错误次数");
 

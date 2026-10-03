@@ -203,6 +203,7 @@ public class Grading : Row
 public record ObservedStep(string Step, string Result, int HintLevel = 0);
 public class Outbox : Row
 {
+    public int? RetryRound {get;set;}=0;
     public Guid StudentId { get; set; }
     public Guid AttemptId { get; set; }
     public DateTimeOffset? ProcessedAt { get; set; }

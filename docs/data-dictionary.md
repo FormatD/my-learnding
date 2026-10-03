@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 61 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 62 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -52,6 +52,7 @@
 | 20261002225131_BuilderCallLedger | 10.0.4 |
 | 20261002232840_BuilderBudgetReservations | 10.0.4 |
 | 20261003001038_BackgroundJobLeases | 10.0.4 |
+| 20261003003523_ProjectionConsumerReceipts | 10.0.4 |
 
 ## Accounts
 
@@ -318,6 +319,8 @@
 | HeartbeatSeconds | integer | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| StudentId | uuid | 是 | 无 |
+| TargetGenerationId | uuid | 是 | 无 |
 
 约束：
 
@@ -326,15 +329,18 @@
 - `CK_BackgroundJob_Limits`：`CHECK ("AttemptCount" >= 0 AND "AttemptCount" <= "MaxAttempts" AND "MaxAttempts" >= 1 AND "MaxAttempts" <= 10 AND "RetryRound" >= 0 AND "LeaseSeconds" >= 3 AND "LeaseSeconds" <= 300 AND "HeartbeatSeconds" >= 1 AND ("HeartbeatSeconds" * 2) <= "LeaseSeconds")`
 - `CK_BackgroundJob_Status`：`CHECK ("Status" = ANY (ARRAY['Queued'::text, 'Running'::text, 'Succeeded'::text, 'Retrying'::text, 'Failed'::text, 'Cancelled'::text]))`
 - `FK_BackgroundJob_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_BackgroundJob_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_BackgroundJob`：`PRIMARY KEY ("Id")`
 
 索引（包含约束自动创建的索引）：
 
 - `CREATE UNIQUE INDEX "AK_BackgroundJob_FamilyId_Id" ON public."BackgroundJob" USING btree ("FamilyId", "Id")`
 - `CREATE INDEX "IX_BackgroundJob_FamilyId" ON public."BackgroundJob" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BackgroundJob_FamilyId_StudentId" ON public."BackgroundJob" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_Type_IdempotencyKey" ON public."BackgroundJob" USING btree ("FamilyId", "Type", "IdempotencyKey")`
 - `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_Type_InputRef" ON public."BackgroundJob" USING btree ("FamilyId", "Type", "InputRef")`
 - `CREATE INDEX "IX_BackgroundJob_Status_NextRunAt_LeaseExpiresAt" ON public."BackgroundJob" USING btree ("Status", "NextRunAt", "LeaseExpiresAt")`
+- `CREATE UNIQUE INDEX "IX_BackgroundJob_TargetGenerationId" ON public."BackgroundJob" USING btree ("TargetGenerationId")`
 - `CREATE UNIQUE INDEX "PK_BackgroundJob" ON public."BackgroundJob" USING btree ("Id")`
 
 ## BuilderAttempt
@@ -625,6 +631,41 @@
 - `CREATE INDEX "IX_Commands_FamilyId" ON public."Commands" USING btree ("FamilyId")`
 - `CREATE UNIQUE INDEX "IX_Commands_FamilyId_ActorId_Scope_Key" ON public."Commands" USING btree ("FamilyId", "ActorId", "Scope", "Key")`
 - `CREATE UNIQUE INDEX "PK_Commands" ON public."Commands" USING btree ("Id")`
+
+## ConsumerReceipt
+
+按消费者/事件唯一的实际评估消费回执，与结果、队列及领取终态同事务提交，不补造旧历史。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| StudentId | uuid | 否 | 无 |
+| ConsumerName | text | 否 | 无 |
+| EventId | uuid | 否 | 无 |
+| JobId | uuid | 否 | 无 |
+| GenerationId | uuid | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_ConsumerReceipt_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ConsumerReceipt_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_ConsumerReceipt_Generations_FamilyId_GenerationId`：`FOREIGN KEY ("FamilyId", "GenerationId") REFERENCES "Generations"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ConsumerReceipt_Outbox_FamilyId_EventId`：`FOREIGN KEY ("FamilyId", "EventId") REFERENCES "Outbox"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_ConsumerReceipt_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_ConsumerReceipt`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_ConsumerReceipt_ConsumerName_EventId" ON public."ConsumerReceipt" USING btree ("ConsumerName", "EventId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId" ON public."ConsumerReceipt" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId_EventId" ON public."ConsumerReceipt" USING btree ("FamilyId", "EventId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId_GenerationId" ON public."ConsumerReceipt" USING btree ("FamilyId", "GenerationId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId_JobId" ON public."ConsumerReceipt" USING btree ("FamilyId", "JobId")`
+- `CREATE INDEX "IX_ConsumerReceipt_FamilyId_StudentId" ON public."ConsumerReceipt" USING btree ("FamilyId", "StudentId")`
+- `CREATE UNIQUE INDEX "PK_ConsumerReceipt" ON public."ConsumerReceipt" USING btree ("Id")`
 
 ## ContentIdentity
 
@@ -1578,9 +1619,11 @@
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
 | NextAttemptAt | timestamp with time zone | 是 | 无 |
+| RetryRound | integer | 是 | 无 |
 
 约束：
 
+- `AK_Outbox_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
 - `FK_Outbox_Attempts_FamilyId_AttemptId`：`FOREIGN KEY ("FamilyId", "AttemptId") REFERENCES "Attempts"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_Outbox_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_Outbox_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
@@ -1588,6 +1631,7 @@
 
 索引（包含约束自动创建的索引）：
 
+- `CREATE UNIQUE INDEX "AK_Outbox_FamilyId_Id" ON public."Outbox" USING btree ("FamilyId", "Id")`
 - `CREATE INDEX "IX_Outbox_FamilyId" ON public."Outbox" USING btree ("FamilyId")`
 - `CREATE INDEX "IX_Outbox_FamilyId_AttemptId" ON public."Outbox" USING btree ("FamilyId", "AttemptId")`
 - `CREATE INDEX "IX_Outbox_FamilyId_StudentId" ON public."Outbox" USING btree ("FamilyId", "StudentId")`
