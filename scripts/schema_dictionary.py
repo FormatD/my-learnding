@@ -9,6 +9,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "BackgroundJob": "后台工作固定输入、领取人/到期/心跳、尝试上限与当前状态；建库及PDF已接入。",
+    "JobLeaseAttempt": "每次实际领取及中断/到期历史；结果与最终领取回执在同一事务提交。",
     "EvidenceRevocation": "已确认更正导致的错误历史证据撤销；原证据不改写，同一证据最多撤销一次。",
     "AssessmentContext": "每世代每作答的固定判分、映射、规则和准入状态；历史缺失不回填。",
     "Accounts": "家长账号；口令仅保存哈希。",

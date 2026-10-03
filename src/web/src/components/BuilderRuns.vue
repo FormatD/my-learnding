@@ -5,7 +5,7 @@ type Item=Record<string,any>;
 const props=defineProps<{runs:Item[];attempts:Item[];sources:Item[];libraries:Item[];disabled:boolean}>(),emit=defineEmits<{refresh:[]}>();
 const busy=ref(false),error=ref(''),notice=ref(''),reasons=ref<Record<string,string>>({});
 const status:Record<string,string>={Queued:'等待处理',Completed:'已完成',Failed:'已停止',NeedsOCR:'需要文字识别',RetryScheduled:'已安排重试'};
-function canRetry(run:Item){return run.status==='Failed'&&['BUILDER_PROCESSING_FAILED','BUILDER_CONCURRENCY_LIMIT','BUILDER_USAGE_RECONCILIATION_REQUIRED','BUILDER_CALL_BUDGET_LIMIT','BUILDER_DAILY_BUDGET_LIMIT'].includes(run.error)}
+function canRetry(run:Item){return run.status==='Failed'&&['BUILDER_PROCESSING_FAILED','BUILDER_CONCURRENCY_LIMIT','BUILDER_USAGE_RECONCILIATION_REQUIRED','BUILDER_CALL_BUDGET_LIMIT','BUILDER_DAILY_BUDGET_LIMIT','JOB_ATTEMPTS_EXHAUSTED'].includes(run.error)}
 async function retry(run:Item){if(busy.value||props.disabled)return;busy.value=true;error.value='';notice.value='';try{await api(`/builder/runs/${run.id}:retry`,{reason:reasons.value[run.id]});notice.value='已请求使用原输入重新处理，旧失败记录继续保留。';emit('refresh');}catch(e){error.value=(e as Error).message}finally{busy.value=false}}
 function protocol(attempt:Item){try{return attempt.protocolResult?JSON.parse(attempt.protocolResult):null}catch{return null}}
 function settings(run:Item){try{return run.modelConfigPayload?JSON.parse(run.modelConfigPayload).limits:null}catch{return null}}

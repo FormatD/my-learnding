@@ -10,6 +10,7 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="job-lease"){await JobLeaseCases.Run(db);return;}
 if(args[0]=="builder-budget"){await BuilderBudgetPersistenceCases.Run(db);return;}
 if(args[0]=="builder-config")
 {
@@ -213,7 +214,7 @@ if(args[0]=="builder-ledger-usage")
 }
 if(args[0]=="builder-call-crash-seed")
 {
-    await db.Database.MigrateAsync();var family=new Family();var source=new Source{FamilyId=family.Id,Title="逐调用中断验收",Text="先乘除后加减。",Hash="crash-source"};var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,InputHash="crash-call-input"};db.AddRange(family,source,run,new Chunk{FamilyId=family.Id,SourceId=source.Id,Text=source.Text,Locator="段落1"});await db.SaveChangesAsync();return;
+    await db.Database.MigrateAsync();var family=new Family();var source=new Source{FamilyId=family.Id,Title="逐调用中断验收",Text="先乘除后加减。",Hash="crash-source"};var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,InputHash="crash-call-input"};db.AddRange(family,source,run,new Chunk{FamilyId=family.Id,SourceId=source.Id,Text=source.Text,Locator="段落1"});await db.SaveChangesAsync();await BackgroundJobs.EnsureBuilderJobs(db);await db.Set<BackgroundJob>().ExecuteUpdateAsync(j=>j.SetProperty(x=>x.LeaseSeconds,3).SetProperty(x=>x.HeartbeatSeconds,1));return;
 }
 if(args[0]=="builder-call-crash"){await using var worker=Open(true);await Builder.ProcessOne(worker,CancellationToken.None);return;}
 if(args[0]=="builder-call-started-crash")
@@ -226,7 +227,7 @@ if(args[0]=="builder-call-started-recover")
 }
 if(args[0]=="builder-call-crash-recover")
 {
-    Assert((await db.BuilderRuns.SingleAsync()).Status=="Queued" && !await db.Candidates.AnyAsync() && !await db.Set<BuilderAttempt>().AnyAsync(),"crashed candidate transaction partially committed");var priorCall=await db.Set<BuilderCall>().SingleAsync();Assert(priorCall.Status=="Returned" && priorCall.ChargedCost==0 && priorCall.BillingStatus=="LocalNoCharge" && priorCall.InputTokens==null,"actual pre-crash call lost or invented tokens");await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();var calls=await db.Set<BuilderCall>().ToArrayAsync();Assert(calls.Length==2 && calls.Select(c=>c.ExecutionId).Distinct().Count()==2 && calls.All(c=>c.CallNumber==1 && c.AttemptNumber==1 && c.Status=="Returned") && await db.Candidates.CountAsync()==1 && await db.Set<BuilderAttempt>().CountAsync()==1,"retry reused call identity or doubled candidates");Console.WriteLine("PASS 提交前实际终止进程后调用事实仍在；恢复新执行身份保留两个实际调用、只有一份候选及成功尝试");await db.Families.ExecuteDeleteAsync();Assert(!await db.Set<BuilderCall>().AnyAsync(),"family delete retained calls");Console.WriteLine("PASS 调用账本同家庭外键及删除闭合");return;
+    Assert(await db.Set<BackgroundJob>().CountAsync(j=>j.Status=="Running")==1,"crash lost persistent lease");Assert((await db.BuilderRuns.SingleAsync()).Status=="Queued" && !await db.Candidates.AnyAsync() && !await db.Set<BuilderAttempt>().AnyAsync(),"crashed candidate transaction partially committed");var priorCall=await db.Set<BuilderCall>().SingleAsync();Assert(priorCall.Status=="Returned" && priorCall.ChargedCost==0 && priorCall.BillingStatus=="LocalNoCharge" && priorCall.InputTokens==null,"actual pre-crash call lost or invented tokens");await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();var calls=await db.Set<BuilderCall>().ToArrayAsync();Assert(calls.Length==2 && calls.Select(c=>c.ExecutionId).Distinct().Count()==2 && calls.All(c=>c.CallNumber==1 && c.AttemptNumber==1 && c.Status=="Returned") && await db.Candidates.CountAsync()==1 && await db.Set<BuilderAttempt>().CountAsync()==1,"retry reused call identity or doubled candidates");Assert(await db.Set<JobLeaseAttempt>().CountAsync(a=>a.Status=="LeaseExpired")==1 && await db.Set<JobLeaseAttempt>().CountAsync(a=>a.Status=="Succeeded")==1,"lease recovery history missing");Console.WriteLine("PASS 提交前实际终止进程，真实保护到期后接替；保留两个物理调用、一份候选和新旧领取记录");await db.Families.ExecuteDeleteAsync();Assert(!await db.Set<BuilderCall>().AnyAsync(),"family delete retained calls");Console.WriteLine("PASS 调用账本同家庭外键及删除闭合");return;
 }
 if(args[0]=="builder-retry-legacy")
 {

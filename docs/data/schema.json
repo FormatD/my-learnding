@@ -136,6 +136,10 @@
     {
       "id": "20261002232840_BuilderBudgetReservations",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261003001038_BackgroundJobLeases",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -1305,6 +1309,251 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Availabilities\" ON public.\"Availabilities\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BackgroundJob",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Type",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputRef",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "IdempotencyKey",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Status",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AttemptCount",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MaxAttempts",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RetryRound",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "NextRunAt",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LeaseOwner",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LeaseExpiresAt",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "HeartbeatAt",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LastErrorCode",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LeaseSeconds",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "HeartbeatSeconds",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_BackgroundJob_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BackgroundJob_Lease",
+          "kind": "c",
+          "definition": "CHECK (\"Status\" = 'Running'::text AND \"LeaseOwner\" IS NOT NULL AND \"LeaseExpiresAt\" IS NOT NULL AND \"HeartbeatAt\" IS NOT NULL OR \"Status\" <> 'Running'::text AND \"LeaseOwner\" IS NULL AND \"LeaseExpiresAt\" IS NULL)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BackgroundJob_Limits",
+          "kind": "c",
+          "definition": "CHECK (\"AttemptCount\" >= 0 AND \"AttemptCount\" <= \"MaxAttempts\" AND \"MaxAttempts\" >= 1 AND \"MaxAttempts\" <= 10 AND \"RetryRound\" >= 0 AND \"LeaseSeconds\" >= 3 AND \"LeaseSeconds\" <= 300 AND \"HeartbeatSeconds\" >= 1 AND (\"HeartbeatSeconds\" * 2) <= \"LeaseSeconds\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BackgroundJob_Status",
+          "kind": "c",
+          "definition": "CHECK (\"Status\" = ANY (ARRAY['Queued'::text, 'Running'::text, 'Succeeded'::text, 'Retrying'::text, 'Failed'::text, 'Cancelled'::text]))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BackgroundJob_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BackgroundJob",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_BackgroundJob_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_BackgroundJob_FamilyId_Id\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_BackgroundJob_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BackgroundJob_FamilyId\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BackgroundJob_FamilyId_Type_IdempotencyKey",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BackgroundJob_FamilyId_Type_IdempotencyKey\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\", \"Type\", \"IdempotencyKey\")"
+        },
+        {
+          "name": "IX_BackgroundJob_FamilyId_Type_InputRef",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BackgroundJob_FamilyId_Type_InputRef\" ON public.\"BackgroundJob\" USING btree (\"FamilyId\", \"Type\", \"InputRef\")"
+        },
+        {
+          "name": "IX_BackgroundJob_Status_NextRunAt_LeaseExpiresAt",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BackgroundJob_Status_NextRunAt_LeaseExpiresAt\" ON public.\"BackgroundJob\" USING btree (\"Status\", \"NextRunAt\", \"LeaseExpiresAt\")"
+        },
+        {
+          "name": "PK_BackgroundJob",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BackgroundJob\" ON public.\"BackgroundJob\" USING btree (\"Id\")"
         }
       ]
     },
@@ -5365,6 +5614,157 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_IndependentMappingDraft\" ON public.\"IndependentMappingDraft\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "JobLeaseAttempt",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "JobId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LeaseOwner",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Number",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RetryRound",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Status",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StartedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FinishedAt",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ErrorCode",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_JobLeaseAttempt_BackgroundJob_FamilyId_JobId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_JobLeaseAttempt_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_JobLeaseAttempt",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_JobLeaseAttempt_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_JobLeaseAttempt_FamilyId\" ON public.\"JobLeaseAttempt\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_JobLeaseAttempt_FamilyId_JobId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_JobLeaseAttempt_FamilyId_JobId\" ON public.\"JobLeaseAttempt\" USING btree (\"FamilyId\", \"JobId\")"
+        },
+        {
+          "name": "IX_JobLeaseAttempt_JobId_LeaseOwner",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_JobLeaseAttempt_JobId_LeaseOwner\" ON public.\"JobLeaseAttempt\" USING btree (\"JobId\", \"LeaseOwner\")"
+        },
+        {
+          "name": "IX_JobLeaseAttempt_JobId_RetryRound_Number",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_JobLeaseAttempt_JobId_RetryRound_Number\" ON public.\"JobLeaseAttempt\" USING btree (\"JobId\", \"RetryRound\", \"Number\")"
+        },
+        {
+          "name": "PK_JobLeaseAttempt",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_JobLeaseAttempt\" ON public.\"JobLeaseAttempt\" USING btree (\"Id\")"
         }
       ]
     },

@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 59 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 61 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -51,6 +51,7 @@
 | 20261002224110_BuilderFrozenConfiguration | 10.0.4 |
 | 20261002225131_BuilderCallLedger | 10.0.4 |
 | 20261002232840_BuilderBudgetReservations | 10.0.4 |
+| 20261003001038_BackgroundJobLeases | 10.0.4 |
 
 ## Accounts
 
@@ -291,6 +292,50 @@
 - `CREATE INDEX "IX_Availabilities_FamilyId_StudentId" ON public."Availabilities" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_Availabilities_StudentId_Date" ON public."Availabilities" USING btree ("StudentId", "Date")`
 - `CREATE UNIQUE INDEX "PK_Availabilities" ON public."Availabilities" USING btree ("Id")`
+
+## BackgroundJob
+
+后台工作固定输入、领取人/到期/心跳、尝试上限与当前状态；建库及PDF已接入。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| Type | text | 否 | 无 |
+| InputRef | uuid | 否 | 无 |
+| IdempotencyKey | text | 否 | 无 |
+| InputPayload | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| Status | text | 否 | 无 |
+| AttemptCount | integer | 否 | 无 |
+| MaxAttempts | integer | 否 | 无 |
+| RetryRound | integer | 否 | 无 |
+| NextRunAt | timestamp with time zone | 是 | 无 |
+| LeaseOwner | text | 是 | 无 |
+| LeaseExpiresAt | timestamp with time zone | 是 | 无 |
+| HeartbeatAt | timestamp with time zone | 是 | 无 |
+| LastErrorCode | text | 是 | 无 |
+| LeaseSeconds | integer | 否 | 无 |
+| HeartbeatSeconds | integer | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_BackgroundJob_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_BackgroundJob_Lease`：`CHECK ("Status" = 'Running'::text AND "LeaseOwner" IS NOT NULL AND "LeaseExpiresAt" IS NOT NULL AND "HeartbeatAt" IS NOT NULL OR "Status" <> 'Running'::text AND "LeaseOwner" IS NULL AND "LeaseExpiresAt" IS NULL)`
+- `CK_BackgroundJob_Limits`：`CHECK ("AttemptCount" >= 0 AND "AttemptCount" <= "MaxAttempts" AND "MaxAttempts" >= 1 AND "MaxAttempts" <= 10 AND "RetryRound" >= 0 AND "LeaseSeconds" >= 3 AND "LeaseSeconds" <= 300 AND "HeartbeatSeconds" >= 1 AND ("HeartbeatSeconds" * 2) <= "LeaseSeconds")`
+- `CK_BackgroundJob_Status`：`CHECK ("Status" = ANY (ARRAY['Queued'::text, 'Running'::text, 'Succeeded'::text, 'Retrying'::text, 'Failed'::text, 'Cancelled'::text]))`
+- `FK_BackgroundJob_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BackgroundJob`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_BackgroundJob_FamilyId_Id" ON public."BackgroundJob" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_BackgroundJob_FamilyId" ON public."BackgroundJob" USING btree ("FamilyId")`
+- `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_Type_IdempotencyKey" ON public."BackgroundJob" USING btree ("FamilyId", "Type", "IdempotencyKey")`
+- `CREATE UNIQUE INDEX "IX_BackgroundJob_FamilyId_Type_InputRef" ON public."BackgroundJob" USING btree ("FamilyId", "Type", "InputRef")`
+- `CREATE INDEX "IX_BackgroundJob_Status_NextRunAt_LeaseExpiresAt" ON public."BackgroundJob" USING btree ("Status", "NextRunAt", "LeaseExpiresAt")`
+- `CREATE UNIQUE INDEX "PK_BackgroundJob" ON public."BackgroundJob" USING btree ("Id")`
 
 ## BuilderAttempt
 
@@ -1113,6 +1158,38 @@
 - `CREATE INDEX "IX_IndependentMappingDraft_FamilyId_SubmittedBy" ON public."IndependentMappingDraft" USING btree ("FamilyId", "SubmittedBy")`
 - `CREATE UNIQUE INDEX "IX_IndependentMappingDraft_SetRevisionId" ON public."IndependentMappingDraft" USING btree ("SetRevisionId")`
 - `CREATE UNIQUE INDEX "PK_IndependentMappingDraft" ON public."IndependentMappingDraft" USING btree ("Id")`
+
+## JobLeaseAttempt
+
+每次实际领取及中断/到期历史；结果与最终领取回执在同一事务提交。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| JobId | uuid | 否 | 无 |
+| LeaseOwner | text | 否 | 无 |
+| Number | integer | 否 | 无 |
+| RetryRound | integer | 否 | 无 |
+| Status | text | 否 | 无 |
+| StartedAt | timestamp with time zone | 否 | 无 |
+| FinishedAt | timestamp with time zone | 是 | 无 |
+| ErrorCode | text | 是 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_JobLeaseAttempt_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_JobLeaseAttempt_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_JobLeaseAttempt`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_JobLeaseAttempt_FamilyId" ON public."JobLeaseAttempt" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_JobLeaseAttempt_FamilyId_JobId" ON public."JobLeaseAttempt" USING btree ("FamilyId", "JobId")`
+- `CREATE UNIQUE INDEX "IX_JobLeaseAttempt_JobId_LeaseOwner" ON public."JobLeaseAttempt" USING btree ("JobId", "LeaseOwner")`
+- `CREATE UNIQUE INDEX "IX_JobLeaseAttempt_JobId_RetryRound_Number" ON public."JobLeaseAttempt" USING btree ("JobId", "RetryRound", "Number")`
+- `CREATE UNIQUE INDEX "PK_JobLeaseAttempt" ON public."JobLeaseAttempt" USING btree ("Id")`
 
 ## KCChangeProposal
 

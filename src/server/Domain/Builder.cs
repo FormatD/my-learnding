@@ -9,7 +9,7 @@ public static class Builder
 {
     public static void Map(RouteGroupBuilder api)
     {
-        Provenance.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);
+        Provenance.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);BackgroundJobs.Map(api);
         api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
         api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
         {
@@ -35,7 +35,7 @@ public static class Builder
             var a=ctx.Actor();a.Require("ContentEditor");var run=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","找不到建库任务。");
             if(string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000)throw new ApiError(422,"REASON_REQUIRED","请填写重新处理的依据，最多4000字。");
             if(run.Status!="Failed")throw new ApiError(409,"RUN_NOT_FAILED","只可重新处理已停止的失败任务。");
-            if(run.Error is not ("BUILDER_PROCESSING_FAILED" or "BUILDER_CONCURRENCY_LIMIT" or "BUILDER_USAGE_RECONCILIATION_REQUIRED" or "BUILDER_CALL_BUDGET_LIMIT" or "BUILDER_DAILY_BUDGET_LIMIT"))throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
+            if(run.Error is not ("BUILDER_PROCESSING_FAILED" or "BUILDER_CONCURRENCY_LIMIT" or "BUILDER_USAGE_RECONCILIATION_REQUIRED" or "BUILDER_CALL_BUDGET_LIMIT" or "BUILDER_DAILY_BUDGET_LIMIT" or "JOB_ATTEMPTS_EXHAUSTED"))throw new ApiError(422,"RUN_RECREATE_REQUIRED","此任务需要修复来源或重新准备输入，不能直接重试。");
             await ValidateRun(db,run);
             if(await db.Candidates.AnyAsync(c=>c.RunId==id) || run.Type=="ParsePDF" && await db.Chunks.AnyAsync(c=>c.SourceId==run.SourceId))throw new ApiError(422,"RUN_OUTPUT_EXISTS","已有输出不能再次生成；请检查原运行记录。");
             var before=Json.Write(run);run.Status="Queued";run.Retries=0;run.RetryRound++;run.NextAttemptAt=null;run.CompletedAt=null;run.Error=null;
@@ -95,27 +95,38 @@ public static class Builder
     }
     public static async Task ProcessOne(Database db,CancellationToken ct,ILogger? logger=null)
     {
-        var now=DateTimeOffset.UtcNow;var run=await db.BuilderRuns.Where(r=>r.Status=="Queued" && (r.NextAttemptAt==null || r.NextAttemptAt<=now)).OrderBy(r=>r.CreatedAt).FirstOrDefaultAsync(ct);if(run==null)return;
-        await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(run.FamilyId,ct);await db.Entry(run).ReloadAsync(ct);
-        if(db.Entry(run).State==EntityState.Detached || run.Status!="Queued" || run.NextAttemptAt>DateTimeOffset.UtcNow)return;
-        var started=DateTimeOffset.UtcNow;var number=(await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id && a.RetryRound==run.RetryRound).MaxAsync(a=>(int?)a.Number,ct)??0)+1;
-        var id=run.Id;await tx.CreateSavepointAsync("builder_work",ct);
+        var stopping=ct;await BackgroundJobs.EnsureBuilderJobs(db,ct);await using var lease=await BackgroundJobs.Claim(db,ct);if(lease==null)return;ct=lease.Token;
         try
         {
-            await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
-            var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
+            await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(lease.Job.FamilyId,ct);
+            var run=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==lease.Job.InputRef && r.FamilyId==lease.Job.FamilyId,ct);
+            if(run==null){await lease.Finish(db,"Failed","JOB_INPUT_MISSING",null,ct);await tx.CommitAsync(ct);return;}
+            await db.Entry(run).ReloadAsync(ct);
+            if(run.Status!="Queued"){await lease.Finish(db,run.Status=="Completed"?"Succeeded":"Failed",run.Error,null,ct);await tx.CommitAsync(ct);return;}
+            if(run.NextAttemptAt>DateTimeOffset.UtcNow){await lease.Finish(db,"Retrying",run.Error,run.NextAttemptAt,ct);await tx.CommitAsync(ct);return;}
+            var started=DateTimeOffset.UtcNow;var number=(await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id && a.RetryRound==run.RetryRound).MaxAsync(a=>(int?)a.Number,ct)??0)+1;
+            var id=run.Id;await tx.CreateSavepointAsync("builder_work",ct);
+            try
+            {
+                if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","后台任务多次中断后已停止，请核对原调用后人工恢复。");
+                if(Content.Hash(lease.Job.InputPayload)!=lease.Job.InputHash || BackgroundJobs.Snapshot(run)!=lease.Job.InputPayload)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","后台任务原输入已变化，请重新准备来源，不直接重试。");
+                await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+                var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
+            }
+            catch(Exception ex)when(ex is not OperationCanceledException)
+            {
+                await tx.RollbackToSavepointAsync("builder_work",ct);db.ChangeTracker.Clear();run=await db.BuilderRuns.SingleAsync(r=>r.Id==id,ct);
+                var retry=ex is not ApiError && run.Retries<3;run.Error=ex is ApiError apiError?apiError.Code:"BUILDER_PROCESSING_FAILED";
+                if(retry){run.Retries++;run.NextAttemptAt=DateTimeOffset.UtcNow.AddSeconds(Math.Pow(2,run.Retries));run.Status="Queued";run.CompletedAt=null;}
+                else{run.Status="Failed";run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;}
+                db.Add(Attempt(run,number,started,retry?"RetryScheduled":"Failed"));await db.SaveChangesAsync(ct);logger?.LogError(ex,"Builder processing failed {RunId}; retry scheduled {RetryScheduled}",id,retry);
+            }
+            await lease.Finish(db,run.Status=="Completed"?"Succeeded":run.Status=="Queued"?"Retrying":"Failed",run.Error,run.NextAttemptAt,ct);
+            await tx.CommitAsync(ct);
         }
-        catch(Exception ex)when(ex is not OperationCanceledException)
-        {
-            await tx.RollbackToSavepointAsync("builder_work",ct);db.ChangeTracker.Clear();run=await db.BuilderRuns.SingleAsync(r=>r.Id==id,ct);
-            var retry=ex is not ApiError && run.Retries<3;run.Error=ex is ApiError apiError?apiError.Code:"BUILDER_PROCESSING_FAILED";
-            if(retry){run.Retries++;run.NextAttemptAt=DateTimeOffset.UtcNow.AddSeconds(Math.Pow(2,run.Retries));run.Status="Queued";run.CompletedAt=null;}
-            else{run.Status="Failed";run.NextAttemptAt=null;run.CompletedAt=DateTimeOffset.UtcNow;}
-            db.Add(Attempt(run,number,started,retry?"RetryScheduled":"Failed"));await db.SaveChangesAsync(ct);logger?.LogError(ex,"Builder processing failed {RunId}; retry scheduled {RetryScheduled}",id,retry);
-        }
-        await tx.CommitAsync(ct);
+        catch(OperationCanceledException)when(lease.Lost && !stopping.IsCancellationRequested){db.ChangeTracker.Clear();logger?.LogWarning("Builder lease lost; uncommitted result discarded {JobId}",lease.Job.Id);}
     }
-    static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=Json.Write(new{run.SourceId,run.Type,run.LibraryReleaseId,run.InputVersion,run.InputHash,run.Provider,run.Model,run.PromptVersion,run.ModelConfigHash,run.ModelConfigPayload})};
+    static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=BackgroundJobs.Snapshot(run)};
     static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct)
     {
         if (run.Type=="ParsePDF")

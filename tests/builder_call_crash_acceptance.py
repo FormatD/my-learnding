@@ -15,7 +15,13 @@ def main():
                 line=child.stdout.readline()
                 if 'BEFORE_COMMIT' in line:break
         else:raise AssertionError('commit barrier was not reached')
-        child.kill();child.wait(timeout=10);selector.close();subprocess.run(command+['builder-call-crash-recover'],env=env,check=True)
+        child.kill();child.wait(timeout=10);selector.close()
+        # Wait for the actual short fixture lease to expire; do not rewrite expiry timestamps.
+        deadline=time.monotonic()+10
+        while subprocess.check_output(['psql','-Atc','SELECT count(*) FROM "BackgroundJob" WHERE "Status"=\'Running\' AND "LeaseExpiresAt">clock_timestamp();'],env=env,text=True).strip()!='0':
+            assert time.monotonic()<deadline,'dead worker lease did not expire'
+            time.sleep(.1)
+        subprocess.run(command+['builder-call-crash-recover'],env=env,check=True)
         subprocess.run(command+['builder-call-crash-seed'],env=env,check=True)
         child=subprocess.Popen(command+['builder-call-started-crash'],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,bufsize=1)
         selector=selectors.DefaultSelector();selector.register(child.stdout,selectors.EVENT_READ);deadline=time.monotonic()+30
