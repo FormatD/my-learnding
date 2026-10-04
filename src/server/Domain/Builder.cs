@@ -26,7 +26,8 @@ public static class Builder
             if (input.Provider!="Mock") throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED",source.AllowExternalAI?"模型尚未配置，学习功能可继续使用。":"来源未允许发送外部模型。");
             if (string.IsNullOrWhiteSpace(source.Text)) throw new ApiError(422,"SOURCE_NOT_READY","来源尚未解析完成，或没有文本层。");
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
-            var configPayload=Json.Write(BuilderConfiguration.Current(configuration));var configHash=Content.Hash(configPayload);
+            var config=BuilderConfiguration.Current(configuration);config=config with{Retrieval=config.Retrieval! with{Aliases=await BuilderAliases.Capture(db,a.FamilyId,library==null?null:Json.Read<Catalog>(library.Payload))}};config.Retrieval!.Validate();
+            var configPayload=Json.Write(config);var configHash=Content.Hash(configPayload);
             var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/4:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
             var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputVersion="builder-input/4",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
         });
@@ -53,8 +54,8 @@ public static class Builder
             {
                 var releases=await db.Releases.Where(r => r.FamilyId==a.FamilyId && !r.Withdrawn).ToListAsync();
                 if (!releases.Any(r => Json.Read<Catalog>(r.Payload).Kcs.Any(k => k.Id==input.ExistingKCId))) throw new ApiError(422,"KC_NOT_PUBLISHED","请关联本家庭已发布 KC。");
-                c.ExistingKCId=input.ExistingKCId;c.Status="Accepted";
-                var normalized=Retrieval.Normalize(input.Name??c.Name);
+                var aliasName=input.Name??c.Name;if(string.IsNullOrWhiteSpace(aliasName) || aliasName.Length>100)throw new ApiError(422,"INVALID_ALIAS","请填写1～100字有效别名。");
+                c.ExistingKCId=input.ExistingKCId;c.Status="Accepted";var normalized=Retrieval.Normalize(aliasName);
                 if (!await db.Set<Alias>().AnyAsync(alias=>alias.FamilyId==a.FamilyId && alias.KCId==input.ExistingKCId && alias.Normalized==normalized)) db.Add(new Alias { FamilyId=a.FamilyId,KCId=input.ExistingKCId!.Value,CandidateId=id,Text=input.Name??c.Name,Normalized=normalized,ReviewedBy=a.Id });
             }
             else if (input.Decision=="CreateDraft")
@@ -84,6 +85,8 @@ public static class Builder
             if(run.Provider!="Mock")throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
             if(run.Model!="fixture/1" || run.PromptVersion!="kc-candidate/1")throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
             BuilderConfiguration.Resolve(run);
+            var retrieval=BuilderConfiguration.ResolveRetrieval(run);var frozenLibrary=run.LibraryReleaseId==null?null:await db.Releases.SingleOrDefaultAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
+            await BuilderAliases.Validate(db,run,frozenLibrary==null?null:Json.Read<Catalog>(frozenLibrary.Payload),retrieval,ct);
             if(run.LibraryReleaseId!=null && !await db.Releases.AnyAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原正式库输入已不可用。");
             if(run.ModelConfigHash!=null)
             {

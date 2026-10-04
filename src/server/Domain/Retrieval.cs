@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Learning;
 public class Embedding : Row
@@ -19,7 +20,7 @@ public class Alias : Row
     public string Normalized { get; set; } = "";
     public Guid ReviewedBy { get; set; }
 }
-public record Match(Guid KCId,string Name,string Behavior,string Boundary,decimal Score,string EmbeddingSpace);
+public record Match(Guid KCId,string Name,string Behavior,string Boundary,decimal Score,string EmbeddingSpace,[property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] BuilderAliasSnapshot[]? MatchedAliases=null);
 public static class Retrieval
 {
     // Deterministic mock feature vectors exercise space isolation. They are not model embeddings.
@@ -47,6 +48,7 @@ public static class Retrieval
         configuration.Validate();
         if(candidate.Subject!="MATH" || !new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(candidate.KcType))throw new ApiError(422,"BUILDER_SCHEMA_INVALID","候选学科或能力类型无效。");
         var query=Vector(candidate.Name+" "+candidate.MeasurableBehavior+" "+candidate.Boundary);
-        return kcs.Where(k=>k.Type==candidate.KcType).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,configuration.Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),configuration.Space),configuration.Space)).OrderByDescending(m=>m.Score).ThenBy(m=>m.KCId).Take(configuration.TopK).ToArray();
+        var name=Normalize(candidate.Name);
+        return kcs.Where(k=>k.Type==candidate.KcType).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,configuration.Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),configuration.Space),configuration.Space,configuration.Aliases?.Where(a=>a.KCId==k.Id && a.Normalized==name).ToArray())).OrderByDescending(m=>m.MatchedAliases is {Length:>0}).ThenByDescending(m=>m.Score).ThenBy(m=>m.KCId).Take(configuration.TopK).ToArray();
     }
 }

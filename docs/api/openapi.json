@@ -1046,6 +1046,41 @@
         ],
         "type": "object"
       },
+      "BuilderAliasSnapshot": {
+        "properties": {
+          "candidateId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kcId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "normalized": {
+            "type": "string"
+          },
+          "reviewedBy": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kcId",
+          "text",
+          "normalized",
+          "candidateId",
+          "reviewedBy"
+        ],
+        "type": "object"
+      },
       "BuilderAttempt": {
         "properties": {
           "createdAt": {
@@ -5337,6 +5372,15 @@
           "kcId": {
             "format": "uuid",
             "type": "string"
+          },
+          "matchedAliases": {
+            "items": {
+              "$ref": "#/components/schemas/BuilderAliasSnapshot"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
           },
           "name": {
             "type": "string"

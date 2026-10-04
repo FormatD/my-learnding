@@ -1,5 +1,5 @@
 """Actually run frozen two-item and legacy jobs in a service configured for one item."""
-import json,secrets,socket,subprocess,tempfile,time,uuid,urllib.request
+import os,json,secrets,socket,subprocess,tempfile,time,uuid,urllib.request
 from pathlib import Path
 import api_acceptance
 from api_acceptance import Client
@@ -37,6 +37,16 @@ def main():
                 final=settled([fresh['id']]);new=next(x for x in final['candidates'] if x['runId']==fresh['id']);assert len(json.loads(new['matches']))==1 and next(x for x in final['candidates'] if x['id']==frozen['id'])==frozen and next(x for x in final['candidates'] if x['id']==old['id'])==old
                 assert c.request('/builder/runs',{'sourceId':fixture['sourceId']})['id']==fresh['id']
                 context=c.request('/builder/candidates/'+new['id']+'/review-context');assert all(m['definition']['type']==context['protocol']['kcType'] for m in context['matches'])
+                target=context['matches'][0]['match']['kcId']
+                c.request('/builder/candidates/'+new['id']+':decide',{'decision':'LinkExisting','reason':'隔离测试经实际审核接口确认别名来源','existingKCId':target,'name':new['name']})
+                aliased=c.request('/builder/runs',{'sourceId':fixture['sourceId']},expected=202);profile=json.loads(aliased['modelConfigPayload'])['retrieval'];assert profile['version']=='builder-retrieval/2' and len(profile['aliases'])==1 and profile['aliases'][0]['candidateId']==new['id'] and aliased['modelConfigHash']!=fresh['modelConfigHash'] and aliased['id']!=fresh['id']
+                alias_state=settled([aliased['id']]);alias_candidate=next(x for x in alias_state['candidates'] if x['runId']==aliased['id']);hits=json.loads(alias_candidate['matches']);assert hits[0]['kcId']==target and hits[0]['matchedAliases']==profile['aliases']
+                alias_context=c.request('/builder/candidates/'+alias_candidate['id']+'/review-context');assert alias_context['matches'][0]['match']['matchedAliases']==profile['aliases']
+                assert next(r for r in alias_state['runs'] if r['id']==fresh['id'])['modelConfigPayload']==fresh['modelConfigPayload']
+                if os.environ.get('RETRIEVAL_BROWSER'):
+                    browser_env=env.copy();browser_env.update(LEARNING_TEST_URL=origin,BUILDER_ALIAS_USER=fixture['userName'],BUILDER_ALIAS_PASSWORD=env['RETRIEVAL_PASSWORD'],BUILDER_ALIAS_ID=alias_candidate['id'],BUILDER_ALIAS_NAME=alias_candidate['name'],BUILDER_ALIAS_SOURCE=new['id'])
+                    subprocess.run(['npm','run','test:e2e','--','tests/builder-alias-review.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env,check=True)
+                print('PASS 实际人工审核接口创建别名，新请求固定来源和摘要，实际后台命中同类型别名，审核上下文保留来源；原请求不改')
                 print('PASS 当前服务真实配置一项时，预先冻结两项任务实际后台仍返回两项，旧任务保留原片段方式；新请求真实使用一项且摘要不同，重复请求复用，原候选/配置字节不改')
     finally:
         if service is not None and service.poll() is None:service.terminate();service.wait(timeout=10)

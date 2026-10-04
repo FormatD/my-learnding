@@ -36,10 +36,21 @@ builder-input/2且两个配置字段均NULL的旧记录保留明确兼容流程�
 
 ## 固定候选检索
 
-当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/1、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列相同KC.Type的正式能力，按实际模拟分数与稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
+当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/2、审核别名快照、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列相同KC.Type的正式能力，规范化名称完全命中的已审核别名优先，再按实际模拟分数与稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
 
-现有数学候选协议仍只接受MATH。KC目录尚未提供独立学科/年级元数据，此处没有声称实现跨学科或跨年级的完整召回边界；真实Embedding、Alias/语义混合排序及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
+现有数学候选协议仍只接受MATH。KC目录尚未提供独立学科/年级元数据，此处没有声称实现跨学科或跨年级的完整召回边界；真实Embedding、关键词/语义混合召回及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
 
 builder-input/3与builder-config/1保留来源片段查询、不筛类型、最多10项的原兼容方式；旧未保存配置的builder-input/2也保持明确兼容，不补造创建时检索字段。新版本缺失检索/配置、空间或方式无法核对时在调用前拒绝，不替换为当前设置。旧配置JSON不增加retrieval:null，原描述/Hash和候选保持。运行处理和恢复读取保存的配置，运行环境后来改TopK不会改变原申请。
 
 tests/builder_retrieval_acceptance.py在实际审核发布固定库夹具经真实后台验证两项同类型结果、旧方式及重复处理原字节、非法空间零调用/候选、家庭删除；tests/builder_retrieval_api_acceptance.py实际启动TopK=1的服务，预先冻结TopK=2的任务仍产生2项，旧任务保留原方式，新HTTP请求实际产生1项且摘要不同，重复请求复用。实际源和库通过受控审核/发布设置，不是正式人工教材验收。规则专项验证异类型高相似候选不混入、相同分数稳定排序、空库、边界数量和旧JSON保持。
+
+
+## 固定审核别名（2026-10-04）
+
+新的builder-retrieval/2在原builder-input/4、builder-config/2内保存Aliases，即使没有别名也明确保存空数组。只捕获本家庭、原固定正式库能力、原候选Accepted且ExistingKCId一致的Alias；保存实际Id、KCId、Text、Normalized、CandidateId及ReviewedBy，不回填未知审核信息。最多1000项；超限明确拒绝，不截断后继续。关联审核的别名须为1～100字有效名称。规范化使用既有NFKC、去首尾空格及小写规则，不把模糊或子串当作完全命中。
+
+同类型能力中，候选名称与原固定别名规范化后完全相同时优先列出。模拟相似分数仍显示原值，不以别名命中改写分数或推定正确概率；仍要求家长核对边界与支持题并明确决定。页面展示命中的实际别名及原来源候选。别名快照进入配置/输入摘要，后来新增别名只影响新请求。处理原任务只验证原快照来源，来源改动、删除或关联失效则BUILDER_ALIAS_SNAPSHOT_CHANGED且零模型调用，不替换成当前别名。
+
+已保存的builder-retrieval/1仍使用同类型、原模拟分数及固定数量排序，原配置不增加aliases:null，原Match不增加matchedAliases:null。旧v2/v3继续原兼容方式。该版本为确定性的审核别名优先检索，并非真实Embedding或关键词/语义混合召回已经通过质量评测。
+
+tests/builder_retrieval_acceptance.py使用明确受控的已接受别名来源夹具，验证实际后台固定快照、后增别名隔离、来源变化零调用、家庭删除及旧retrieval/1实际执行；tests/builder_retrieval_api_acceptance.py经真实审核接口创建别名，再生成新请求，核对实际来源、摘要变化与审核上下文。设置RETRIEVAL_BROWSER=1及CHROMIUM_PATH可验证别名来源页面和390像素宽度；不替代正式内容人工审核或实体平板。
