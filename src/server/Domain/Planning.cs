@@ -23,7 +23,9 @@ public static class Planning
     public static async Task<PlanRevision> Generate(Database db, Student s, DateOnly date)
     {
         if (s.ActiveReleaseId==null) throw new ApiError(422,"NO_CONTENT","请先审核发布内容，并绑定学生。");
-        var release=await db.Releases.SingleAsync(r => r.Id==s.ActiveReleaseId && r.FamilyId==s.FamilyId && !r.Withdrawn);
+        var release=await db.Releases.SingleOrDefaultAsync(r => r.Id==s.ActiveReleaseId && r.FamilyId==s.FamilyId);
+        if(release==null)throw new ApiError(422,"NO_CONTENT","绑定的内容版本不可用，请核对并绑定已审核的版本。");
+        if(release.Withdrawn)throw new ApiError(422,"WITHDRAWN","绑定的内容版本已撤回，请先绑定已审核的替代版本。");
         var content=Json.Read<Catalog>(release.Payload);
         var projection=await PlanProjection.Capture(db,s);
         var plan=await db.Plans.SingleOrDefaultAsync(p => p.StudentId==s.Id && p.Date==date);

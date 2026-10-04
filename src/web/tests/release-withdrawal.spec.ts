@@ -25,6 +25,7 @@ test('发布版本可明确撤回，新绑定和新会话拒绝，既有会话�
  await page.unroute(endpoint);await row.getByRole('button',{name:'确认撤回此版本',exact:true}).click();await expect(row).toContainText('已撤回 · 不再接受新绑定或新会话');await expect(row).toContainText('当前学生仍绑定此版本');await expect(row.getByRole('button',{name:'当前学生已绑定'})).toBeDisabled();await expect(row.getByRole('button',{name:'撤回此版本',exact:true})).toHaveCount(0);
  const after=await call(`/students/${student.id}/export`);expect(after.attempts.find((a:any)=>a.id===attempt.id)).toEqual(attempt);expect(after.evidence).toEqual(before.evidence);expect(before.sessions).toHaveLength(1);expect(after.sessions).toEqual(before.sessions);expect(before.evidence.length).toBeGreaterThan(0);
  const saved=(await call('/content')).releases.find((r:any)=>r.id===release.id);expect(saved.withdrawn).toBe(true);expect(saved.payload).toBe(release.payload);expect(saved.hash).toBe(release.hash);
+ const refused=await call(`/students/${student.id}/plans/${day}:generate`,{},422);expect(refused.code).toBe('WITHDRAWN');const unchanged=await call(`/students/${student.id}/export`);expect(unchanged.plans).toEqual(after.plans);expect(unchanged.revisions).toEqual(after.revisions);expect(unchanged.tasks).toEqual(after.tasks);
  await call(`/students/${student.id}/content/${release.id}:bind`,{},422);await call(`/tasks/${tasks[1].id}/sessions`,{},422);
  expect((await call(`/tasks/${tasks[0].id}/sessions`,{})).sessionId).toBe(session.sessionId);
  await call(`/sessions/${session.sessionId}/attempts`,{clientSubmissionId:crypto.randomUUID(),answer:question.answer});
