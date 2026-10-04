@@ -22,7 +22,7 @@ function policy(q:Item){const kc=q.mappings.find((m:Item)=>m.role==='Primary')?.
 function addResource(){catalog.value!.resources.push({id:identity(),revisionId:identity(),title:'',paperReference:'',minutes:5,kcIds:[catalog.value!.kcs[0].id],url:null});}
 function addLesson(){catalog.value!.lessons.push({id:identity(),title:'',sequence:catalog.value!.lessons.length+1,revisionId:identity(),unitId:null,courseId:null,estimatedMinutes:5,sourceRefs:[],kcIds:[catalog.value!.kcs[0].id]});}
 function addRelation(){catalog.value!.relations.push({from:catalog.value!.kcs[0].id,to:catalog.value!.kcs[1].id,type:'Prerequisite'});}
-function save(){error.value='';for(const k of catalog.value!.kcs){if(k.gradeMin==='')delete k.gradeMin;if(k.gradeMax==='')delete k.gradeMax;if(k.subject==null&&k.gradeMin==null&&k.gradeMax==null)continue;if(!k.subject||!Number.isInteger(k.gradeMin)||!Number.isInteger(k.gradeMax)||k.gradeMin<1||k.gradeMax>12||k.gradeMin>k.gradeMax){error.value='请同时填写能力学科与1～12年级的适用范围，起始年级不能超过结束年级。';return;}}if(!props.title.trim()){error.value='请填写草稿标题。';return;}pruneCoverage(catalog.value!);emit('save');}
+function save(){error.value='';for(const k of catalog.value!.kcs){for(const key of ['domain','cognitiveLevel','difficultyLevel']){if(typeof k[key]==='string')k[key]=k[key].trim();if(k[key]==null||k[key]==='')delete k[key];}if((k.domain?.length||0)>200||(k.cognitiveLevel?.length||0)>100||/[\u0000-\u001f\u007f-\u009f]/u.test((k.domain||'')+(k.cognitiveLevel||''))||(k.difficultyLevel&&!['Easy','Medium','Hard'].includes(k.difficultyLevel))){error.value='请检查能力领域、复杂度和认知层级，描述须为单行且不超过标注字数。';return;}if(k.gradeMin==='')delete k.gradeMin;if(k.gradeMax==='')delete k.gradeMax;if(k.subject==null&&k.gradeMin==null&&k.gradeMax==null)continue;if(!k.subject||!Number.isInteger(k.gradeMin)||!Number.isInteger(k.gradeMax)||k.gradeMin<1||k.gradeMax>12||k.gradeMin>k.gradeMax){error.value='请同时填写能力学科与1～12年级的适用范围，起始年级不能超过结束年级。';return;}}if(!props.title.trim()){error.value='请填写草稿标题。';return;}pruneCoverage(catalog.value!);emit('save');}
 
 </script>
 <template>
@@ -41,6 +41,10 @@ function save(){error.value='';for(const k of catalog.value!.kcs){if(k.gradeMin=
       <label>能力学科<select v-model="k.subject" :disabled="busy"><option :value="null">未记录学科（旧定义）</option><option value="MATH">数学</option><option value="ENGLISH">英语</option><option value="CHINESE">语文</option><option value="SCIENCE">科学</option><option value="OTHER">其他</option></select></label>
       <label>适用起始年级<input v-model.number="k.gradeMin" type="number" min="1" max="12" :disabled="busy" placeholder="旧定义未记录"></label><label>适用结束年级<input v-model.number="k.gradeMax" type="number" min="1" max="12" :disabled="busy" placeholder="旧定义未记录"></label>
       <p class="muted">学科和年级属于本能力定义，不从教材或编码推定。补充旧定义需重新审核发布；已记录的正式能力不能改换或清空学科。年级范围调整不复制历史证据。</p>
+      <label>能力领域<input v-model="k.domain" maxlength="200" :disabled="busy" placeholder="例如：数与运算；未知可留空"></label>
+      <label>能力复杂度<select v-model="k.difficultyLevel" :disabled="busy"><option :value="null">未记录</option><option value="Easy">简单</option><option value="Medium">中等</option><option value="Hard">较复杂</option></select></label>
+      <label>能力认知层级<input v-model="k.cognitiveLevel" maxlength="100" :disabled="busy" placeholder="例如：理解与应用；未知可留空"></label>
+      <p class="muted">这些描述由审核人填写，不从题目或教材推定。能力复杂度与每道题的难度分开记录；修改描述需要重新审核发布，不改变历史判分。</p>
       <label>独立可测行为<input v-model="k.behavior" :readonly="publishedIds.includes(k.id)" :disabled="busy"></label>
       <label>测量边界与排除范围<input v-model="k.boundary" :readonly="publishedIds.includes(k.id)" :disabled="busy"></label>
       <label>能力类型<select v-model="k.type" :disabled="busy||publishedIds.includes(k.id)"><option value="Procedure">计算与操作</option><option value="Concept">概念理解</option><option value="Application">应用与建模</option></select></label>

@@ -15,7 +15,8 @@ public static class Content
         if (c.Questions.Select(q => q.Id).Distinct().Count() != c.Questions.Length) errors.Add("题目身份必须唯一");
         foreach (var k in c.Kcs)
         {
-            if(!KCMetadata.Valid(k))errors.Add($"{k.Name}: 学科与适用年级需同时记录，年级范围为1～12，起始年级不能大于结束年级。");
+            if(!KCMetadata.SubjectGradeValid(k))errors.Add($"{k.Name}: 学科与适用年级需同时记录，年级范围为1～12，起始年级不能大于结束年级。");
+            if(!KCMetadata.DescriptionsValid(k))errors.Add($"{k.Name}: 领域需为1～200字、认知层级需为1～100字的单行描述；能力复杂度请选择简单、中等或较复杂。未知字段可不填写。");
             if (k.Id == Guid.Empty || k.RevisionId == Guid.Empty || string.IsNullOrWhiteSpace(k.Name) || string.IsNullOrWhiteSpace(k.Behavior) || string.IsNullOrWhiteSpace(k.Boundary)) errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 缺少可测行为、边界或身份");
             if(!new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(k.Type))errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 能力类型无效");
             if (!c.Questions.Any(q => q.Mappings.Any(m => m.KCId == k.Id && m.Mode != "None" && m.Share>0 && m.Role is "Primary" or "Secondary"))) errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 没有经过审核的测量题");

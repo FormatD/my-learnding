@@ -3778,6 +3778,24 @@
           "code": {
             "type": "string"
           },
+          "cognitiveLevel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "difficultyLevel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "domain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "gradeMax": {
             "format": "int32",
             "pattern": "^-?(?:0|[1-9]\\d*)$",
