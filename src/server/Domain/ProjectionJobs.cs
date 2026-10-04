@@ -29,6 +29,11 @@ public static class ProjectionJobs
     }
     public static void Map(RouteGroupBuilder api)
     {
+        api.MapGet("/students/{id:guid}/consumer-receipts/window",async(Guid id,int? pageSize,string? cursor,Database db,HttpContext ctx)=>{
+            var actor=ctx.Actor();actor.Require("Parent");await using var snapshot=await ReadSnapshot.Begin(db,ctx);await actor.Student(db,id);
+            var page=await StableReadPage.Load(db.Set<ConsumerReceipt>().AsNoTracking().Where(r=>r.FamilyId==actor.FamilyId&&r.StudentId==id),"consumer-receipts/1",actor.FamilyId,id,pageSize,cursor,ctx.RequestAborted);
+            await snapshot.CommitAsync(ctx.RequestAborted);return new{page.PageSize,page.Total,receipts=page.Rows,nextCursor=page.NextCursor};
+        }).WithMetadata(new OptionalResponseFieldsMetadata("nextCursor"));
         api.MapGet("/students/{id:guid}/consumer-receipts",async(Guid id,int? page,int? pageSize,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");await a.Student(db,id);var p=page??1;var size=pageSize??20;if(p<1 || p>100_000 || size<1 || size>50)throw new ApiError(422,"INVALID_PAGE","请使用有效页码及每页1～50条。");var query=db.Set<ConsumerReceipt>().Where(r=>r.FamilyId==a.FamilyId && r.StudentId==id);var total=await query.CountAsync();return new{page=p,pageSize=size,total,receipts=await query.OrderByDescending(r=>r.CreatedAt).ThenBy(r=>r.Id).Skip((p-1)*size).Take(size).ToArrayAsync()};});
     }
 }

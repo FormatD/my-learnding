@@ -13,3 +13,11 @@ DispatchTarget=assessment/1 的事件建立同ID Outbox引用；当前仅作答�
 目前评估仍按原固定作答序列全学生重放。新日志序号尚未代替独立增量算法的事件游标，进度/任务日志也尚未成为独立教学投影消费者；不能因此关闭设计§13的全部增量与重放要求。映射建议后台化、用户取消以及真实模型、教材审核、实体设备、长期试用条件继续开放。
 
 验证入口：domain_event_persistence_acceptance.py核对事务回滚、服务器顺序、旧描述兼容、新旧各自回执、重复消费、错误负载锚点拒绝且零部分结果、不可修改数据库约束与删除。observed_steps_api_acceptance.py与projection_receipt_api_acceptance.py核对七类真实操作事件、Pending后确认/映射更正、家庭隔离、孩子权限和隐私导出；api_acceptance.py核对复用固定世代不产生重复应用事件。实际浏览器assessment-context.spec.ts核对新旧评估、撤销、事件/回执导出和窄屏页面。
+
+## 普通历史游标读取（2026-10-05）
+
+新增GET `/api/v1/domain-events/window`，可选studentId筛选，pageSize默认20/最大50，cursor为上次返回的URL编码后nextCursor。响应含pageSize、total、events和可空nextCursor；按CreatedAt降序/Id升序，是普通历史显示顺序。EventSequence原值和正式消费顺序不变，原GET `/domain-events?page=1`仍按原EventSequence页码语义；不要把历史显示游标当作消费进度。
+
+游标绑定domain-events/1、当前家庭、精确学生筛选和页大小；全家/某学生之间、更换学生、其他类型游标均须重新从第一页读取。不匹配或畸形422；Parent读取，孩子403，跨家庭学生404。一次页的计数、记录和家庭版本来自同一RepeatableRead事务；跨页不是历史快照，总数仍可变化。新记录在顶端出现时，后续页保持原边界；重新读取第一页才能看到新记录。已有事件和Payload/Hash不修改，不更改领域事件序号、Outbox或数学处理。
+
+`tests/event_cursor_acceptance.py`在隔离服务真实提交三次原创题作答并等待实际消费者完成，读取事件/回执第一页，再真实提交第四次并等待完成。原页后续逐项匹配原始完整记录，刷新匹配完整新记录，学生/类型/页大小及角色边界验证；最终导出核对事件、回执、作答、判分、证据、掌握、世代和检查点保持，未注入合成事件或回执。

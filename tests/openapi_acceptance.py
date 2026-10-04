@@ -31,6 +31,7 @@ from published_mapping_acceptance import verify as verify_published_mappings
 from builder_budget_api_acceptance import verify as verify_builder_budget
 from job_lease_api_acceptance import verify as verify_jobs
 from background_cursor_acceptance import verify as verify_background_cursor
+from event_cursor_acceptance import verify as verify_event_cursor
 from builder_protocol_acceptance import verify as verify_builder_protocol
 from learning_reference_acceptance import verify as verify_learning_references
 from independent_mapping_acceptance import verify as verify_independent_mappings
@@ -121,6 +122,7 @@ def main():
                     verify_builder_budget(client,env)
                     verify_jobs(client)
                     verify_background_cursor(client,env,credentials)
+                    verify_event_cursor(client)
                     from plan_projection_api_acceptance import verify as verify_plan_projection
                     verify_plan_projection(client,env)
                 elif args.cancel_regression:

@@ -59,6 +59,11 @@ public static class DomainEvents
     static ApiError Invalid()=>new(422,"DOMAIN_EVENT_INVALID","事件原记录与评估输入不一致，请核对记录后处理。");
     public static void Map(RouteGroupBuilder api)
     {
+        api.MapGet("/domain-events/window",async(Guid? studentId,int? pageSize,string? cursor,Database db,HttpContext ctx)=>{
+            var actor=ctx.Actor();actor.Require("Parent");await using var snapshot=await ReadSnapshot.Begin(db,ctx);if(studentId!=null)await actor.Student(db,studentId.Value);
+            var page=await StableReadPage.Load(db.Set<DomainEvent>().AsNoTracking().Where(e=>e.FamilyId==actor.FamilyId&&(studentId==null||e.StudentId==studentId)),"domain-events/1",actor.FamilyId,studentId,pageSize,cursor,ctx.RequestAborted);
+            await snapshot.CommitAsync(ctx.RequestAborted);return new{page.PageSize,page.Total,events=page.Rows,nextCursor=page.NextCursor};
+        }).WithMetadata(new OptionalResponseFieldsMetadata("nextCursor"));
         api.MapGet("/domain-events",async(Guid? studentId,int? page,int? pageSize,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("Parent");if(studentId!=null)await a.Student(db,studentId.Value);var p=page??1;var size=pageSize??20;if(p<1 || p>100000 || size<1 || size>50)throw new ApiError(422,"INVALID_PAGE","请使用有效页码及每页1～50条。");var q=db.Set<DomainEvent>().Where(e=>e.FamilyId==a.FamilyId && (studentId==null || e.StudentId==studentId));return new{page=p,pageSize=size,total=await q.CountAsync(),events=await q.OrderByDescending(e=>e.EventSequence).Skip((p-1)*size).Take(size).ToArrayAsync()};});
     }
 }

@@ -27,3 +27,9 @@ GET /students/{id}/consumer-receipts供Parent分页读取，默认20/最多50，
 projection_receipt_persistence_acceptance.py验证合并两事件各自回执/同一个固定目标、另一领取及受控完成标记缺口不再建世代、原回执全部字段不改、数据库唯一键及学生删除闭合、受控耗尽状态零结果/回执及人工新轮次沿原目标恢复。worker_fault_acceptance.py实际终止进程，在短策略夹具下等待真实数据库租约到期后让两个消费者竞争，固定目标、一份回执及一组结果收敛。evidence_revocation_fault_acceptance.py实际中断判分更正，旧证据/上下文/撤销仍原子恢复。mastery_snapshot_acceptance.py继续核对活动结果与积压为同一数据库快照。
 
 目前仍为全学生重放算法，并未完成独立增量算法或增量/全量对照。新DomainEvent日志及Outbox/回执的明确引用已补齐，详见[事件说明](domain-events.md)；日志序号尚未用于独立增量消费，非评估事件目前只记录事实。手动重建API仍同步，映射建议后台化及用户取消协议仍开放；这些不因新增消费回执而关闭。真实模型/教材/实体设备/长期试用仍按完整V1条件核对。
+
+## 回执历史稳定翻页（2026-10-05）
+
+GET `/api/v1/students/{id}/consumer-receipts/window`返回pageSize、total、receipts和可空nextCursor。默认20、最大50；按CreatedAt降序/Id升序，回传URL编码游标及同样页大小读取后续页。游标绑定consumer-receipts/1、家庭和该学生；更换学生、事件游标或页大小时422，孩子403，跨家庭学生404。旧GET `/students/{id}/consumer-receipts?page=1`继续原字段与页码行为。
+
+一次读取的计数、回执和家庭版本在同一数据库快照中；请求取消传递给游标查询。跨页状态不冻结，刷新第一页看最新回执。只读取既有真实回执，不重标ProcessedAt、不创建回执、不推进消费边界，也不重算掌握。实际隔离检验见`tests/event_cursor_acceptance.py`及[事件历史说明](domain-events.md)；同时间UUID边界由共享StableReadPage的后台任务实际数据库专项验证。
