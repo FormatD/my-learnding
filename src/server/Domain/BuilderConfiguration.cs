@@ -11,11 +11,11 @@ public record BuilderLimits(int MaxFragments=100,int MaxInputCharacters=100_000,
     }
 }
 public record BuilderAliasSnapshot(Guid Id,Guid KCId,string Text,string Normalized,Guid CandidateId,Guid ReviewedBy);
-public record BuilderRetrievalConfiguration(string Version,int TopK,string Space,string QueryMode,string TypePolicy,[property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] BuilderAliasSnapshot[]? Aliases=null)
+public record BuilderRetrievalConfiguration(string Version,int TopK,string Space,string QueryMode,string TypePolicy,[property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] BuilderAliasSnapshot[]? Aliases=null,[property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] string? KeywordPolicy=null,[property:JsonIgnore(Condition=JsonIgnoreCondition.WhenWritingNull)] string? FusionPolicy=null)
 {
     public void Validate()
     {
-        if(Version is not ("builder-retrieval/1" or "builder-retrieval/2") || TopK is <1 or >50 || Space!=Retrieval.Space || QueryMode!="CandidateDefinition" || TypePolicy!="ExactKCType" || Version=="builder-retrieval/1" && Aliases!=null || Version=="builder-retrieval/2" && Aliases==null)throw new ApiError(422,"BUILDER_CONFIGURATION_INVALID","原候选检索设置无法验证，请重新准备任务。");
+        if(Version is not ("builder-retrieval/1" or "builder-retrieval/2" or "builder-retrieval/3") || TopK is <1 or >50 || Space!=Retrieval.Space || QueryMode!="CandidateDefinition" || TypePolicy!="ExactKCType" || Version=="builder-retrieval/1" && Aliases!=null || Version!="builder-retrieval/1" && Aliases==null || Version=="builder-retrieval/3" && (KeywordPolicy!=BuilderLexicalRetrieval.KeywordPolicy || FusionPolicy!=BuilderLexicalRetrieval.FusionPolicy) || Version!="builder-retrieval/3" && (KeywordPolicy!=null || FusionPolicy!=null))throw new ApiError(422,"BUILDER_CONFIGURATION_INVALID","原候选检索设置无法验证，请重新准备任务。");
         if(Aliases!=null && (Aliases.Length>1000 || Aliases.Any(a=>a==null || a.Id==Guid.Empty || a.KCId==Guid.Empty || a.CandidateId==Guid.Empty || a.ReviewedBy==Guid.Empty || string.IsNullOrWhiteSpace(a.Text) || a.Text.Length>100 || a.Normalized!=Retrieval.Normalize(a.Text)) || Aliases.Select(a=>a.Id).Distinct().Count()!=Aliases.Length || Aliases.Select(a=>(a.KCId,a.Normalized)).Distinct().Count()!=Aliases.Length))throw new ApiError(422,"BUILDER_ALIAS_SNAPSHOT_INVALID","原审核别名无法核对，请检查别名记录；不会替换为当前别名。");
     }
 }
@@ -26,7 +26,7 @@ public static class BuilderConfiguration
     {
         int Setting(string key,int fallback)=>configuration.GetValue<int?>("Builder:"+key)??fallback;
         var limits=new BuilderLimits(Setting("MaxFragments",100),Setting("MaxInputCharacters",100_000),Setting("MaxOutputCharacters",1_000_000),Setting("TimeoutMilliseconds",30_000),Setting("RepairAttempts",1));limits.Validate();
-        var retrieval=new BuilderRetrievalConfiguration("builder-retrieval/2",Setting("RetrievalTopK",10),Learning.Retrieval.Space,"CandidateDefinition","ExactKCType",[]);retrieval.Validate();
+        var retrieval=new BuilderRetrievalConfiguration("builder-retrieval/3",Setting("RetrievalTopK",10),Learning.Retrieval.Space,"CandidateDefinition","ExactKCType",[],BuilderLexicalRetrieval.KeywordPolicy,BuilderLexicalRetrieval.FusionPolicy);retrieval.Validate();
         return new("builder-config/2","Mock","fixture/1","kc-candidate/1",Content.Hash(BuilderProtocol.Schema),limits,retrieval);
     }
     static ApiError Unknown()=>new(422,"RUN_CONFIGURATION_UNKNOWN","原建库配置无法验证，请重新准备任务；不会替换为当前配置。");
@@ -51,7 +51,7 @@ public static class BuilderConfiguration
             if(modern)
             {
                 if(c.Retrieval==null)throw Unknown();var element=doc.RootElement.GetProperty("retrieval");
-                Fields(element,c.Retrieval.Version=="builder-retrieval/2"?["version","topK","space","queryMode","typePolicy","aliases"]:["version","topK","space","queryMode","typePolicy"]);c.Retrieval.Validate();
+                Fields(element,c.Retrieval.Version=="builder-retrieval/3"?["version","topK","space","queryMode","typePolicy","aliases","keywordPolicy","fusionPolicy"]:c.Retrieval.Version=="builder-retrieval/2"?["version","topK","space","queryMode","typePolicy","aliases"]:["version","topK","space","queryMode","typePolicy"]);c.Retrieval.Validate();
                 if(c.Retrieval.Aliases!=null)foreach(var alias in element.GetProperty("aliases").EnumerateArray())Fields(alias,"id","kcId","text","normalized","candidateId","reviewedBy");
             }
             c.Limits.Validate();return c;

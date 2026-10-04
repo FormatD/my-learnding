@@ -36,9 +36,9 @@ builder-input/2且两个配置字段均NULL的旧记录保留明确兼容流程�
 
 ## 固定候选检索
 
-当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/2、审核别名快照、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列相同KC.Type的正式能力，规范化名称完全命中的已审核别名优先，再按实际模拟分数与稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
+当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/3、审核别名快照、关键词/融合规则、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列相同KC.Type的正式能力，规范化名称完全命中的已审核别名优先，其他结果使用关键词与模拟相似排序融合及稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
 
-现有数学候选协议仍只接受MATH。KC目录尚未提供独立学科/年级元数据，此处没有声称实现跨学科或跨年级的完整召回边界；真实Embedding、关键词/语义混合召回及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
+现有数学候选协议仍只接受MATH。KC目录尚未提供独立学科/年级元数据，此处没有声称实现跨学科或跨年级的完整召回边界；真实Embedding、语义判断及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
 
 builder-input/3与builder-config/1保留来源片段查询、不筛类型、最多10项的原兼容方式；旧未保存配置的builder-input/2也保持明确兼容，不补造创建时检索字段。新版本缺失检索/配置、空间或方式无法核对时在调用前拒绝，不替换为当前设置。旧配置JSON不增加retrieval:null，原描述/Hash和候选保持。运行处理和恢复读取保存的配置，运行环境后来改TopK不会改变原申请。
 
@@ -47,10 +47,23 @@ tests/builder_retrieval_acceptance.py在实际审核发布固定库夹具经真�
 
 ## 固定审核别名（2026-10-04）
 
-新的builder-retrieval/2在原builder-input/4、builder-config/2内保存Aliases，即使没有别名也明确保存空数组。只捕获本家庭、原固定正式库能力、原候选Accepted且ExistingKCId一致的Alias；保存实际Id、KCId、Text、Normalized、CandidateId及ReviewedBy，不回填未知审核信息。最多1000项；超限明确拒绝，不截断后继续。关联审核的别名须为1～100字有效名称。规范化使用既有NFKC、去首尾空格及小写规则，不把模糊或子串当作完全命中。
+builder-retrieval/2引入的别名快照在原builder-input/4、builder-config/2内保存Aliases，即使没有别名也明确保存空数组。只捕获本家庭、原固定正式库能力、原候选Accepted且ExistingKCId一致的Alias；保存实际Id、KCId、Text、Normalized、CandidateId及ReviewedBy，不回填未知审核信息。最多1000项；超限明确拒绝，不截断后继续。关联审核的别名须为1～100字有效名称。规范化使用既有NFKC、去首尾空格及小写规则，不把模糊或子串当作完全命中。
 
 同类型能力中，候选名称与原固定别名规范化后完全相同时优先列出。模拟相似分数仍显示原值，不以别名命中改写分数或推定正确概率；仍要求家长核对边界与支持题并明确决定。页面展示命中的实际别名及原来源候选。别名快照进入配置/输入摘要，后来新增别名只影响新请求。处理原任务只验证原快照来源，来源改动、删除或关联失效则BUILDER_ALIAS_SNAPSHOT_CHANGED且零模型调用，不替换成当前别名。
 
 已保存的builder-retrieval/1仍使用同类型、原模拟分数及固定数量排序，原配置不增加aliases:null，原Match不增加matchedAliases:null。旧v2/v3继续原兼容方式。该版本为确定性的审核别名优先检索，并非真实Embedding或关键词/语义混合召回已经通过质量评测。
 
 tests/builder_retrieval_acceptance.py使用明确受控的已接受别名来源夹具，验证实际后台固定快照、后增别名隔离、来源变化零调用、家庭删除及旧retrieval/1实际执行；tests/builder_retrieval_api_acceptance.py经真实审核接口创建别名，再生成新请求，核对实际来源、摘要变化与审核上下文。设置RETRIEVAL_BROWSER=1及CHROMIUM_PATH可验证别名来源页面和390像素宽度；不替代正式内容人工审核或实体平板。
+
+
+## 关键词与模拟相似排序融合（builder-retrieval/3）
+
+新请求保存KeywordPolicy=`unicode-bigram-bm25/1/k1-1.2/b-0.75`及FusionPolicy=`rrf/1/k-60/source-top-k`，沿用原TopK和审核别名快照；不把当前方法套用到已保存的retrieval/1或retrieval/2。字段缺失、未知规则或旧版本夹带新规则在模型调用前拒绝，不能推断原方法。
+
+以候选及原固定能力的名称、行为、边界分别提取词片：先按既有NFKC/首尾空格/小写规范化，连续中文按Unicode字符对生成相邻词片，非中文字母和数字连续串（包括英文、数字）按完整词片提取。标点、字段和文字系统边界不连接；不跨标点生成词片，不将单个中文字符冒充关键词，支持扩展区Unicode字符。使用实际同类型库的文档频率、词频和长度，正值IDF变体 `log(1+(N-df+0.5)/(df+0.5))`，k1=1.2、b=0.75；候选重复词片去重。词片为机械文字特征，没有声称按中文词义分词。
+
+关键词得分大于零的前TopK及原模拟相似前TopK各按原分数/稳定KCId排序，与完全命中的已审核别名取并集。每个进入某路前列的能力贡献`1/(60+该路名次)`；未进入某路时该路无贡献，不制造名次或关键词命中。最终先别名完全命中，再融合分数，再稳定KCId，最多TopK项。无词片命中时保留模拟相似回退；空同类型库仍为空，不自动新建或关联。
+
+原Match.Score仍为实际模拟相似原值，不加关键词分数。新Match.RetrievalEvidence保存真实命中词片、关键词分数/名次、模拟相似名次、融合分数和原规则。某路未进入前列的名次为NULL，即使有少量词片命中也不假称进入前列；页面显示命中词片及各路排序，仍仅供人工核对。旧Match不补retrievalEvidence:null，旧配置不加keywordPolicy/fusionPolicy:null。后台和重试读取原方法与固定库，后续请求方法变化形成不同配置/输入摘要。
+
+算法参考：[Stanford信息检索教材中的BM25](https://nlp.stanford.edu/IR-book/html/htmledition/okapi-bm25-a-non-binary-model-1.html)及[原始RRF论文](https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf)。本地正值IDF、Unicode词片和候选列表策略已通过上述明确版本固定；引用方法不等于此教材上的召回质量已评测。真实Embedding、语义判断、独立学科/年级元数据及固定人工质量金标仍未关闭。

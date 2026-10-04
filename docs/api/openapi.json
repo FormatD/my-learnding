@@ -1707,6 +1707,66 @@
         ],
         "type": "object"
       },
+      "BuilderRetrievalEvidence": {
+        "properties": {
+          "fusionPolicy": {
+            "type": "string"
+          },
+          "fusionScore": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "keywordPolicy": {
+            "type": "string"
+          },
+          "keywordRank": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "keywordScore": {
+            "format": "double",
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "matchedTerms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "vectorRank": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          }
+        },
+        "required": [
+          "keywordPolicy",
+          "fusionPolicy",
+          "matchedTerms",
+          "keywordScore",
+          "keywordRank",
+          "vectorRank",
+          "fusionScore"
+        ],
+        "type": "object"
+      },
       "BuilderRun": {
         "properties": {
           "completedAt": {
@@ -5384,6 +5444,16 @@
           },
           "name": {
             "type": "string"
+          },
+          "retrievalEvidence": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BuilderRetrievalEvidence"
+              }
+            ]
           },
           "score": {
             "format": "double",
