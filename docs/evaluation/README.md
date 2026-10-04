@@ -56,3 +56,19 @@ python3 scripts/k1_mapping_results.py --dataset docs/evaluation/mixed-operations
 映射运行接口没有实际审核时长、候选Schema逐次调用、题干引文和库重复审查，因此导出不补造这些指标。ReviewedAt是时间点，不能推算耗时。正式人工金标准缺失时仍NotEvaluated。当前适配只覆盖题目映射，不将其当作KC候选抽取或真实模型质量证明。
 
 专项运行：`python3 tests/k1_mapping_results_acceptance.py`。实际后台/审核接口验收：`python3 tests/k1_mapping_api_acceptance.py`，使用独立临时数据库、隔离测试家庭和明确标注的受控发布；验证56题真实后台输出、校正/拒绝/待审核分离、CLI读文件与摘要、跨家庭404/孩子403以及零证据/掌握副作用，结束清理，不修改正式标签。
+
+## 候选任务结构与来源统计
+
+`scripts/k1_builder_report.py`读取已有`GET /api/v1/builder`完整响应文件，用重复的`--run-id`明确选择任务；只接受现有Mock/fixture/1的Candidates及kc-candidate/1或/2，不混入PDF解析任务。
+
+```sh
+python3 scripts/k1_builder_report.py --builder /path/to/saved-builder-response.json --run-id <候选任务id> --run-id <另一任务id> --output .local/evaluation/new-builder-report.json
+```
+
+输出为独立`k1-builder-report/1`，不能伪装为题目映射结果或自动合并为固定检查集质量报告。Completed、Failed、Queued及尝试数分别列出；失败原因保留。结构比例使用完成任务为分母，仅当实际保留的成功BuilderProtocolResult、Calls、Repaired、版本与全部候选ProtocolPayload对应时统计首轮/修复通过。多份成功记录、输出混合版本/字段或运行/家庭冲突明确拒绝。这里读取服务端保存的成功校验事实，没有重新校验模型首轮原始响应，也没有将调用账本Returned当作Schema通过。
+
+旧任务缺少成功ProtocolResult时，完成任务仍在分母，未知数单列，首轮/修复比例显示null；旧候选缺少ProtocolPayload时同样保留候选分母并显示来源比例未知，不从展示Quote补造结构引用。已记录来源不合法时计入分母并计为无效引用。每个引用检查实际片段存在、来源/家庭对应、真实非空引文、主引用及原片段包含于来源文本；输出片段定位、片段/引文摘要，不带全文引文。文本上传核对原文本SHA-256；PDF来源原Hash对应文件，响应没有文件字节，明确标记OriginalFileHashNotRecomputed，不能宣称复算原PDF摘要。
+
+输出保留选择与完整响应摘要、原任务输入摘要、协议版本、成功尝试引用及协议摘要。这些是本地保存响应的交叉检查，不构成独立服务端签署。Mock来源引用通过不表示语义提取正确，更不能作为正式100%追溯验收；许可、正式内容及独立证据仍需核对。语义质量固定NotEvaluated，formalV1ExitProven始终false；不推算金标准、映射准确率、审核耗时或费用。
+
+边界专项：`python3 tests/k1_builder_report_acceptance.py`（首轮/修复分列、失败/排队、旧缺失未知、错误引用保留分母、记录冲突拒绝）。实际接口：`python3 tests/k1_builder_api_acceptance.py`使用临时数据库，执行真实首轮成功两候选、101片段超限失败、实际记录/引用与CLI核对；修复统计分支本轮由明确受控文件夹具覆盖，未声称实际修复后成功的持久任务验收。文件不会覆盖已有报告，测试完成自动清理。

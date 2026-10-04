@@ -5,6 +5,7 @@ cd "$task_root"
 sh scripts/check.sh
 python3 tests/k1_evaluation_acceptance.py
 python3 tests/k1_mapping_results_acceptance.py
+python3 tests/k1_builder_report_acceptance.py
 if test -x .tools/dotnet/dotnet; then .tools/dotnet/dotnet build tests/persistence --no-restore; else dotnet build tests/persistence --no-restore; fi
 python3 tests/openapi_contract_acceptance.py
 if test "$#" -gt 0; then
@@ -28,6 +29,7 @@ python3 tests/rebuild_compatibility_api_acceptance.py
 python3 tests/builder_candidate_review_acceptance.py
 python3 tests/unit_pack_service_acceptance.py
 python3 tests/k1_mapping_api_acceptance.py
+python3 tests/k1_builder_api_acceptance.py
 python3 tests/builder_retrieval_acceptance.py
 python3 tests/builder_v2_api_acceptance.py
 python3 tests/kc_descriptions_api_acceptance.py
