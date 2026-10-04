@@ -15,6 +15,7 @@ public static class Content
         if (c.Questions.Select(q => q.Id).Distinct().Count() != c.Questions.Length) errors.Add("题目身份必须唯一");
         foreach (var k in c.Kcs)
         {
+            if(!KCMetadata.Valid(k))errors.Add($"{k.Name}: 学科与适用年级需同时记录，年级范围为1～12，起始年级不能大于结束年级。");
             if (k.Id == Guid.Empty || k.RevisionId == Guid.Empty || string.IsNullOrWhiteSpace(k.Name) || string.IsNullOrWhiteSpace(k.Behavior) || string.IsNullOrWhiteSpace(k.Boundary)) errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 缺少可测行为、边界或身份");
             if(!new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(k.Type))errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 能力类型无效");
             if (!c.Questions.Any(q => q.Mappings.Any(m => m.KCId == k.Id && m.Mode != "None" && m.Share>0 && m.Role is "Primary" or "Secondary"))) errors.Add($"{(string.IsNullOrWhiteSpace(k.Name)?"未命名能力":k.Name)}: 没有经过审核的测量题");
@@ -69,7 +70,7 @@ public static class Content
     {
         string[] codes = ["MEANING", "MENTAL.TENS", "NOCARRY.2D1D", "CARRY.2D1D", "WRITTEN.3D1D", "ZERO", "ESTIMATE", "APPLY.ONE", "APPLY.MULTI"];
         string[] names = ["理解乘法意义", "整十整百口算", "两位数不进位乘法", "两位数进位乘法", "三位数笔算乘法", "含零乘法位值", "乘法估算", "一步乘法建模", "多条件应用建模"];
-        var kcs = codes.Select((code,i) => new KC(Guid.NewGuid(), Guid.NewGuid(), $"MATH.G3.MULT.{code}", names[i], $"独立完成{names[i]}题目", "仅限本能力；不由整题结果推断其他步骤", i >= 7 ? "Application" : "Procedure")).ToArray();
+        var kcs = codes.Select((code,i) => new KC(Guid.NewGuid(), Guid.NewGuid(), $"MATH.G3.MULT.{code}", names[i], $"独立完成{names[i]}题目", "仅限本能力；不由整题结果推断其他步骤", i >= 7 ? "Application" : "Procedure",Subject:"MATH",GradeMin:3,GradeMax:3)).ToArray();
         string[] stems = ["4 组小棒，每组 3 根。一共有几根？", "6 个盒子，每盒 5 支笔，共几支？", "20 × 4 = ?", "300 × 3 = ?", "23 × 3 = ?", "32 × 2 = ?", "27 × 3 = ?", "46 × 5 = ?", "123 × 3 = ?", "214 × 4 = ?", "205 × 3 = ?", "120 × 4 = ?", "估算 198 × 4，把 198 看作 200，约等于多少？", "估算 302 × 3，把 302 看作 300，约等于多少？", "每本书 12 元，买 4 本。只写乘法算式。", "每盒 24 支，买 3 盒。只写乘法算式。", "一张票 46 元，5 人共多少钱？写出列式与计算。", "两辆车各装 23 箱，每箱 4 个，写出计算步骤。", "38 × 6 = ?", "304 × 5 = ?"];
         string[] answers = ["12","30","80","900","69","64","81","230","369","856","615","480","800","900","12×4","24×3","230","184","228","1520"];
         int[] targets = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,3,5];
@@ -83,7 +84,7 @@ public static class Content
         string[] codes=["MULDIV_FIRST","ADD_SUB_ORDER","MULDIV_ORDER","PARENTHESES","APPLY_MULT_ADD","APPLY_MULT_SUB","APPLY_DIV_ADD","APPLY_DIV_SUB","MODEL_TWO_STEP"];
         string[] names=["先乘除后加减","加减同级从左到右","乘除同级从左到右","先算小括号","乘加应用","乘减应用","除加应用","除减应用","两步问题列式"];
         string[] boundaries=["不含小括号；使用表内乘除", "仅含加减同级运算", "仅含乘除同级运算", "一个小括号，不含嵌套", "给定乘加算式，不同时测阅读", "给定乘减算式，不同时测阅读", "给定除加算式，不同时测阅读", "给定除减算式，不同时测阅读", "只观察列式，不用最终计算推断建模"];
-        var kcs=names.Select((n,i) => new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.G3.MIXED.{codes[i]}",n,$"独立完成{n}任务，并说明先算哪一步",boundaries[i],i==8?"Application":"Procedure")).ToArray();
+        var kcs=names.Select((n,i) => new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.G3.MIXED.{codes[i]}",n,$"独立完成{n}任务，并说明先算哪一步",boundaries[i],i==8?"Application":"Procedure",Subject:"MATH",GradeMin:3,GradeMax:3)).ToArray();
         string[] stems=["3 + 4 × 2 = ?", "18 − 12 ÷ 3 = ?", "24 − 8 + 6 = ?", "16 + 7 − 9 = ?", "24 ÷ 3 × 2 = ?", "4 × 6 ÷ 3 = ?", "(8 + 4) ÷ 3 = ?", "5 × (9 − 3) = ?", "3 × 6 + 5 = ?", "4 + 7 × 2 = ?", "30 − 4 × 5 = ?", "6 × 4 − 8 = ?", "18 ÷ 3 + 7 = ?", "8 + 24 ÷ 4 = ?", "25 − 18 ÷ 3 = ?", "32 ÷ 4 − 5 = ?", "有 3 盒铅笔，每盒 6 支，再添 5 支。只写一个综合算式。", "有 24 个苹果，平均装 4 袋，吃掉一袋里的 2 个。只写这一袋剩下数量的算式。", "7 + 5 × 3 = ?", "(18 − 6) ÷ 4 = ?"];
         string[] answers=["11","14","22","14","16","8","4","30","23","18","10","16","13","14","19","3","3×6+5","24÷4-2","22","3"];
         int[] targets=[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,0,3];

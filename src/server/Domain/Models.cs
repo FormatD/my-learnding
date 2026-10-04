@@ -103,7 +103,7 @@ public class Release : Row
     public Guid PublishedBy { get; set; }
     public bool Withdrawn { get; set; }
 }
-public record KC(Guid Id, Guid RevisionId, string Code, string Name, string Behavior, string Boundary, string Type = "Procedure", string[]? RequiredCoverage = null);
+public record KC(Guid Id, Guid RevisionId, string Code, string Name, string Behavior, string Boundary, string Type = "Procedure", string[]? RequiredCoverage = null, [property:System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? Subject = null, [property:System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] int? GradeMin = null, [property:System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] int? GradeMax = null);
 public record Mapping(Guid KCId, string Role = "Primary", decimal Share = 1, string Mode = "WholeItem", string? Step = null);
 public record Question(Guid Id, Guid RevisionId, string Stem, string Answer, string Explanation, string Type, string Difficulty, string Policy, Mapping[] Mappings, Guid? VariantGroupId = null, string Coverage = "Basic", string? Hint = null);
 public record Resource(Guid Id, string Title, string PaperReference, int Minutes, Guid[] KCIds, string? Url = null,Guid? RevisionId=null);

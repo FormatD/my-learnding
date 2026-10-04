@@ -1,5 +1,5 @@
 """Independently recompute original arithmetic and exercise draft-only creation."""
-import ast,json,re,uuid
+import ast,copy,hashlib,json,re,uuid
 from pathlib import Path
 from fractions import Fraction
 from collections import Counter
@@ -48,7 +48,13 @@ def main():
     c=Client();c.request('/auth/register',{'userName':'pack-'+uuid.uuid4().hex[:12],'password':'private-'+uuid.uuid4().hex},expected=201);c.request('/me')
     key=str(uuid.uuid4());d=c.request('/content/unit-pack',{},key=key);again=c.request('/content/unit-pack',{},key=key)
     assert d['id']==again['id'] and d['status']=='Draft' and not d['reviewedBy']
-    assert json.loads(d['payload'])==reference
+    modern=json.loads(d['payload']);check(modern);projected=copy.deepcopy(modern)
+    # Independent resource revisions and nullable coverage predate KC metadata. Verify their facts, then compare all original fields.
+    assert projected.pop('mappingCoverage',None) is None
+    for i,resource in enumerate(projected['resources']):
+        expected=str(uuid.UUID(bytes_le=hashlib.sha256(('mixed-original-v1:resource-revision:'+str(i)).encode()).digest()[:16]))
+        assert resource.pop('revisionId')==expected
+    assert projected==reference
     assert len(c.request('/content')['releases'])==0
     c.request('/content/drafts/'+d['id']+':publish',{'previewHash':'none'},expected=422)
     print('PASS 创建与重试仅留下同一待审核草稿，未审核拒绝发布')

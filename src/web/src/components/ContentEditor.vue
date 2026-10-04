@@ -15,14 +15,14 @@ function addUnit(){const c=directories();c.units.push({id:identity(),revisionId:
 function addCourse(){directories().courses.push({id:identity(),revisionId:identity(),provider:'',subject:'English',title:'',sourceRefs:[]});}
 function owner(l:Item,value:string){l.unitId=null;l.courseId=null;if(value.startsWith('unit:'))l.unitId=value.slice(5);if(value.startsWith('course:'))l.courseId=value.slice(7);}
 
-function addKC(){catalog.value!.kcs.push({id:identity(),revisionId:identity(),code:'MATH.CUSTOM.'+identity().replaceAll('-',''),name:'',behavior:'',boundary:'',type:'Procedure',requiredCoverage:['Basic']});}
+function addKC(){catalog.value!.kcs.push({id:identity(),revisionId:identity(),code:'MATH.CUSTOM.'+identity().replaceAll('-',''),name:'',behavior:'',boundary:'',type:'Procedure',requiredCoverage:['Basic'],subject:'MATH',gradeMin:3,gradeMax:3});}
 function linked(id:string){const c=catalog.value!;return c.questions.some((q:Item)=>q.mappings.some((m:Item)=>m.kcId===id))||c.resources.some((r:Item)=>r.kcIds.includes(id))||c.lessons.some((l:Item)=>l.kcIds.includes(id))||c.relations.some((r:Item)=>r.from===id||r.to===id);}
 function addQuestion(){catalog.value!.questions.push({id:identity(),revisionId:identity(),stem:'',answer:'',explanation:'',type:'Numeric',difficulty:'Medium',policy:'SingleKC',mappings:[{kcId:catalog.value!.kcs[0].id,role:'Primary',share:1,mode:'WholeItem',step:null}],coverage:'Basic',variantGroupId:null,hint:''});}
 function policy(q:Item){const kc=q.mappings.find((m:Item)=>m.role==='Primary')?.kcId||catalog.value!.kcs[0]?.id;if(q.policy==='SingleKC')q.mappings=[{kcId:kc,role:'Primary',share:1,mode:'WholeItem',step:null}];if(q.policy==='NoEvidence')q.mappings=[{kcId:kc,role:'Context',share:0,mode:'None',step:null}];if(q.policy==='ObservedSteps'){q.type='MultiStep';q.mappings=[{kcId:kc,role:'Primary',share:1,mode:'StepObserved',step:'步骤1'}];}}
 function addResource(){catalog.value!.resources.push({id:identity(),revisionId:identity(),title:'',paperReference:'',minutes:5,kcIds:[catalog.value!.kcs[0].id],url:null});}
 function addLesson(){catalog.value!.lessons.push({id:identity(),title:'',sequence:catalog.value!.lessons.length+1,revisionId:identity(),unitId:null,courseId:null,estimatedMinutes:5,sourceRefs:[],kcIds:[catalog.value!.kcs[0].id]});}
 function addRelation(){catalog.value!.relations.push({from:catalog.value!.kcs[0].id,to:catalog.value!.kcs[1].id,type:'Prerequisite'});}
-function save(){error.value='';if(!props.title.trim()){error.value='请填写草稿标题。';return;}pruneCoverage(catalog.value!);emit('save');}
+function save(){error.value='';for(const k of catalog.value!.kcs){if(k.gradeMin==='')delete k.gradeMin;if(k.gradeMax==='')delete k.gradeMax;if(k.subject==null&&k.gradeMin==null&&k.gradeMax==null)continue;if(!k.subject||!Number.isInteger(k.gradeMin)||!Number.isInteger(k.gradeMax)||k.gradeMin<1||k.gradeMax>12||k.gradeMin>k.gradeMax){error.value='请同时填写能力学科与1～12年级的适用范围，起始年级不能超过结束年级。';return;}}if(!props.title.trim()){error.value='请填写草稿标题。';return;}pruneCoverage(catalog.value!);emit('save');}
 
 </script>
 <template>
@@ -38,6 +38,9 @@ function save(){error.value='';if(!props.title.trim()){error.value='请填写草
   <details open><summary>能力定义 · {{catalog?.kcs.length}}</summary>
     <div v-for="(k,index) in catalog?.kcs" :key="k.id" class="content-editor-row" :aria-label="`能力 ${Number(index)+1}`">
       <label>能力名称<input v-model="k.name" :disabled="busy"></label>
+      <label>能力学科<select v-model="k.subject" :disabled="busy"><option :value="null">未记录学科（旧定义）</option><option value="MATH">数学</option><option value="ENGLISH">英语</option><option value="CHINESE">语文</option><option value="SCIENCE">科学</option><option value="OTHER">其他</option></select></label>
+      <label>适用起始年级<input v-model.number="k.gradeMin" type="number" min="1" max="12" :disabled="busy" placeholder="旧定义未记录"></label><label>适用结束年级<input v-model.number="k.gradeMax" type="number" min="1" max="12" :disabled="busy" placeholder="旧定义未记录"></label>
+      <p class="muted">学科和年级属于本能力定义，不从教材或编码推定。补充旧定义需重新审核发布；已记录的正式能力不能改换或清空学科。年级范围调整不复制历史证据。</p>
       <label>独立可测行为<input v-model="k.behavior" :readonly="publishedIds.includes(k.id)" :disabled="busy"></label>
       <label>测量边界与排除范围<input v-model="k.boundary" :readonly="publishedIds.includes(k.id)" :disabled="busy"></label>
       <label>能力类型<select v-model="k.type" :disabled="busy||publishedIds.includes(k.id)"><option value="Procedure">计算与操作</option><option value="Concept">概念理解</option><option value="Application">应用与建模</option></select></label>

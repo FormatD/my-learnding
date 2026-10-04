@@ -20,9 +20,10 @@ AssessmentOutput Replay(params AssessmentInput[] inputs)=>Assessment.Replay(fami
 Test("评估前缀流式双摘要保持原JSON字节与单次枚举",AssessmentPrefixHashCases.Run);
 Test("完整评估输入流式摘要保留任务流程字段及原JSON字节",AssessmentInputHashCases.Run);
 Test("评估状态差量逐字恢复、字段变动与错误格式拒绝",AssessmentStateDeltaCases.Run);
+Test("能力学科年级元数据、旧JSON保持及同学科跨年级检索",KCMetadataCases.Run);
 Test("M0 混合运算 20 题发布校验",()=>{var c=Content.Fixture();Eq(c.Questions.Length,20);Eq(Content.Validate(c).Length,0);});
 Test("原创题包身份稳定、目录合法、变式分组与人工步骤映射",()=>{
-    var c=MixedOperationsPack.Create();Eq(Json.Write(c),Json.Write(MixedOperationsPack.Create()));Eq(Content.Validate(c).Length,0);Eq(c.Questions.Length,160);Eq(c.Resources.Length,15);
+    var c=MixedOperationsPack.Create();Eq(Content.Hash(Json.Write(c.Kcs)),Content.Hash(Json.Write(Json.Read<Catalog>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures","mixed-operations-original-v1.json"))).Kcs)));Eq(Json.Write(c),Json.Write(MixedOperationsPack.Create()));Eq(Content.Validate(c).Length,0);Eq(c.Questions.Length,160);Eq(c.Resources.Length,15);
     Eq(c.Questions.Count(q=>q.Type=="Numeric"),128);Eq(c.Questions.Count(q=>q.Policy=="ObservedSteps"),16);
     Eq(c.Questions.All(q=>q.VariantGroupId!=null),true);Eq(c.Questions.Where(q=>q.Policy=="ObservedSteps").All(q=>q.Mappings.Select(m=>m.Step).SequenceEqual(new[]{"model","calculate"})),true);
     Eq(c.Questions.Where(q=>q.Policy=="SingleKC").All(q=>q.Mappings.Length==1),true);Eq(c.Resources.All(r=>r.PaperReference.Contains("独立练") && r.PaperReference.Contains("核对")),true);

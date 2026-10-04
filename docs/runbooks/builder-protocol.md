@@ -36,9 +36,9 @@ builder-input/2且两个配置字段均NULL的旧记录保留明确兼容流程�
 
 ## 固定候选检索
 
-当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/3、审核别名快照、关键词/融合规则、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列相同KC.Type的正式能力，规范化名称完全命中的已审核别名优先，其他结果使用关键词与模拟相似排序融合及稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
+当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/4、独立学科/宽年级策略、审核别名快照、关键词/融合规则、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列已记录同学科、相同KC.Type的正式能力，不按年级排除，规范化名称完全命中的已审核别名优先，其他结果使用关键词与模拟相似排序融合及稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
 
-现有数学候选协议仍只接受MATH。KC目录尚未提供独立学科/年级元数据，此处没有声称实现跨学科或跨年级的完整召回边界；真实Embedding、语义判断及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
+现有数学候选协议仍只接受MATH。KC已提供独立Subject/GradeMin/GradeMax；新/4固定同已记录学科和不排除跨年级策略，旧/1～/3沿原策略。未知旧定义不自动推定，需新修订人工审核。详见[能力元数据](kc-metadata.md)。其他学科抽取、真实Embedding、语义判断及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
 
 builder-input/3与builder-config/1保留来源片段查询、不筛类型、最多10项的原兼容方式；旧未保存配置的builder-input/2也保持明确兼容，不补造创建时检索字段。新版本缺失检索/配置、空间或方式无法核对时在调用前拒绝，不替换为当前设置。旧配置JSON不增加retrieval:null，原描述/Hash和候选保持。运行处理和恢复读取保存的配置，运行环境后来改TopK不会改变原申请。
 
@@ -76,3 +76,8 @@ tests/builder_retrieval_acceptance.py使用明确受控的已接受别名来源�
 核对原候选身份、Accepted状态和相同ExistingKCId，原记录有ReviewedBy时须与固定别名来源相符。不一致则提示并停止展示为已核实来源，不替换原命中结果。旧原记录未保存理由/时间时明确标未知，不补造；旧缺失Reviewer也不回填。读取失败在该别名旁显示，当前候选的校正和依据保留。只读查看既不提交决定，也不采用这次读取的较新家庭版本覆盖当前候选保存时的版本；过期审核仍须明确重新读取。切换候选清空原来源查看状态，迟到结果不能写入新的候选。
 
 设置RETRIEVAL_BROWSER=1运行tests/builder_retrieval_api_acceptance.py，依次验证实际审核来源/校正保留/真实另一页写入后的412，以及明确受控的旧缺失审核字段和关联不一致两种夹具。后两项由隔离数据库明确修改测试来源记录，不是旧程序真实升级或正式人工教材审核证据。
+
+
+## 独立学科和年级（builder-retrieval/4）
+
+新任务固定ExactRecordedSubject、NoGradeExclusion及原同类型/关键词融合/别名/TopK设置，未知定义不自动参与新学科筛选，跨年级同能力保持可列出。候选新草稿保留原结构的学科和年级，编辑后另行审核发布；原修订不改。旧配置不补策略字段。最终63/63规则、全套本地CI、固定原创能力与160题接口、实际学科冲突拒绝通过；主服务4/4（21.7秒）、健康200。115路径164结构、69表46迁移保持，无新迁移/回填或本轮备份恢复。正式质量和完整V1门槛仍开放，详见[能力元数据手册](kc-metadata.md)。

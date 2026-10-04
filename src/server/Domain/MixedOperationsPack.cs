@@ -9,7 +9,8 @@ public static class MixedOperationsPack
     public static Catalog Create()
     {
         var sample=Content.Fixture();
-        var kcs=sample.Kcs.Select((k,i)=>k with {Id=Id($"kc:{i}"),RevisionId=Id($"kc-revision:{i}"),Code=$"MATH.G3.MIXED.ORIGINAL1.{i+1}",Behavior=i==8?"独立为两步数量关系写出一个综合算式；接受等价列式":"给定算式，独立计算两步运算的结果；不由结果推断未观察的口头解释"}).ToArray();
+        // V1 has already fixed these revision IDs; metadata must be added through new reviewed revisions.
+        var kcs=sample.Kcs.Select((k,i)=>k with {Subject=null,GradeMin=null,GradeMax=null,Id=Id($"kc:{i}"),RevisionId=Id($"kc-revision:{i}"),Code=$"MATH.G3.MIXED.ORIGINAL1.{i+1}",Behavior=i==8?"独立为两步数量关系写出一个综合算式；接受等价列式":"给定算式，独立计算两步运算的结果；不由结果推断未观察的口头解释"}).ToArray();
         var qs=new List<Question>();
         void Add(int kc,string expression,int answer,string first,int variant)
         {

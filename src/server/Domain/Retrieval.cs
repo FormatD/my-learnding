@@ -49,8 +49,8 @@ public static class Retrieval
         if(candidate.Subject!="MATH" || !new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(candidate.KcType))throw new ApiError(422,"BUILDER_SCHEMA_INVALID","候选学科或能力类型无效。");
         var query=Vector(candidate.Name+" "+candidate.MeasurableBehavior+" "+candidate.Boundary);
         var name=Normalize(candidate.Name);
-        var matches=kcs.Where(k=>k.Type==candidate.KcType).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,configuration.Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),configuration.Space),configuration.Space,configuration.Aliases?.Where(a=>a.KCId==k.Id && a.Normalized==name).ToArray())).ToArray();
-        if(configuration.Version=="builder-retrieval/3")return BuilderLexicalRetrieval.Fuse(candidate,matches,configuration.TopK);
+        var matches=kcs.Where(k=>k.Type==candidate.KcType && (configuration.Version!="builder-retrieval/4" || k.Subject==candidate.Subject)).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,configuration.Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),configuration.Space),configuration.Space,configuration.Aliases?.Where(a=>a.KCId==k.Id && a.Normalized==name).ToArray())).ToArray();
+        if(configuration.Version is "builder-retrieval/3" or "builder-retrieval/4")return BuilderLexicalRetrieval.Fuse(candidate,matches,configuration.TopK);
         return matches.OrderByDescending(m=>m.MatchedAliases is {Length:>0}).ThenByDescending(m=>m.Score).ThenBy(m=>m.KCId).Take(configuration.TopK).ToArray();
     }
 }

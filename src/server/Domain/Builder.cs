@@ -49,11 +49,14 @@ public static class Builder
             if (string.IsNullOrWhiteSpace(input.Reason) || input.Reason.Length>4000) throw new ApiError(422,"REASON_REQUIRED","请填写1～4000字审核依据。");
             var chunk=await db.Chunks.SingleAsync(x=>x.Id==c.ChunkId && x.FamilyId==a.FamilyId);
             if(input.Decision!="Reject" && (string.IsNullOrWhiteSpace(c.Quote) || !chunk.Text.Contains(c.Quote,StringComparison.Ordinal)))throw new ApiError(422,"SOURCE_QUOTE_INVALID","候选引用与原始片段不符，不能接受或发布。");
+            var context=input.Decision=="Reject"?null:await BuilderCandidateReviews.Read(db,a,id);
             if (input.Decision=="Reject") c.Status="Rejected";
             else if (input.Decision=="LinkExisting")
             {
                 var releases=await db.Releases.Where(r => r.FamilyId==a.FamilyId && !r.Withdrawn).ToListAsync();
                 if (!releases.Any(r => Json.Read<Catalog>(r.Payload).Kcs.Any(k => k.Id==input.ExistingKCId))) throw new ApiError(422,"KC_NOT_PUBLISHED","请关联本家庭已发布 KC。");
+                var target=releases.OrderByDescending(r=>r.Number).SelectMany(r=>Json.Read<Catalog>(r.Payload).Kcs).First(k=>k.Id==input.ExistingKCId);
+                if(context?.Protocol is { } protocol && (target.Subject!=null && target.Subject!=protocol.Subject || BuilderConfiguration.ResolveRetrieval(context.Run)?.Version=="builder-retrieval/4" && (target.Subject!=protocol.Subject || target.Type!=protocol.KcType)))throw new ApiError(422,"KC_SUBJECT_OR_TYPE_CONFLICT","此能力的已记录学科或类型与候选不一致；请核对正式定义后重新准备，不按名称自动关联。");
                 var aliasName=input.Name??c.Name;if(string.IsNullOrWhiteSpace(aliasName) || aliasName.Length>100)throw new ApiError(422,"INVALID_ALIAS","请填写1～100字有效别名。");
                 c.ExistingKCId=input.ExistingKCId;c.Status="Accepted";var normalized=Retrieval.Normalize(aliasName);
                 if (!await db.Set<Alias>().AnyAsync(alias=>alias.FamilyId==a.FamilyId && alias.KCId==input.ExistingKCId && alias.Normalized==normalized)) db.Add(new Alias { FamilyId=a.FamilyId,KCId=input.ExistingKCId!.Value,CandidateId=id,Text=input.Name??c.Name,Normalized=normalized,ReviewedBy=a.Id });
@@ -62,7 +65,7 @@ public static class Builder
             {
                 var name=input.Name??c.Name;var behavior=input.Behavior??c.Behavior;var boundary=input.Boundary??c.Boundary;
                 if (string.IsNullOrWhiteSpace(behavior) || string.IsNullOrWhiteSpace(boundary) || string.IsNullOrWhiteSpace(name) || name.Length>100 || behavior.Contains("请审核者补充") || boundary.Contains("请审核者补充")) throw new ApiError(422,"INVALID_DEFINITION","请补充可测行为和边界。");
-                var k=new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.CUSTOM.{Guid.NewGuid():N}",name,behavior,boundary,c.Type);
+                var k=new KC(Guid.NewGuid(),Guid.NewGuid(),$"MATH.CUSTOM.{Guid.NewGuid():N}",name,behavior,boundary,c.Type,Subject:context?.Protocol?.Subject,GradeMin:context?.Protocol?.GradeMin,GradeMax:context?.Protocol?.GradeMax);
                 var draft=new ContentDraft { FamilyId=a.FamilyId,Title=$"Builder 审核草稿 · {name}",Payload=Json.Write(new Catalog([k],[],[],[],[])) };db.Drafts.Add(draft);c.CreatedDraftId=draft.Id;c.CreatedKCId=k.Id;c.Status="Accepted";
             }
             else throw new ApiError(422,"INVALID_DECISION","支持新建草稿、关联已有或拒绝。");

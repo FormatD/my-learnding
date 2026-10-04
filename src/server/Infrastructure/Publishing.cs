@@ -45,6 +45,8 @@ public static class Publishing
             {
                 if(stable.Status=="Deprecated" && !await db.Releases.AnyAsync(r=>r.Id==release.Id))throw new ApiError(422,"KC_DEPRECATED","新发布不能重新启用已停用能力；历史版本与已领取任务仍保留。请使用新的能力身份。");
                 var prior=await db.Set<ContentRevision>().Where(r=>r.IdentityId==identity && r.EntityType=="KC").OrderBy(r=>r.CreatedAt).FirstOrDefaultAsync();
+                var recorded=await db.Set<ContentRevision>().Where(r=>r.IdentityId==identity && r.EntityType=="KC").Select(r=>r.Definition).ToArrayAsync();
+                if(recorded.Select(Json.Read<KC>).Any(k=>k.Subject!=null && k.Subject!=((KC)definition).Subject))throw new ApiError(422,"KC_SUBJECT_CHANGED","已记录学科的能力不能改换或清空学科，请创建独立能力；历史证据不迁移。");
                 if(prior!=null && Content.MeasurementSignature(Json.Read<KC>(prior.Definition))!=Content.MeasurementSignature((KC)definition))throw new ApiError(422,"MEASUREMENT_IDENTITY_CHANGED","已发布能力的测量行为、边界、类型与覆盖要求保持固定；改变测量含义请新增独立能力。");
             }
             if (stable==null) db.Add(new ContentIdentity { Id=identity,FamilyId=release.FamilyId,EntityType=type,Code=code });

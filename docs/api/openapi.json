@@ -3778,6 +3778,24 @@
           "code": {
             "type": "string"
           },
+          "gradeMax": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "gradeMin": {
+            "format": "int32",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
           "id": {
             "format": "uuid",
             "type": "string"
@@ -3797,6 +3815,12 @@
           "revisionId": {
             "format": "uuid",
             "type": "string"
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "type": {
             "default": "Procedure",

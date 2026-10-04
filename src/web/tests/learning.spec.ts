@@ -163,8 +163,11 @@ test('建库候选保留引用，审核草稿可继续编辑并发布',async({pa
   // The named section may have an implicit region only when its accessible name is present.
   await expect(trace.getByText(quote,{exact:true})).toBeVisible();await expect(trace.getByText('家长原创运算说明',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'关闭记录'}).click();await page.getByRole('button',{name:'继续编辑审核草稿'}).click();await expect(page.getByRole('heading',{name:'编辑内容草稿'})).toBeVisible();
+  const recordedMetadata=await page.evaluate(async()=>{const data=await(await fetch('/api/v1/builder')).json();return JSON.parse(data.candidates[0].protocolPayload);});const metadata=page.locator('[aria-label="能力 1"]');await expect(metadata.getByLabel('能力学科')).toHaveValue(recordedMetadata.subject);await expect(metadata.getByLabel('适用起始年级')).toHaveValue(String(recordedMetadata.gradeMin));await expect(metadata.getByLabel('适用结束年级')).toHaveValue(String(recordedMetadata.gradeMax));await metadata.getByLabel('适用起始年级').fill('2');await metadata.getByLabel('适用结束年级').fill('5');
   await page.getByRole('button',{name:'新增测量题'}).click();const q=page.locator('[aria-label="题目 1"]');await q.getByLabel('题干',{exact:true}).fill('(8 + 4) ÷ 3 = ?');await q.getByLabel('参考答案').fill('4');await q.getByLabel('讲解说明').fill('先算8+4=12，再算12÷3=4。');
   await page.getByRole('button',{name:'新增课时'}).click();await page.locator('[aria-label="课时 1"]').getByLabel('课时名称').fill('原创小括号练习');await page.getByRole('button',{name:'保存并退回待审核'}).click();await page.getByRole('button',{name:'审核答案与映射后发布'}).click();
+  await expect(page.getByRole('heading',{name:'内容版本 1',exact:true})).toBeVisible();
+  const publishedMetadata=await page.evaluate(async()=>{const data=await(await fetch('/api/v1/content')).json();return JSON.parse(data.releases[0].payload).kcs[0];});expect(publishedMetadata).toMatchObject({subject:'MATH',gradeMin:2,gradeMax:5});
   await page.getByText('能力定义与来源',{exact:true}).click();await page.getByRole('button',{name:'查看能力来源'}).click();await expect(trace.getByText(quote,{exact:true})).toBeVisible();
   await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });
