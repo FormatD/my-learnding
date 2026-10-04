@@ -1,0 +1,79 @@
+{
+  "format": "k1-report/1",
+  "datasetHash": "bfb877f7036ea5cd614a27675b6b56539aa83e30cc1846a84d3eb1dd9463837c",
+  "labelsHash": "c251dbcad78ee84da0795563d93ab55017d7b9d72f8e6d0c74208741474770e5",
+  "resultsHash": null,
+  "partition": "Holdout",
+  "referenceStatus": "AuthoredDraftNotHumanGold",
+  "producer": null,
+  "evidenceStatus": "UserSuppliedRecordsNotIndependentlyVerified",
+  "formalV1ExitProven": false,
+  "selectedItems": 56,
+  "approvedItems": 0,
+  "pendingItems": 56,
+  "predictionItems": 0,
+  "missingPredictionItems": 56,
+  "primaryAccuracy": {
+    "numerator": 0,
+    "denominator": 0,
+    "rate": null
+  },
+  "mappingCoverage": {
+    "numerator": 0,
+    "denominator": 0,
+    "rate": null
+  },
+  "byQuestionType": {
+    "MultiStep": {
+      "primaryAccuracy": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      },
+      "mappingCoverage": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      }
+    },
+    "Numeric": {
+      "primaryAccuracy": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      },
+      "mappingCoverage": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      }
+    },
+    "ShortAnswer": {
+      "primaryAccuracy": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      },
+      "mappingCoverage": {
+        "numerator": 0,
+        "denominator": 0,
+        "rate": null
+      }
+    }
+  },
+  "sourceTraceability": null,
+  "firstSchemaSuccess": null,
+  "repairedSchemaSuccess": null,
+  "reviewMinutesPer100": null,
+  "duplicateRate": null,
+  "orphanRate": null,
+  "goldComplete": false,
+  "qualityGate": {
+    "status": "NotEvaluated",
+    "primaryAccuracyTarget": 0.85,
+    "firstSchemaTarget": 0.95,
+    "duplicateRateTarget": 0.05,
+    "reviewMinutesTarget": 30,
+    "traceabilityTarget": 1
+  }
+}

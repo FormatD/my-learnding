@@ -1,0 +1,2247 @@
+{
+  "format": "k1-labels/1",
+  "datasetHash": "bfb877f7036ea5cd614a27675b6b56539aa83e30cc1846a84d3eb1dd9463837c",
+  "referenceStatus": "PendingHumanReview",
+  "labels": [
+    {
+      "id": "9f568839-4c6e-adce-a4c9-b8afb36e36a4",
+      "inputHash": "52427171527d337a7e692b469670035a09c852f280e11c3d0e56958f04ff1ac6",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "ab29abbc-ae69-aa4c-5544-d9502d656e3e",
+      "inputHash": "71ef0c40b20dfda2c7a2a94965c69ead3f4ab92bac93ef7ae83c328e3c308dba",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "a2925473-bb4d-94c1-08be-8b6a836ff75a",
+      "inputHash": "4f814816b6b37159282fc6a2e823b5e2d964749ac15bb24fd793b3c164507948",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "a805c46e-c5c8-d823-350d-4f54d31fda2e",
+      "inputHash": "f18c01461cd5e0ef37232c3835277476a4982c05d17222ee368d38104838c5a2",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "c10a964a-b97d-0d44-9ee4-9568c471af15",
+      "inputHash": "94d16210e42b7d9db4060816b451e8450012f52658a894c00457a5d760156c47",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "048d2a4c-a3fa-addb-f6d4-dce2ed139e56",
+      "inputHash": "61f93e1dff8cb15edf440c792db57d640b56e79dbce3a3248829c5069ca0d8bf",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "2dc33b90-89ad-7fdc-f206-c86b2c0ff778",
+      "inputHash": "43b86812bc625f1115a145b012e957e00798ffcc756f75ef5a8568130225868a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "147df31b-2bd5-9f79-95d0-5b74f6cae028",
+      "inputHash": "af6be33673437a5fb76c02ca3fcff1f2c80addf9e5c83644ece4ce930f34302e",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "a2b0b0c9-f86d-5aca-cad2-e54a7144014e",
+      "inputHash": "77c07c9a5bdbc3bdf15efd9d2821457120fd2ea5cf3ad71f38e847c315500dda",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "dcb95cac-ff8e-83b6-ba39-3129d2501957",
+      "inputHash": "29e02bd8168762b3d845d545c25d2fe3168966a5a7cbde51e74bf2c13702c5c2",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "472d5320-ed2f-9b0a-dfd5-e0638e1f1113",
+      "inputHash": "411ebcb6768522a530ccf8acaaa75f3110d128c6c0bd2f264838f0ec40087b4c",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "047f374c-707a-799a-dd5f-ddf6156020d6",
+      "inputHash": "085efeb9dd7b4f7d12276b1a939389957f868b84da74f1535a8b1e46e4e0285a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "31eec47c-d36b-8f77-8b8b-99635f5e1191",
+      "inputHash": "964810e54b7fc65bfdd1d2b9b1431eee34a0282db1f9a048f99e73dcee9e3773",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "c723309e-f498-2bf9-75a4-ab8ed706aed3",
+      "inputHash": "17eca2b31b81d6da28011a6842b25ed65f03fdee92318f02a4438d23640309d0",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "a9086e1a-c35a-e363-a8c7-f2425e30ea8d",
+      "inputHash": "a4029ee526ba8bf2e743b55928f888c6dca4385cdda1048b46c953bc7002c917",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "fc5912f4-a510-5742-3c1b-1f6162651a5f",
+      "inputHash": "b0c48f8fbd334b6bb1850bcef6805c65a37131a5a716c355d768db379072d4e0",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "2ba8baac-e095-7f08-5214-03669475c5dd",
+      "inputHash": "781f04fb36ffff7cffbead321223df2a79d7d40e4bd0c39632901c1304c7ba0d",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "bb7e98c4-f8b7-3803-cfeb-3086109afd39",
+      "inputHash": "018c350012f47ba0a871c135adccd3bf2324a678ec59d995847e82e11efeda3a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "09668ecc-5120-c212-d6d4-225471086633",
+      "inputHash": "656885b69dd4e193d67c66d7240c3f454f986a1c1269b4fc39c2028dd96224a8",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "6761f54c-5622-7c15-b612-5423a05270b4",
+      "inputHash": "008459c376a21207cd467ca7f06daf7be930d10f5acf5f5f93a0d2bda03a1acd",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "f8fa52b4-78ac-68fb-131a-d4ce26b2d53c",
+      "inputHash": "8f9a097870c06a7d43168748ad26a5f15e43d53508ba5bd4f0b909f5ce280517",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "04aea53a-9ffa-a30b-834e-589e6f9fe58d",
+      "inputHash": "97704c2e9a99bd37e3ca8458e0bc546a4d66b9bc224ae63cb269dadb31d2b1f5",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "b48e3e36-8743-b332-6a6e-69ab8bc41c84",
+      "inputHash": "3d53aadff98c057b3e0afdf940b202daeab1ed40d0572a004b3a78f36a451ed0",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "e40f6ef3-dfb1-c191-1199-ed9f1c1da068",
+      "inputHash": "21fa58578e3e5aee598d157bd2f244652f7a3dfd68897bebea318c7758d95e73",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "621d7520-3289-e045-2cef-701e36521488",
+      "inputHash": "90359fec5c5ffb90de3b4615b4918aec58692f748f09be8030827c048d44a6d6",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "80c4fe73-4781-bb7f-e417-036c407a1dff",
+      "inputHash": "688392ce84251ca933246b5d0ec1f1cc94c3c81078022c4e8d5a91e06592c259",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "9ab9bb29-6280-5f2b-dd0d-c36a6bdd490e",
+      "inputHash": "cc802a6b05b2275514bbbf05f3f08d27b6541438a2ac726479a3498d7cc65ffc",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "31513a56-8b5a-0acb-664f-3b515d06655a",
+      "inputHash": "c31f5745421e19cedfe528516c1225dd5f3b3a46a2782f1f468f1ed4f7153418",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "05995a25-80a6-be43-65d2-c70c1ab85734",
+      "inputHash": "64ddbdd3a49dd7b014bd29649fdf0b44d6130ba9a4a65b63f185b9981151c5b7",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "f4843092-d33c-ee09-b0b8-98974bec3b02",
+      "inputHash": "1850a62ff88461b3c41103b46eb8a72a00603b2e6642cbe4ce23be3eaed5bfdb",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "4fbb070a-4296-8121-8b8f-da8f91c2425f",
+      "inputHash": "a68a181be0186701743391211425decf42617095bd08cf2d753a080eed66f0ed",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "8d8d8c29-ac5e-28f3-2ed3-3a8b43df619f",
+      "inputHash": "11a8db81f9081733a94732c87b6538723976da829cd3a1d7f2cc57f94e788708",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "1ffee1d7-7750-5f78-e12e-90a775b90233",
+      "inputHash": "7981258d4bb7df17972b08d3dc0ae34da9939cd859e36042a0ac5a9eb7d226be",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "661111be-e38b-3615-e3d6-84aed222dca4",
+      "inputHash": "7814520c29e25ce048e22c92e8438b13fabe083ebed91515f98ceb5aa4b8a98f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "1641a1a1-30f7-0bd0-6fe8-f722ead373f2",
+      "inputHash": "2abe9b0370f048a8b5f3c8053ea69a826bf83f0106780ac83a17d979d9f18a08",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "c617d6fa-17d4-2662-8834-10c1dfece2f9",
+      "inputHash": "3b238ea0f12d6e8a99ecf0985f1261eafc62c71b549b6ca5feda8aec8078c52e",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "a1718fea-e1fc-63b8-10d8-9668986b471e",
+      "inputHash": "6cb0ed7f7e2a6002b3b3c3dd1992da422d55bdaf293f6ae09d51e627394f2a28",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "21a587ee-bdea-3b55-e641-3f33d793cc8b",
+      "inputHash": "f72992ea8a957118e4137c80058b2940cb6faf2f73140e08274f1e006684b620",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "67aeed44-b1cb-689d-84fc-180d8029afce",
+      "inputHash": "3e56d407b388a23c34c6f9611fd402f7a6bb9da985557fa833b8989fc6f25269",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "f3af3f99-68ae-66db-e3f7-e0306a56c28d",
+      "inputHash": "14a317d9eb84211f06e62a52881c838541c233ddd16e0153d80ea73e7ebb41fd",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "5feeffde-c8e4-fd1d-343c-17b2d71d9771",
+      "inputHash": "ad3aa1a0e3df04dadd4700e10b87b92dd939b5872bf74515f2cb937cf4263091",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "85c21aaa-7ef7-57bd-7771-196e57f7b327",
+      "inputHash": "2026acaac0cc7d3a02ab0a2740ecd5c8611a2e486300fe856c4ed4600882bb8f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "b43f7568-9e29-6a27-a1fd-2069f4d7f9f4",
+      "inputHash": "1413e15584b5f6846aecb0618d51aa5302dcd1623eb4d9628a0deba121a2577e",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "851ea643-d220-bb38-a581-229f36944065",
+      "inputHash": "b5d1d4454f3692fbf7e65b0b59d28a183a419380a864f60e720e5702e2ef453a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "4cda2b3e-23a0-9742-9f3c-055b3c5fcf5c",
+      "inputHash": "39d22383a44a815356d4f6b5493981b5f0e25043fe27cbee6316c765f7042e89",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "4b5c0670-670d-8080-75cb-739e90014a79",
+      "inputHash": "89b779121125ebdfc94f9ad05e009543f2958858439ee6e5f7e1e1c2e7833fcd",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "7930b45a-fc87-e5f1-df92-6920b92b7bad",
+      "inputHash": "9217805e28cb92b08b59508de409a8092c4f8b5bf2f81dfb39a25fec9df8b3c4",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "edb7cdd0-64f4-0917-4c59-80ad788d56b0",
+      "inputHash": "447d8868d3968901c4e118e20634d0d680d458a80e1a7489635cf90b2719c36b",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "e2197ab3-8344-6321-0c57-7bc35a22a62d",
+      "inputHash": "2b0d9c5d2c03f8e07331ffc055b91bf1e5cac807bf755a33f13f7fe9cbfd52a4",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "0b056433-b623-d868-04cd-871cd64edae8",
+      "inputHash": "bfc8395e1a33ee9b9a4396416392bd844a440ccd09bef7616bc267d2863c8eb3",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "80ace552-fafe-72c2-ba7e-b35cb1de27e4",
+      "inputHash": "c4e429b446a2fe5ab894b21ca039bd1982ac8f7f06ddfc00502d52aaf268e2de",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "ed32791c-2331-ac41-1095-8eaa04ade6ff",
+      "inputHash": "8849d042fccf3696f0896c0b76f17901c9e21c07156fba53852a148607227c83",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "b64aef77-5398-ea3e-ed72-c260a1781ae0",
+      "inputHash": "83dd035fd2040f1366e799e0f9036d5ee3acfbe35e0c1bf9800bce9934b01f77",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "503da0b1-dc54-e751-4e8b-8cfddbe32f3f",
+      "inputHash": "977d1f2ddbcb91a5bb616e8a683ebb8733ff6b3d425105c22ac6222f5d632def",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "5feaf324-13d7-7b8b-368c-074e4178a81b",
+      "inputHash": "76dc92532056dc90624b8d1491bb6ddfc121174f48b4e2e9c19f5cf01cce3cf8",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "94252e0d-1205-34ab-6e7a-d33a71cc2b3f",
+      "inputHash": "cdbe64c35da40c6dd3bf2aaad097aae30168792ebc353648a9c3b878baf26c0a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "9077bb65-8b5b-f00d-1ab0-bd7d63a3f9ad",
+      "inputHash": "8fef20fee8a995e86abff5e74ca1d332ea3ca4898064b4243d1f7b8144edda06",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "59af6a91-9987-3355-0dc1-d9452b846c52",
+      "inputHash": "5ca52f0766f8a5e72636b3ce1a0027f9dba96a12a50ed09bd19b7009eb0afc95",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "6afd5b41-3f59-295a-e088-78a790a20651",
+      "inputHash": "29a717462845bdd60bc48f58f63b3fa021ce2407057d082bc2fbd91a80560d6f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "a3bb67d2-0da5-35cf-157c-b656a0c3433d",
+      "inputHash": "fb64c9051b2a7d66f3383af0e517c5131a53b676ec490f38c4215665acd121fc",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "13ae0f1a-cf69-286e-c006-d689dc534c60",
+      "inputHash": "5eb148e87fa112997a46b11a7f32f85c30c99a9103c3c582e2c2bce9085f1cc1",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "319bce61-caa7-d487-51c6-9159da4e59eb",
+      "inputHash": "6139168833e2094aa066ef767ffd36d8086a47dadd6b3a4573baa764927d6a64",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "cd8e13e0-5b1b-37d5-8c7c-bf85cab78235",
+      "inputHash": "53a39dcc024e45d6b0ec53f8e40ac1ae308845d50ac178d00fd6696b6e0a791c",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "74f624b7-1189-0d7b-851b-6bdf08042807",
+      "inputHash": "cd90ecf00701daa4499e72d182d6ce4b3acccb543c4995ee77bab047421882d4",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "ef536833-c297-1d0b-5ac1-a06acc4d5276",
+      "inputHash": "df1d28013475b4f39342d9d39810a89a7d7b5ec65ecbaffbdce630c8e59c1b7f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "b7909277-c97f-6bd6-b084-b4c7985c76a2",
+      "inputHash": "83691a44468c94a5892b811689a25562b43d55c60ecabae0d3fc65e308505beb",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "bd620a54-ad3a-01bf-126f-2fd2b3bb08aa",
+      "inputHash": "1bc4f7e5129d95938167939f9774d89f217fa62f752162f40fbc9cf9330d0008",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "68e2b6e0-277d-f72f-1f83-a794cc9b3e9d",
+      "inputHash": "382604d7b74e13e07f4b13bfe6ab2ea35cc3c4133396cb8c51f674dd70e8ee7d",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "0972f5ab-19c9-805a-80ee-b61d8f4a4f1d",
+      "inputHash": "d933537b6b902f2835f5b152240c73abbe036d24b13afee381e1dad4cf002daa",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "e32afe33-f475-3d53-41cc-5d7e9a5fff46",
+      "inputHash": "22706cab2e3e023e3b0b80e7a54c22c94368e89afd7b12e7837b6cdf8b19c628",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "abef3c33-c1a4-615c-29ea-46aea0d30abf",
+      "inputHash": "be84fc4093a69afbd634ce3392f322f6564f0c33d1f0f78ecd706ac78cc839d9",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "ee68fe99-a57e-8a34-92fa-406bb23a4db4",
+      "inputHash": "02140f79de0bc9e918c7e894216fb977e55a3225d154b0af051eba9b3cc0b74d",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "11520dc9-6e04-ca06-7151-5141c3e5c436",
+      "inputHash": "2ddab2339decb0137270ab9609d5b92720c970b27fefee034201e32515302a00",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "bc2a40bc-452d-940b-b67c-3ca52059f09e",
+      "inputHash": "3393f8a7ce4680d7a4bb91b400ba950cdd7a407dd0d3386d3f7576d8166d3ba8",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "c7acc6f5-896a-f02f-aae2-607f03cf0463",
+      "inputHash": "0291d61ccbee9983ff09051ff6fe3171967b1f3f7aca2c2f666637c462f0cb44",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "af8de64d-d65e-5319-a696-ed66273b9049",
+      "inputHash": "5fc87a698b3d718f99db00f10bd76084bb6428bb7f4c23bf64a8152095d72082",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "1947a099-a132-dbfe-a4ec-4bf1ebfb9da4",
+      "inputHash": "1c625a98271ba09875cee982462111534da45589d02370e8dcab78e6bbe827e9",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "f310d66f-5674-47e7-9f26-75b39ac35aeb",
+      "inputHash": "49484c42e179e9921cc0f225c3d3c168e4306d6c7038cd8370dee5dde10aa9d9",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "12a9e190-46cc-370f-dae0-5ffb310850b0",
+      "inputHash": "bd536972bde9a062543abc928d8dc1b6a0b8fb056fdf472444d5ddfa883aeb10",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "41104e2e-bc42-2d2c-bd4b-a31455049e26",
+      "inputHash": "934c58bd397d73b951bfe950a9126363d113bb177b17e73c72d4b67e5febe6a1",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "e6109ade-44cc-244d-7a92-df5df798f04b",
+      "inputHash": "5b0433574f65d7bb0f54faaaaac6c396a09de592286e70a4183887a56a9c41f3",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "d9db4d5f-02db-1b7a-b5eb-954feb379fb3",
+      "inputHash": "403ff82e90f966a82197a17818bc6bb2e377d77377b2ab3d1196835672660713",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "d671a104-4efb-211d-3a3d-620d1137e8b3",
+      "inputHash": "44d06aa2a7a1a1a6a07d44946799fef9736258109cf77f47f1e80a0464c9d853",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "7f961c1f-b08e-fe09-1805-0d518055760a",
+      "inputHash": "440096ccf534e4d269384c0123de7767fb55a2528aa783d735af50c576018bd6",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "e9e5e0ea-a9ea-353f-3c71-330c5cfab8e2",
+      "inputHash": "d431e8e69ce1fd341fbb7c72d67c2b41f110dda03915b9fe68c7384fea58108a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "ee8a741d-64f6-7d4a-e8ff-2c778bf66832",
+      "inputHash": "ad02cccd928b410faf0889565703602a53fef3e9008b6d57a7b7123889b77f7d",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "bf9df739-b38e-57d8-6288-3f551f5cd43e",
+      "inputHash": "c63636f1cd24e3f151616c8fcecdd0c1622016891b8e48f0c01fdc587a2035ec",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "1f46a286-01e1-82b4-a109-cf5ff1c8a691",
+      "inputHash": "5810012bb80ed207abcf18c2a4f281b4368ccab427a8a84fe8f57d19b5b49649",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "af8b9423-b2ae-d7a6-ded7-e7764648953d",
+      "inputHash": "dd5074e4ee2bb4b44ba4ad4d3b62e1b8d129782c8f41f07140e417704693b6c5",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "4430e9e9-47b9-e551-1c15-7fd75c1c634e",
+      "inputHash": "2ef71101e167cb1208c75d3135da8d538c0ed4170a194c64c142d753fe309fb6",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "074d48ca-0f22-0ca1-6ed7-8104758c45e7",
+      "inputHash": "182f1b614b531b6d47b3a64ec31b97f48ed0e86105de778b112ee4cceee04cb1",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "9fcadcb4-5aca-1901-b8d6-9eb0b9be12fb",
+      "inputHash": "a3acdac4073ad2906fbe86d2b991a87e50b4dc99e4f0cfd32a6655594b9aa130",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "e9bc29a4-722d-c6b6-29d6-4b0ff07eabac",
+      "inputHash": "ae103f1400639ca8ad05da3bd7618f8a265eb921195e1f9267116f234f42c221",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "841a773f-5a87-ad9d-6709-f4f371c1d01f",
+      "inputHash": "968284a637eaf5e37bded55c5431d7b9128d4efd5b69c637053aaa7ba517613a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "90e391a5-9939-8efd-e96e-426934388647",
+      "inputHash": "ffe801a9e3af8afe93058d48d4cf8b4958ea20e8c1c131d1b781eb7bb61ae99a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "bf9433f6-1146-c371-2bb0-aaa3c3a9b530",
+      "inputHash": "cc31e8c3a7af112ddd9b6644b787fd1e8db38c35e19f541cc48cbdbfec512839",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "5d5747ef-094f-aafc-7474-87216806f0d9",
+      "inputHash": "962170d9d22365a1e0ebe3a0d83ef11cb45ac3adebabea94f4beb8a9ba4eb058",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "0fe35308-37e7-0a99-9444-36fa95855689",
+      "inputHash": "2af070cfb92e3100ad2d0a48b95760e699db752d9ad5524cf447b813c627f8c7",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "9e274dcc-b14d-c312-6333-6ce95420a939",
+      "inputHash": "fe4de885cb3439fbeabbbecd2903b709e48a02d08e62b4cfbe21ba31e7e9461f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "2ff061df-5e7b-1a9c-9866-79113f9b6dc3",
+      "inputHash": "5b4fa485a62882585b943740a0b3ddba0d4db8d33420cc8b4861e4dace77d53c",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "79945a3d-b9d2-79a0-35e2-4d1ced2751b0",
+      "inputHash": "998c779cfde33e14c08c8b77a9b4ab3b9020d8ce1bb91a7d516049db29b1c5de",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "f5c4f98c-55d1-341a-3c6c-7aed0455743b",
+      "inputHash": "7f258ab49186b0cbcc22c3a1484842ff6296604ba46c6c0ce0d418ee273aeba2",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "90318104-00c4-e4a8-f474-a13fc2d974a1",
+      "inputHash": "fab1a6a6e2a1afdce793f68e7da064bd0cc8d652fa3ce9a0f2c1631e71a3bc7a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "5f592713-9d25-7b39-fb75-40b827de7136",
+      "inputHash": "9d8959e0bc49d552a9be5303b806d0e4d4c2de5eaf1774b4a9cba718e2ac3f8c",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "15ba0398-afe5-39f2-3948-9d4236751185",
+      "inputHash": "fd3cdbc3e9b229a905ee64bdec698c4356b0bbd4d0ba291ce257b3c5e5047dd1",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "d45266e5-3e94-937d-3323-99e091069cdb",
+      "inputHash": "a3d51a4c71ce6c0b13f941b600828955ff9c5fd042d38594745b99ed0ca3cd89",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "5691a590-5e88-667b-6540-3a4a4c5ceec2",
+      "inputHash": "fd0f3c8f56144018a8a97d48dbdab01ce0c6aec3daa947339f249504761d56e8",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "23a0be09-93f1-34a2-2b68-86327685a539",
+      "inputHash": "314b7d4782ab13387812f0eb5c23d2ad27d40846f238b331ab750030193797f4",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "5e9c9143-e91c-4806-282f-c9d82973c3a4",
+      "inputHash": "0be3593cf18b291c745fffade54f9f6a3c1c58cf5c6075e1b22f3be2fa500d1e",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "6f504a85-3c8d-c75f-4815-76fb2fc8fc15",
+      "inputHash": "0425c762499b7655257bb09d0ef252795621343cd55e28a1af2ec1a2d12aeec1",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "1fa8050d-8e81-3794-7249-2b6a855b1623",
+      "inputHash": "00fdb68fb5bc9781f5bda1c54cba1c29fc859990a764f53ba7acdbd5e6a74651",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "4bc3638c-2805-9356-1113-0f298d2c660f",
+      "inputHash": "cbaf0a704ab1ecae069a72338f2ffefa658730d468745b3e53877cc30a4db544",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "270d72cf-d205-45ef-c3e5-6dcd97c2a218",
+      "inputHash": "6e9fdffcfd0b8090397add269a0ac35504e6eee8a8368ff953fbd08f42fce5bc",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "a8b3e621-bcdf-e1e7-a12a-a7bac16ef22a",
+      "inputHash": "b0b62b19f86132acb7e3031315835adc00fdc7522bcc002c20ce7f87bce963b8",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "a8e690ea-5844-a978-9eac-94c2f0ff0a49",
+      "inputHash": "cfa30764d5b935a01d30382f78a172cdb1c8a44073ff5ccb38b59dee4ae9b788",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "422ec614-d61f-9421-58d0-d76b387b94fc",
+      "inputHash": "4481c598754d5a87acfb22eea28166cf90fae0ddf12782b851112cc79dcab467",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "77134869-7462-a1a3-da6c-6ee7598746e0",
+      "inputHash": "7b93f4e23fa0c4fbb34cdae3437272424359a0d184b8f959934fc90ee51f8886",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "91a622e9-a59f-0a4f-7c2f-349ad228adf7",
+      "inputHash": "142c2d41ff6c86fe65bf89000412ca9a9088ce1b90a30e79381a856eaf56323a",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "89a63aa8-2a91-73cf-6270-22ab7a20208a",
+      "inputHash": "6c8be3a07b19f9f9e2c899e45de11acad501ade0eab75bb4dc0ea3d2fc973ab3",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "7ea7693d-232a-6bcb-d891-c341d69d86b0",
+      "inputHash": "ffa1a35cb735514b4b42e3744f52453cb1d175b69cdf979df0477eaf45e1b512",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "38cfa4a0-a95d-a9ec-9a21-65a1f8d86a30",
+      "inputHash": "8ab24a03c96c5780f4f3b7c5574b68ddeda199a5e7652cc29cb20e24b30b8861",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "ba82b75d-3f24-b7de-b223-8c487467b567"
+      ]
+    },
+    {
+      "id": "a30dcee8-9774-96c9-1b05-aaa3125c5264",
+      "inputHash": "e7bdcfdbeb4fb1ec263376a93090fb530f91343d3c0ec43fa59a806e85882c3c",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "388675d7-365b-6e58-d4c5-e6f4b17bc92b"
+      ]
+    },
+    {
+      "id": "f3dbb2a8-05b0-968c-5dbf-193a794cb5b7",
+      "inputHash": "ccc4615fb69ea5906968dc6dbf4034b5ceee730c48540a8b51ff3e6954e5cb93",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "60c64bf3-c96d-aa4d-a529-c51f59f192da"
+      ]
+    },
+    {
+      "id": "c125ae80-a58b-321b-f323-a1336d810af0",
+      "inputHash": "57ab41a744cd3ddca5b04f1c9a9aacf3cc09227c8bbd8f13d1600e316c974583",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "84b920b0-fab2-911c-166a-c38a3be54a51"
+      ]
+    },
+    {
+      "id": "970c3167-679b-95ec-e358-73c7a552cad0",
+      "inputHash": "4747ef7e94f4d31a0c2edcc9bfecb961da61ede3897301a36c781220492fb48e",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "d0b643d8-235c-f380-ee86-dec8500bbe39"
+      ]
+    },
+    {
+      "id": "fe88e614-0990-a8b4-b662-3c323254a031",
+      "inputHash": "8d1f21ace2a40a600c8fa23aa447565c04148bf3757cab223d6d6bf5e6401487",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "32324b59-e719-a3b4-0cae-6cf828132bde"
+      ]
+    },
+    {
+      "id": "73dc556b-403d-75e8-8c0c-fcbfe8c87c45",
+      "inputHash": "cecd7763e404abf06bb67901161ba021e5e6f9dda7e6373f8bd4555111a0a90b",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "81fd79f2-eff1-f9b1-a219-72920edbebb1"
+      ]
+    },
+    {
+      "id": "7559e2f5-4f72-5be2-1f62-ab7ed80aed48",
+      "inputHash": "8846b564eb05d99112f71701141d34c024758e88baeb4b41151cfc336c45b601",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "1c04edb2-7b04-427e-29b1-379ed5693c19"
+      ]
+    },
+    {
+      "id": "4fe11a14-f02d-fdf5-84ad-44a7beca19e5",
+      "inputHash": "8802fd95477ef28e9d860c68e87074ad121dd334206c644f34492f91309d5d24",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "063d626c-cd69-e4f6-56f1-94305ffec4ad",
+      "inputHash": "be39ae5db0e67e7ce778738636567feb5c9d454756b2dc727e5a783a574b7f64",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "2d04eb6e-16a2-0d0b-715b-31178fc14139",
+      "inputHash": "c9fc8d7b0e18ee0547768e5e83af654685e2253fded02dca5666ef1da084464c",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "788c21fc-04b5-870f-3ed7-066574659179",
+      "inputHash": "f7b073176a5b2bead808716bf1b13304fdc8a459939ac71b1132a37873116e0f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "1d417564-96e3-6e94-0ccd-49f848acb27f",
+      "inputHash": "d14f8f698c07d10e8abe81514f79ac9bb00e17cc1de2bcf602ae2d60d318434f",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "dfcf8b74-5747-f5d1-a593-87b414364c5e",
+      "inputHash": "2cc628b2c9ae61808d465a7502b34275d082ea3d332435d866b5729d86d88199",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "b7725926-4341-f229-5e8c-a8b43f03dc16",
+      "inputHash": "0ddf955075d7afc3360ab1df4a69d07209bf20b6e098dbf89308373a51cc0db7",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "fa70bf1f-4009-8531-9c1b-e4148db5af1b",
+      "inputHash": "e683ecd5201a77021ad53f9c8047db37a674a9c60a5d0f694ae4df244ba73e98",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "02ba8b26-771f-302c-a011-74c7c7e29449",
+      "inputHash": "0791342fcae7bafe03f44887d06ad19f42f5f55b87c2d42dec65d402e93ffc70",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "554557ad-1401-7a19-c864-e24b78261f39",
+      "inputHash": "d0042c355be5dde8f7d2b0e74aeba33352258553a4b9d82e9676acbf103eaf53",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "e1bada14-2f2d-d3e1-4657-79030dea4125",
+      "inputHash": "884d7c54d8d2dfadf2c650ca190a7cb6bc7f2fa84fccd5483451f93073efba7b",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "6bd2634d-74ac-b036-0bf8-0d7e65b1391d",
+      "inputHash": "695a40ae6adf26bfdea648d8c3002411d87a0e7900f8c1f8002876c7f75a9a34",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "d6af5cb8-6958-0edc-fcf5-088efdea9181",
+      "inputHash": "a164e21155b595ceb8a334c67132cd8b5844dc375dcb684a55ce79dd1d58fc76",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "437d79c9-9152-b50b-77cc-7ec63decd050",
+      "inputHash": "5b3dc63762d6cb1634c8442b0585759335dd64e990545ff427a51285dd81b521",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "ab08d4e0-4965-c16c-d74d-4943409a0ade",
+      "inputHash": "8a17eac6370a694677562882d4c761554c4649ca349bd66512616ec3e999a97b",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "bed2a330-ca0b-d8af-eec0-7d8de1435106",
+      "inputHash": "ebe9f108729faf04ca3f10447209dd59b7faa77df2e01b8f4db5147b80809564",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "5cbeadb6-f1bc-d7ef-5f53-bd669447df9b",
+      "inputHash": "d7916b5da618b69cf54efd5caab962a11cc9edc09921fecdb4abe3d0c71b3fbe",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "60ac3a43-de44-e068-aac6-26d4dbceb77f",
+      "inputHash": "4522482fa50d51da85dac9e765097c3c6831b70da9cbd0fab53bced3c3c4393b",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "8706eabe-362a-9eb7-740f-4f43ed4662f0",
+      "inputHash": "9d50729b7cd1bc7d5ab8a87e5b71421b705baabbe65333d9c090126e2930d68d",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "d1c19313-cbe6-3372-ed63-ff5f79b7899b",
+      "inputHash": "9d316805b9de39ec50abddc0cf3b0a5f023108d21875c741167b48541b13d936",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "965b653f-5760-e253-2f1e-d78c6394a770",
+      "inputHash": "0bf79e3161077dd3f15aea0416e351829659e90fb0c5d7e1d09df668ab4bcd76",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "adca561a-8189-2db6-eea9-911c1adaa0a8",
+      "inputHash": "47ea8ae513374bd35a797f1ca852f11b17ba45c8172572abbdf7c4143f5538dc",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "5084ba07-9098-1562-64d0-1c2ea7a5022f",
+      "inputHash": "75ce6685ccf70c2e494d193d0fc8fbe6af8bc9e7f1a7f8c5ab640641dd1d5cbd",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "8b9785d6-b9cf-c700-856c-c988124f6fe3",
+      "inputHash": "ec3ed089057d98ba3cae7d73443c25291d1292f0c15ba7f6ca4f4a932ef0e6f3",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "6267def5-1638-756d-82a5-a7aeca71ad68",
+      "inputHash": "8b28f225b64d6fc6d7f34dcbd2b5033bb7a4e03b8361b4d54306a92c272b7aa4",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "20f5ed5e-d83c-c17f-0b57-e3531226f164",
+      "inputHash": "c0993609bea13e2fcb6c8bdbe864b52afc84aa553c0ca0fda5bc7df7a775d0d3",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "1b8d4ea4-bddb-dd8c-9965-a6a69671acb3",
+      "inputHash": "84609d81986f9d80937048516cb7f917355b15e5cf09c201e4cacf3e28220c52",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "ae14eda5-3770-1544-1c2f-6ebf2d7d7eef",
+      "inputHash": "41128ff71ab641ede6f9a8e75d872ff4f439ac06db3e5bea8f563c88865e52e7",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "37fb6691-05a9-3acf-4f01-1cdfbe4e44ac",
+      "inputHash": "c2947bde1556860b2468b230ae93168a0b6e204c20e075d61fc44fc6c3d99fef",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "41a79ffd-c78c-308a-887a-a9c4d399b5ba",
+      "inputHash": "a64b11c37c11c1c97e068ce4a1b9c05970ebb7451643c79335b9bbc5643a1526",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "965e0978-9381-8a19-69a0-2738513f4b0c",
+      "inputHash": "39dd60dc52f98251304754dd4cf119e4e06d06d9274718ec0a9a7cd06d175fea",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    },
+    {
+      "id": "a3af237f-05fb-8ba8-8516-77dc677cdf34",
+      "inputHash": "4c3dd60c47951e58c320738d4357a301cfb3a42030c3bcc3734d5b5f76d523a6",
+      "status": "Pending",
+      "validItem": null,
+      "measurable": null,
+      "primaryKCIds": null,
+      "reviewer": null,
+      "reviewedAt": null,
+      "reason": null,
+      "draftReferencePrimaryKCIds": [
+        "5627505c-4862-d618-4c65-89cbcb5c895e"
+      ]
+    }
+  ]
+}

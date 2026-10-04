@@ -15,9 +15,9 @@
 | E07 规则计划、人工覆盖 | Planning、Deferral、计划调整、WeeklyReporting/BudgetReporting；plan/3保存实际评估进度，超过30秒或失败时只新增保守学校/目标任务 | 实际平板Wi-Fi和正式内容规模p95；更大负载未验 |
 | E08 周报、数据控制、备份恢复、L1交付 | 周报全部指标、本地隐私导出删除、加密备份/调度/临时库恢复；项目专属数据库/API管理器与登录项，独立集群及实际launchd进程停止恢复已验 | 独立物理盘、持续RPO、正式RTO、灾难应用切换、整机重启/登录实测；实际管理器恢复不能代替整机启动验收 |
 | E09 来源与解析运行 | 本地文本/PDF、Chunk、BuilderRun/BuilderAttempt、有界重试与来源追溯；候选固定结构/真实引文门禁、一次修复与超时；新候选配置/摘要固定；独立逐次调用账本与未知费用；家庭每日/单次USD费用及Token预留、并发名额与追加核对；建库/PDF持久化领取、心跳及提交围栏 | 建库/PDF及评估追平已接入BackgroundJob，评估有ConsumerReceipt和固定重建目标；明确事件日志/评估引用已补齐；新页面映射准备及家长重建已入后台，旧映射入口同输入已有任务时不能绕过领取/失败/取消/明确恢复生成；独立旧同步兼容接口仍开放；可选任务取消已接入；真实提供者可验证报价/账单、固定价格/请求Token配置和跨家庭提供者账户总预算未接入；家庭策略变更保留审计，每次决策保存快照，但未纳入运行ModelConfigHash；正式来源许可仍需人核对 |
-| E10 Candidate、Schema、检索 | 当前仅Mock/local parser；空间/维度边界与冻结输入；新候选builder-input/4及retrieval/4固定检索数量/方式/同已记录学科/同能力类型、不按年级排除，定义修订保存独立学科年级及人工领域/能力复杂度/认知描述，旧任务保留原方式 | 本地固定结构/来源、受控修复、超时与家庭预算/并发门禁已有验证；新kc-candidate/2及builder-config/3支持六类/旧兼容类型，旧/1五类原Schema与配置保持；受控提供者真实任务/审核链已验，不代表实际语义识别。真实提供者及其最大请求Token/固定价格、真实索引迁移、固定评测集及质量报告待开发/联调。用户模型稍后接入不等于这些已验收 |
+| E10 Candidate、Schema、检索 | 当前仅Mock/local parser；空间/维度边界与冻结输入；新候选builder-input/4及retrieval/4固定检索数量/方式/同已记录学科/同能力类型、不按年级排除，定义修订保存独立学科年级及人工领域/能力复杂度/认知描述，旧任务保留原方式 | 本地固定结构/来源、受控修复、超时与家庭预算/并发门禁已有验证；新kc-candidate/2及builder-config/3支持六类/旧兼容类型，旧/1五类原Schema与配置保持；受控提供者真实任务/审核链已验，不代表实际语义识别。真实提供者及其最大请求Token/固定价格、真实索引迁移、[固定原创评测集、待标注工作页和计分工具](evaluation/README.md)已准备；独立人工金标准及真实质量报告仍待联调。用户模型稍后接入不等于这些已验收 |
 | E11 候选人工审核、Alias | Builder候选接受/关联/拒绝、实际逐项依据、固定来源/正式定义/支持测量题及对照、独立草稿与审核发布 | 真实模型输出和固定人工耗时/质量指标未验；单候选审核不等于E12映射批量审核 |
-| E12 题目/课时/资源映射建议 | MappingPreparation/BackgroundJob后台准备与MappingRun/MappingSuggestion/MappingReviewDecision/MappingSetRevision/MappingSetItem；冻结对象与能力库，原始/校正分别保存，整批人工接受/拒绝、分批累积与待审核草稿，真实页面及发布边界；[阶段报告](content/mapping-review-report.md) | 本地Mock与流程统计不等于正式映射质量；真实模型、固定人工标注集、题型错误分析与真实审核耗时仍待验。E12完整质量退出条件没有关闭 |
+| E12 题目/课时/资源映射建议 | MappingPreparation/BackgroundJob后台准备与MappingRun/MappingSuggestion/MappingReviewDecision/MappingSetRevision/MappingSetItem；冻结对象与能力库，原始/校正分别保存，整批人工接受/拒绝、分批累积与待审核草稿，真实页面及发布边界；[阶段报告](content/mapping-review-report.md) | 本地Mock与流程统计不等于正式映射质量；原创固定集及题型计分工具已准备，全部人工标签Pending；真实模型、正式人工金标准、实际题型错误与真实审核耗时仍待验。E12完整质量退出条件没有关闭 |
 
 E13/E14按基线是P1，离线作答队列、OCR草稿和自动通过校准没有当成V1 P0已交付。真实模型没有接入，不选择付费服务或外发私有数据。
 

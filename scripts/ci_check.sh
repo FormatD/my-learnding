@@ -3,6 +3,7 @@ set -eu
 task_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$task_root"
 sh scripts/check.sh
+python3 tests/k1_evaluation_acceptance.py
 if test -x .tools/dotnet/dotnet; then .tools/dotnet/dotnet build tests/persistence --no-restore; else dotnet build tests/persistence --no-restore; fi
 python3 tests/openapi_contract_acceptance.py
 if test "$#" -gt 0; then
