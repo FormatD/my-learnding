@@ -34,3 +34,11 @@ job_lease_persistence_acceptance.py实际两连接领取竞争、心跳跨完整
 
 
 可选任务取消及明确恢复已接入，实际停止与提供者费用分别核对，见[取消手册](job-cancellation.md)。必需学习结果同步不会被取消。
+
+## 任务历史稳定翻页（2026-10-05）
+
+家长维护页面使用GET `/api/v1/background-jobs/window?pageSize=20`。响应保留jobs与attempts，另有pageSize、total、可空nextCursor；后续请求回传URL编码后的cursor和同样页大小。默认20、最大50，按CreatedAt降序/Id升序取原边界后记录。新任务插入顶部不会挤动原后续页；上一页重新读取原位置，刷新回第一页以查看最新记录。读取失败保留当前页，离页迟到读取不写回。旧GET `/background-jobs?page=1`继续原页码语义和字段。
+
+一次页读取的计数、任务、领取记录与家庭版本来自同一RepeatableRead事务，领取记录仅包含当页任务；查询传递请求取消。StableReadPage固定background-jobs/1读取范围、家庭、过滤值与页大小，未知版本/范围/家庭/大小、畸形或超长游标422，孩子403。游标没有签名，不是来源证明；权限和家庭隔离由当前会话/数据库筛选执行。跨页不是历史快照，状态、心跳、领取和总数可以继续变化，家庭ETag不是所有任务状态的独立版本。没有更改Worker领取、续期、取消或提交围栏。
+
+`tests/background_cursor_acceptance.py`接入实际隔离接口检查：55条Cancelled终态分页夹具使用有效输入摘要、独立InputRef/命令键及相同创建时间，没有实际执行或伪造领取；页间插入顶部记录后原夹具各出现一次，并检查UUID排序、领取所属当页、错误范围/家庭/大小和孩子权限，结束清除夹具。BACKGROUND_CURSOR_BROWSER=1时再运行实际隔离浏览器分页/刷新及受控503保留原页专项。

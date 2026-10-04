@@ -68,6 +68,12 @@ public static class BackgroundJobs
     public static void Map(RouteGroupBuilder api)
     {
         JobCancellation.Map(api);
+        api.MapGet("/background-jobs/window",async(int? pageSize,string? cursor,Database db,HttpContext ctx)=>{
+            var actor=ctx.Actor();actor.Require("ContentEditor");var ct=ctx.RequestAborted;await using var snapshot=await ReadSnapshot.Begin(db,ctx);
+            var page=await StableReadPage.Load(db.Set<BackgroundJob>().AsNoTracking().Where(j=>j.FamilyId==actor.FamilyId),"background-jobs/1",actor.FamilyId,null,pageSize,cursor,ct);
+            var ids=page.Rows.Select(j=>j.Id).ToArray();var attempts=await db.Set<JobLeaseAttempt>().AsNoTracking().Where(j=>j.FamilyId==actor.FamilyId&&ids.Contains(j.JobId)).OrderBy(j=>j.CreatedAt).ThenBy(j=>j.Id).ToArrayAsync(ct);
+            await snapshot.CommitAsync(ct);return new{page.PageSize,page.Total,jobs=page.Rows,attempts,nextCursor=page.NextCursor};
+        }).WithMetadata(new OptionalResponseFieldsMetadata("nextCursor"));
         api.MapGet("/background-jobs",async(int? page,int? pageSize,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");var p=page??1;var size=pageSize??20;if(p<1 || p>100_000 || size<1 || size>50)throw new ApiError(422,"INVALID_PAGE","请使用有效页码及每页1～50条。");var query=db.Set<BackgroundJob>().Where(j=>j.FamilyId==a.FamilyId);var total=await query.CountAsync();var jobs=await query.OrderByDescending(j=>j.CreatedAt).ThenBy(j=>j.Id).Skip((p-1)*size).Take(size).ToArrayAsync();var ids=jobs.Select(j=>j.Id).ToArray();return new{page=p,pageSize=size,total,jobs,attempts=await db.Set<JobLeaseAttempt>().Where(j=>j.FamilyId==a.FamilyId && ids.Contains(j.JobId)).OrderBy(j=>j.CreatedAt).ThenBy(j=>j.Id).ToArrayAsync()};});
     }
 }
