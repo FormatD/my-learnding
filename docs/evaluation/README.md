@@ -71,4 +71,9 @@ python3 scripts/k1_builder_report.py --builder /path/to/saved-builder-response.j
 
 输出保留选择与完整响应摘要、原任务输入摘要、协议版本、成功尝试引用及协议摘要。这些是本地保存响应的交叉检查，不构成独立服务端签署。Mock来源引用通过不表示语义提取正确，更不能作为正式100%追溯验收；许可、正式内容及独立证据仍需核对。语义质量固定NotEvaluated，formalV1ExitProven始终false；不推算金标准、映射准确率、审核耗时或费用。
 
-边界专项：`python3 tests/k1_builder_report_acceptance.py`（首轮/修复分列、失败/排队、旧缺失未知、错误引用保留分母、记录冲突拒绝）。实际接口：`python3 tests/k1_builder_api_acceptance.py`使用临时数据库，执行真实首轮成功两候选、101片段超限失败、实际记录/引用与CLI核对；修复统计分支本轮由明确受控文件夹具覆盖，未声称实际修复后成功的持久任务验收。文件不会覆盖已有报告，测试完成自动清理。
+边界专项：`python3 tests/k1_builder_report_acceptance.py`（首轮/修复分列、失败/排队、旧缺失未知、错误引用保留分母、记录冲突拒绝）。实际接口：`python3 tests/k1_builder_api_acceptance.py`使用临时数据库，执行真实首轮成功两候选、101片段超限失败、实际记录/引用与CLI核对；修复统计最初只由明确受控文件夹具覆盖；现在另有`tests/k1_builder_repair_api_acceptance.py`核对实际后台修复持久链。文件不会覆盖已有报告，测试完成自动清理。
+
+
+修复持久链专项使用服务端测试提供者经真实任务领取/原输入检查/调用预算账本/协议/候选提交执行。首次返回`{}`引发结构错误，修复请求保留原无效输出与BUILDER_SCHEMA_INVALID，使用相同Schema；成功时实际保存Calls=2/Repaired=true和独立候选，仍失败时BUILDER_NEEDS_REPAIR、零自动重试、无候选/成功协议。另一固定RepairAttempts=0任务只调用一次并失败，不采用默认一次修复。共五条实际Returned账本，分别具有原模型配置/输入摘要、同执行内连续调用编号、真实Repair标志和LocalNoCharge/Settled状态；Returned不当作Schema通过。重复处理不新增调用/尝试或改候选，数据库确认无Evidence/Mastery。
+
+实际HTTP读取得到一个修复后完成、两个失败、一个引用有效候选，首轮0/1、修复1/1、来源1/1；统计与CLI输出对应，审核上下文可读、跨家庭404/孩子403、旧输出覆盖拒绝。该受控夹具不开放HTTP提供者注入，不接入外部模型，不批准教材或金标准；测试结束清理临时数据库和服务。
