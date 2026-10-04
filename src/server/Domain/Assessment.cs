@@ -226,7 +226,7 @@ public static class Assessment
     public static async Task Rebuild(Database db, Student student, CancellationToken ct=default,Guid? targetGenerationId=null,bool forceFull=false,bool online=false)
     {
         var (inputs,teaching)=await LoadInputs(db,student,ct);
-        var hash=Content.Hash(Json.Write(new {inputs,teaching,mappingContext="assessment-context/1",inputVersion=InputHashVersion,timeZone=student.TimeZone,rule=EvidenceRuleVersion,model=MasteryModelVersion,review=ReviewRuleVersion}));
+        var hash=AssessmentInputHashes.Compute(student.TimeZone,inputs,teaching,ct);
         if (!forceFull && student.ActiveGenerationId.HasValue && await db.Generations.AnyAsync(g => g.Id==student.ActiveGenerationId && g.InputHash==hash && g.InputVersion==InputHashVersion,ct)) return;
         if(targetGenerationId!=null && await db.Generations.AnyAsync(g=>g.Id==targetGenerationId,ct))throw new ApiError(422,"GENERATION_TARGET_CONFLICT","固定重建目标已有不同结果，请核对消费记录。");
         var gen=new Generation { Id=targetGenerationId??Guid.NewGuid(),FamilyId=student.FamilyId,StudentId=student.Id,InputHash=hash,InputVersion=InputHashVersion,RuleVersion=EvidenceRuleVersion,ModelVersion=MasteryModelVersion,Cursor=inputs.LastOrDefault()?.Attempt.Sequence??0 };

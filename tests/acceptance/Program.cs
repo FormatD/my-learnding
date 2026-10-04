@@ -18,6 +18,7 @@ AssessmentInput Input(int n,bool correct=true,int day=0,Guid? questionId=null,in
 }
 AssessmentOutput Replay(params AssessmentInput[] inputs)=>Assessment.Replay(family,student,generation,"Asia/Shanghai",inputs);
 Test("评估前缀流式双摘要保持原JSON字节与单次枚举",AssessmentPrefixHashCases.Run);
+Test("完整评估输入流式摘要保留任务流程字段及原JSON字节",AssessmentInputHashCases.Run);
 Test("M0 混合运算 20 题发布校验",()=>{var c=Content.Fixture();Eq(c.Questions.Length,20);Eq(Content.Validate(c).Length,0);});
 Test("原创题包身份稳定、目录合法、变式分组与人工步骤映射",()=>{
     var c=MixedOperationsPack.Create();Eq(Json.Write(c),Json.Write(MixedOperationsPack.Create()));Eq(Content.Validate(c).Length,0);Eq(c.Questions.Length,160);Eq(c.Resources.Length,15);
