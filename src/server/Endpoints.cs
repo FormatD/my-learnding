@@ -310,6 +310,7 @@ public static class Endpoints
         Corrections.Map(api);
         ReviewTargetConfirmations.Map(api);
         Deferral.Map(api);
+        ResourceIssues.Map(api);
     }
     static void ValidateStudent(StudentInput input)
     {

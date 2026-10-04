@@ -24,6 +24,7 @@ from success_response_contract import verify
 from failure_response_contract import verify as verify_failures, verify_rate
 from budget_reporting_acceptance import verify as verify_budget
 from resource_revision_acceptance import verify as verify_resources
+from resource_issue_acceptance import verify as verify_resource_issues
 from mapping_suggestion_acceptance import verify as verify_mappings
 from content_review_acceptance import verify as verify_content_reviews
 from published_mapping_acceptance import verify as verify_published_mappings
@@ -108,6 +109,7 @@ def main():
                     verify(document,client,registered)
                     verify_budget(document,client)
                     verify_resources(document,client)
+                    verify_resource_issues(client)
                     verify_mappings(document,client)
                     verify_content_reviews(document,client)
                     verify_published_mappings(document,client)
