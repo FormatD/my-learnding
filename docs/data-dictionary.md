@@ -62,6 +62,7 @@
 | 20261003195858_AssessmentConsumptionCursor | 10.0.4 |
 | 20261003205749_PlanProjectionSnapshot | 10.0.4 |
 | 20261003220215_ReviewTargetConfirmations | 10.0.4 |
+| 20261004172710_BoundedCheckpointDeltas | 10.0.4 |
 
 ## Accounts
 
@@ -138,12 +139,18 @@
 | Cursor | bigint | 是 | 无 |
 | InputHash | text | 是 | 无 |
 | ProcessedInputCount | integer | 是 | 无 |
+| BaseCheckpointId | uuid | 是 | 无 |
+| DeltaDepth | integer | 是 | 无 |
+| StatePayloadHash | text | 是 | 无 |
+| StorageVersion | text | 是 | 无 |
 
 约束：
 
 - `AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId`：`UNIQUE ("FamilyId", "Id", "StudentId", "GenerationId")`
 - `CK_AssessmentCheckpoint_Application`：`CHECK ("InputHash" IS NULL AND "Cursor" IS NULL AND "CalculationMode" IS NULL AND "ProcessedInputCount" IS NULL OR "InputHash" IS NOT NULL AND length("InputHash") = 64 AND "Cursor" IS NOT NULL AND "Cursor" >= 0 AND "CalculationMode" IS NOT NULL AND ("CalculationMode" = ANY (ARRAY['FullStream'::text, 'FullStreamChangedPrefix'::text, 'IncrementalAppend'::text, 'OnlineAppend'::text])) AND "ProcessedInputCount" IS NOT NULL AND "ProcessedInputCount" >= 0 AND "ProcessedInputCount" <= "InputCount")`
 - `CK_AssessmentCheckpoint_State`：`CHECK ("InputCount" >= 0 AND length("PrefixHash") = 64 AND length("PayloadHash") = 64 AND jsonb_typeof("Payload"::jsonb) = 'object'::text)`
+- `CK_AssessmentCheckpoint_Storage`：`CHECK ("StorageVersion" IS NULL AND "BaseCheckpointId" IS NULL AND "DeltaDepth" IS NULL AND "StatePayloadHash" IS NULL OR "StorageVersion" IS NOT NULL AND "StorageVersion" = 'checkpoint-storage/1'::text AND "StatePayloadHash" IS NOT NULL AND length("StatePayloadHash") = 64 AND "DeltaDepth" IS NOT NULL AND ("DeltaDepth" = 0 AND "BaseCheckpointId" IS NULL OR "DeltaDepth" >= 1 AND "DeltaDepth" <= 31 AND "BaseCheckpointId" IS NOT NULL AND "BaseCheckpointId" <> "Id"))`
+- `FK_AssessmentCheckpoint_AssessmentCheckpoint_FamilyId_BaseChec~`：`FOREIGN KEY ("FamilyId", "BaseCheckpointId", "StudentId", "GenerationId") REFERENCES "AssessmentCheckpoint"("FamilyId", "Id", "StudentId", "GenerationId")`
 - `FK_AssessmentCheckpoint_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_AssessmentCheckpoint_Generations_FamilyId_GenerationId_Stud~`：`FOREIGN KEY ("FamilyId", "GenerationId", "StudentId") REFERENCES "Generations"("FamilyId", "Id", "StudentId") ON DELETE CASCADE`
 - `FK_AssessmentCheckpoint_Students_FamilyId_StudentId`：`FOREIGN KEY ("FamilyId", "StudentId") REFERENCES "Students"("FamilyId", "Id") ON DELETE CASCADE`
@@ -153,6 +160,7 @@
 
 - `CREATE UNIQUE INDEX "AK_AssessmentCheckpoint_FamilyId_Id_StudentId_GenerationId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "Id", "StudentId", "GenerationId")`
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId" ON public."AssessmentCheckpoint" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_BaseCheckpointId_StudentId_Ge~" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "BaseCheckpointId", "StudentId", "GenerationId")`
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_GenerationId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "GenerationId", "StudentId")`
 - `CREATE INDEX "IX_AssessmentCheckpoint_FamilyId_StudentId" ON public."AssessmentCheckpoint" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_AssessmentCheckpoint_GenerationId_InputCount" ON public."AssessmentCheckpoint" USING btree ("GenerationId", "InputCount")`

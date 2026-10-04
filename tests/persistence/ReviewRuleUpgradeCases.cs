@@ -32,6 +32,13 @@ public static class ReviewRuleUpgradeCases
         Console.WriteLine("PASS 新规则从原始11条输入完整重算，原目标保持到期；旧状态/证据/复习逐字节不变，新状态记录 review/3，同输入复用");
         await db.Families.Where(f=>f.Id==learner.FamilyId).ExecuteDeleteAsync();Check(!await db.Set<AssessmentCheckpoint>().AnyAsync() && !await db.Reviews.AnyAsync(),"Family deletion retained review history");Console.WriteLine("PASS 家庭删除清理升级前后全部复习与检查点");
     }
-    static async Task<string> Bytes(Database db,Guid generation)=>Json.Write(new{checkpoints=await db.Set<AssessmentCheckpoint>().AsNoTracking().Where(c=>c.GenerationId==generation).OrderBy(c=>c.Id).ToArrayAsync(),evidence=await db.Evidence.AsNoTracking().Where(c=>c.GenerationId==generation).OrderBy(c=>c.Id).ToArrayAsync(),reviews=await db.Reviews.AsNoTracking().Where(c=>c.GenerationId==generation).OrderBy(c=>c.Id).ToArrayAsync()});
+    static async Task<string> Bytes(Database db,Guid generation)
+    {
+        var data=System.Text.Json.Nodes.JsonNode.Parse(Json.Write(new{checkpoints=await db.Set<AssessmentCheckpoint>().AsNoTracking().Where(c=>c.GenerationId==generation).OrderBy(c=>c.Id).ToArrayAsync(),evidence=await db.Evidence.AsNoTracking().Where(c=>c.GenerationId==generation).OrderBy(c=>c.Id).ToArrayAsync(),reviews=await db.Reviews.AsNoTracking().Where(c=>c.GenerationId==generation).OrderBy(c=>c.Id).ToArrayAsync()}))!;
+        // Old assemblies have no storage columns. Ignore only newly added NULLs, never recorded facts.
+        foreach(var checkpoint in data["checkpoints"]!.AsArray())foreach(var field in new[]{"storageVersion","baseCheckpointId","deltaDepth","statePayloadHash"})
+            if(checkpoint!.AsObject().TryGetPropertyValue(field,out var value) && value==null)checkpoint.AsObject().Remove(field);
+        return Json.Write(data);
+    }
     record UpgradeProof(Guid Student,Guid Generation,Guid Target,string Bytes);
 }

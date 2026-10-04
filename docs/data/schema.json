@@ -180,6 +180,10 @@
     {
       "id": "20261003220215_ReviewTargetConfirmations",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261004172710_BoundedCheckpointDeltas",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -531,6 +535,38 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "BaseCheckpointId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DeltaDepth",
+          "type": "integer",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StatePayloadHash",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StorageVersion",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -554,6 +590,22 @@
           "name": "CK_AssessmentCheckpoint_State",
           "kind": "c",
           "definition": "CHECK (\"InputCount\" >= 0 AND length(\"PrefixHash\") = 64 AND length(\"PayloadHash\") = 64 AND jsonb_typeof(\"Payload\"::jsonb) = 'object'::text)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_AssessmentCheckpoint_Storage",
+          "kind": "c",
+          "definition": "CHECK (\"StorageVersion\" IS NULL AND \"BaseCheckpointId\" IS NULL AND \"DeltaDepth\" IS NULL AND \"StatePayloadHash\" IS NULL OR \"StorageVersion\" IS NOT NULL AND \"StorageVersion\" = 'checkpoint-storage/1'::text AND \"StatePayloadHash\" IS NOT NULL AND length(\"StatePayloadHash\") = 64 AND \"DeltaDepth\" IS NOT NULL AND (\"DeltaDepth\" = 0 AND \"BaseCheckpointId\" IS NULL OR \"DeltaDepth\" >= 1 AND \"DeltaDepth\" <= 31 AND \"BaseCheckpointId\" IS NOT NULL AND \"BaseCheckpointId\" <> \"Id\"))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_AssessmentCheckpoint_AssessmentCheckpoint_FamilyId_BaseChec~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"BaseCheckpointId\", \"StudentId\", \"GenerationId\") REFERENCES \"AssessmentCheckpoint\"(\"FamilyId\", \"Id\", \"StudentId\", \"GenerationId\")",
           "validated": true,
           "deferrable": false,
           "initiallyDeferred": false
@@ -603,6 +655,12 @@
           "unique": false,
           "valid": true,
           "definition": "CREATE INDEX \"IX_AssessmentCheckpoint_FamilyId\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_AssessmentCheckpoint_FamilyId_BaseCheckpointId_StudentId_Ge~",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_AssessmentCheckpoint_FamilyId_BaseCheckpointId_StudentId_Ge~\" ON public.\"AssessmentCheckpoint\" USING btree (\"FamilyId\", \"BaseCheckpointId\", \"StudentId\", \"GenerationId\")"
         },
         {
           "name": "IX_AssessmentCheckpoint_FamilyId_GenerationId_StudentId",
