@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import {computed,onMounted,onUnmounted,ref,watch} from 'vue';
 import {api,apiWithVersion} from '../api';
+import EvaluationDownload from './EvaluationDownload.vue';
 type Item=Record<string,any>;
 const props=defineProps<{drafts:Item[];releases:Item[];disabled:boolean}>();
 const emit=defineEmits<{refresh:[];editDraft:[id:string]}>();
 const busy=ref(false),error=ref(''),notice=ref(''),draftId=ref(''),libraryId=ref('');
 const provider=ref('Mock');
-const preparations=ref<Item[]>([]),openingPreparation=ref('');let poll:ReturnType<typeof setInterval>|undefined;const jobLabels:Record<string,string>={Queued:'等待处理',Running:'处理中',Retrying:'等待重试',Failed:'已停止，待核对',Succeeded:'已完成',Cancelled:'已取消'};
+const preparations=ref<Item[]>([]),openingPreparation=ref('');let initialized=false;let poll:ReturnType<typeof setInterval>|undefined;const jobLabels:Record<string,string>={Queued:'等待处理',Running:'处理中',Retrying:'等待重试',Failed:'已停止，待核对',Succeeded:'已完成',Cancelled:'已取消'};
 const selectedOwners=ref<string[]>([]),ownerType=ref('All'),search=ref(''),ownerPage=ref(0);
 const runs=ref<Item[]>([]),detail=ref<Item|null>(null),reviewVersion=ref(''),rows=ref<Item[]>([]);
 const selectedReviews=ref<string[]>([]),reviewPage=ref(0),acknowledged=ref(false),commonReason=ref(''),commonDecision=ref('Accept');
@@ -54,7 +55,9 @@ function changePolicy(r:Item){if(r.proposal.evidencePolicy==='NoEvidence')r.prop
 function applyCommon(){selected.value.forEach(r=>{r.decision=commonDecision.value;r.reason=commonReason.value.trim();});}
 async function decide(){await run(async()=>{const result=await api('/builder/mapping-runs/'+detail.value!.run.id+'/suggestions:decide',{decisions:selected.value.map(r=>({suggestionId:r.id,decision:r.decision,reason:r.reason.trim(),correctedProposal:r.decision==='Accept'?r.proposal:null}))},'POST',undefined,reviewVersion.value);await open(result.runId);await load();emit('refresh');notice.value=result.draftId?'本批决定已保存，接受项生成待审核草稿；尚未发布或改变学生学习。':'拒绝决定已保存，没有生成正式映射。';});}
 function flags(r:Item){const labels:Record<string,string>={ManualSource:'手工维护，只带入原有关联，不使用模型',CoverageNeedsReview:'原快照未记录覆盖权重，默认值1须人工核对',MockOnly:'本地模拟，尚无质量评测',HumanReviewRequired:'须人工核对',IndependentStepReviewRequired:'逐个核对独立观察步骤',OriginalKCOutsideLibrary:'原能力不在所选能力库',NoLibraryMatch:'没有能力库匹配'};return JSON.parse(r.validationFlags).map((f:string)=>labels[f]||f).join('；');}
-onMounted(()=>{void run(load);poll=setInterval(()=>{if(!blocked.value && preparations.value.some(p=>['Queued','Running','Retrying'].includes(p.status)))void run(refreshPreparation);},1500);});
+async function initialize(){if(initialized||blocked.value)return;await run(async()=>{await load();initialized=true;});}
+watch(()=>props.disabled,value=>{if(!value)void initialize();});
+onMounted(()=>{void initialize();poll=setInterval(()=>{if(!blocked.value && preparations.value.some(p=>['Queued','Running','Retrying'].includes(p.status)))void run(refreshPreparation);},1500);});
 onUnmounted(()=>{if(poll)clearInterval(poll);});
 </script>
 <template>
@@ -81,6 +84,7 @@ onUnmounted(()=>{if(poll)clearInterval(poll);});
   <template v-if="detail">
     <p class="muted">{{detail.run.provider==='Manual'?'手工原映射':'本地模拟建议'}} · 源草稿第 {{detail.run.sourceDraftVersion}} 版 · 固定能力库内容版本 {{releases.find(r=>r.id===detail!.run.libraryReleaseId)?.number||'历史'}}。源草稿后续修改与新发布版本不会替换本批输入。</p>
     <p>共 {{detail.quality.suggested}} 项 · 待处理 {{detail.quality.pending}} 项 · 接受 {{detail.quality.accepted}} 项 · 拒绝 {{detail.quality.rejected}} 项 · 接受时校正 {{detail.quality.corrected}} 项</p><p class="muted">{{detail.quality.note}}</p>
+    <EvaluationDownload kind="mapping" :run-id="detail.run.id" :disabled="blocked" />
     <div v-if="pending.length">
       <label>选中项的处理方式<select v-model="commonDecision" :disabled="blocked"><option value="Accept">接受校正后的映射</option><option value="Reject">拒绝建议</option></select></label><label>选中项的共同审核依据<textarea v-model="commonReason" maxlength="4000" :disabled="blocked" placeholder="先核对选中对象，再填写具体依据。也可以逐项填写不同理由。"></textarea></label>
       <button @click="applyCommon" :disabled="blocked||!selected.length||!commonReason.trim()">将方式与理由应用到选中项</button>

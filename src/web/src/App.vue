@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import KCDescriptions from './components/KCDescriptions.vue';
+import EvaluationDownload from './components/EvaluationDownload.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { api, apiWithVersion, localDate } from './api';
 import EvidenceRevocations from './components/EvidenceRevocations.vue';
@@ -185,6 +186,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
           <BuilderBudget :owner="me.family.ownerAccountId===me.actor.accountId" />
           <BackgroundJobs />
           <BuilderCalls :owner="me.family.ownerAccountId===me.actor.accountId" />
+          <EvaluationDownload kind="builder" :disabled="busy" />
           <BuilderRuns :runs="builder.runs||[]" :attempts="builder.attempts||[]" :sources="builder.sources||[]" :libraries="builder.libraries||[]" :disabled="busy" @refresh="run(refresh)" />
         </template>
         <template v-else-if="page==='settings'">

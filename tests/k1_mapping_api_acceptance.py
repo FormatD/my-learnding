@@ -26,7 +26,7 @@ def main():
                             if response.status==200:break
                     except OSError:time.sleep(.1)
                 else:raise AssertionError('Service not healthy')
-                api_acceptance.BASE=origin+'/api/v1';c=Client();c.request('/auth/register',{'userName':'k1-mapping-'+uuid.uuid4().hex[:12],'password':secrets.token_hex(24)},expected=201);c.request('/me');student=c.request('/students',{'name':'受控评测隔离测试'},expected=201);draft=c.request('/content/unit-pack',{})
+                api_acceptance.BASE=origin+'/api/v1';c=Client();user_name='k1-mapping-'+uuid.uuid4().hex[:12];password=secrets.token_hex(24);c.request('/auth/register',{'userName':user_name,'password':password},expected=201);c.request('/me');student=c.request('/students',{'name':'受控评测隔离测试'},expected=201);draft=c.request('/content/unit-pack',{})
                 # Explicit isolated test publication, not real textbook approval or gold labels.
                 c.request('/content/drafts/'+draft['id']+':review',{'expectedDraftVersion':draft['version'],'reason':'受控评测导出接口测试，不作为正式教材或金标准审核'});preview=c.request('/content/drafts/'+draft['id']+'/preview');release=c.request('/content/drafts/'+draft['id']+':publish',{'previewHash':preview['hash']})
                 request={'draftId':draft['id'],'libraryReleaseId':release['id'],'owners':[{'ownerType':'Question','ownerId':i['id'],'ownerRevisionId':i['revisionId']} for i in ITEMS],'provider':'Mock'}
@@ -46,6 +46,22 @@ def main():
                 assert before==e.digest(original['predictions']) and reviewed['capture']['detailHash']==e.digest(reviewed_detail)
                 saved=work/'detail.json';saved.write_text(json.dumps(reviewed_detail));output=work/'normalized.json';subprocess.run(['python3',str(ROOT/'scripts/k1_mapping_results.py'),'--dataset',str(ROOT/'docs/evaluation/mixed-operations-draft-v1.json'),'--detail',str(saved),'--stage','ReviewedMapping','--output',str(output)],check=True,capture_output=True);assert json.loads(output.read_text())==reviewed
                 report=e.evaluate(DATA,json.loads((ROOT/'docs/evaluation/mixed-operations-labels-template-v1.json').read_text()),reviewed);assert report['pendingItems']==56 and report['qualityGate']['status']=='NotEvaluated' and report['primaryAccuracy']['rate'] is None and report['reviewMinutesPer100'] is None and not report['formalV1ExitProven']
+                if os.environ.get('EVALUATION_DOWNLOAD_BROWSER'):
+                    c.request('/students/'+student['id']+'/content/'+release['id']+':bind',{})
+                    candidate_source=c.request('/content/sources',{'title':'评测下载受控候选来源','text':'先乘除后加减。独立核对运算顺序。','usageScope':'原创受控测试，非正式教材'},expected=201)
+                    candidate_run=c.request('/builder/runs',{'sourceId':candidate_source['id']},expected=202)
+                    for _ in range(150):
+                        builder_state=c.request('/builder');current=next(r for r in builder_state['runs'] if r['id']==candidate_run['id'])
+                        if current['status']=='Completed':break
+                        assert current['status']=='Queued';time.sleep(.1)
+                    else:raise AssertionError('Candidate fixture did not complete')
+                    browser_env=env|dict(LEARNING_TEST_URL=origin,EVALUATION_DOWNLOAD_USER=user_name,EVALUATION_DOWNLOAD_PASSWORD=password,EVALUATION_DOWNLOAD_RUN=state['runId'],EVALUATION_DOWNLOAD_DIRECTORY=str(work))
+                    subprocess.run(['npm','run','test:e2e','--','tests/evaluation-download.spec.ts','--workers=1'],cwd=ROOT/'src/web',env=browser_env,check=True)
+                    downloaded=json.loads((work/'mapping-download.json').read_text());assert adapter.normalize(DATA,downloaded,stage='ReviewedMapping')==reviewed
+                    import k1_builder_report
+                    builder_report=k1_builder_report.report(json.loads((work/'builder-download.json').read_text()),[candidate_run['id']]);assert builder_report['firstSchemaSuccess']['rate']==1 and builder_report['sourceTraceability']['rate']==1 and not builder_report['formalV1ExitProven']
+                    assert c.request('/builder/mapping-runs/'+state['runId'])==reviewed_detail
+                    print('PASS actual page downloads normalize with both evaluation tools; unsaved review preserved, read denial has no file, late page response ignored')
                 export=c.request('/students/'+student['id']+'/export');assert export['evidence']==[] and export['mastery']==[]
                 c.request('/students/'+student['id']+'/child-sessions',{});c.request('/builder/mapping-runs/'+state['runId'],expected=403)
                 other_family=Client();other_family.request('/auth/register',{'userName':'k1-other-'+uuid.uuid4().hex[:12],'password':secrets.token_hex(24)},expected=201);other_family.request('/me');other_family.request('/builder/mapping-runs/'+state['runId'],expected=404)
