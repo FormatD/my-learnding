@@ -46,6 +46,32 @@ public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemp
     }
     public static void Map(RouteGroupBuilder api)
     {
+        api.MapGet("/builder/calls/window",async(int? pageSize,Guid? runId,string? cursor,Database db,HttpContext ctx)=>
+        {
+            var actor=ctx.Actor();actor.Require("ContentEditor");var size=pageSize??20;var ct=ctx.RequestAborted;
+            if(size<1 || size>50)throw new ApiError(422,"INVALID_PAGE","每页请使用1～50条。");
+            CallCursor? position=null;
+            if(cursor!=null)
+            {
+                try
+                {
+                    if(cursor.Length>1024)throw new FormatException();
+                    position=Json.Read<CallCursor>(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(cursor)));
+                    if(position==null || position.Version!=1 || position.FamilyId!=actor.FamilyId || position.RunId!=runId || position.PageSize!=size || position.Id==Guid.Empty || position.CreatedAt.Offset!=TimeSpan.Zero || position.CreatedAt==default)throw new FormatException();
+                }
+                catch(Exception ex) when(ex is FormatException or System.Text.Json.JsonException or ArgumentException)
+                {throw new ApiError(422,"INVALID_CURSOR","翻页位置无效，请刷新账本后重试。");}
+            }
+            await using var snapshot=await ReadSnapshot.Begin(db,ctx);
+            if(runId!=null && !await db.BuilderRuns.AnyAsync(r=>r.Id==runId && r.FamilyId==actor.FamilyId,ct))throw new ApiError(404,"NOT_FOUND","找不到本家庭任务。");
+            var query=db.Set<BuilderCall>().AsNoTracking().Where(c=>c.FamilyId==actor.FamilyId && (runId==null || c.RunId==runId));var total=await query.CountAsync(ct);
+            if(position!=null){var time=position.CreatedAt;var id=position.Id;query=query.Where(c=>c.CreatedAt<time || c.CreatedAt==time && c.Id.CompareTo(id)>0);}
+            var window=await query.OrderByDescending(c=>c.CreatedAt).ThenBy(c=>c.Id).Take(size+1).ToArrayAsync(ct);
+            var calls=window.Take(size).ToArray();string? nextCursor=null;
+            if(window.Length>size){var last=calls[^1];nextCursor=Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Json.Write(new CallCursor(1,actor.FamilyId,runId,size,last.CreatedAt,last.Id))));}
+            var ids=calls.Select(c=>c.Id).ToArray();var reconciliations=await db.Set<BuilderBudgetReconciliation>().AsNoTracking().Where(r=>r.FamilyId==actor.FamilyId && ids.Contains(r.CallId)).ToArrayAsync(ct);
+            await snapshot.CommitAsync(ct);return new{pageSize=size,total,calls,reconciliations,nextCursor};
+        }).WithMetadata(new OptionalResponseFieldsMetadata("reconciliations","nextCursor"));
         api.MapGet("/builder/calls",async(int? page,int? pageSize,Guid? runId,Database db,HttpContext ctx)=>
         {
             var actor=ctx.Actor();actor.Require("ContentEditor");var p=page??1;var size=pageSize??20;if(p<1 || size<1 || size>50 || p>100_000)throw new ApiError(422,"INVALID_PAGE","请使用有效页码及每页1～50条。");
@@ -54,3 +80,5 @@ public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemp
         }).WithMetadata(new OptionalResponseFieldsMetadata("reconciliations"));
     }
 }
+
+public record CallCursor(int Version,Guid FamilyId,Guid? RunId,int PageSize,DateTimeOffset CreatedAt,Guid Id);

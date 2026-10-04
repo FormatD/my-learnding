@@ -13,3 +13,12 @@
 本地数据库仍串行保护同家庭候选生成；独立调用预算另用家庭预算锁，保护预留、结算和人工核对的竞争。费用/Token预留及并发名额已接入，详见[调用预算与核对](builder-budget.md)。建库及PDF任务租约/心跳已接入（见[任务手册](background-jobs.md)）；Outbox投影等后台统一、跨家庭提供者账户总预算、真实提供者可验证报价及固定价格/最大请求Token配置仍开放。真正模型和质量按用户安排稍后接入；不得把Started自动清成免费。
 
 验收：tests/builder_call_crash_acceptance.py实际终止两个隔离进程，分别验证返回但候选未提交和仅调用开始时的恢复；builder_retry_persistence_acceptance.py注入候选保存失败，确认每次真实调用仍在；builder_retry_api_acceptance.py核对包含账本的全家导出、真实加密恢复、删除不复活。标准接口回归验证分页和权限，实际页面检验本地不计费/Token不适用及人工审核发布。
+
+
+## 稳定翻页（2026-10-05）
+
+页面使用GET `/builder/calls/window?pageSize=20`，可选runId筛选。响应包含calls、reconciliations、total、pageSize和可空nextCursor。后续请求以同样筛选和页大小传回URL编码后的cursor；不要解析或自行构造游标。按CreatedAt降序、Id升序，取边界之后的记录，避免正常新增到顶部时挤动原后续页。默认20、最大50，未知版本/错误家庭、运行筛选或页大小返回422。旧GET `/builder/calls?page=1`继续兼容；旧调用方仍使用页码语义。
+
+每次读页独立使用同一已提交数据库快照读取总数、记录、核对决定与家庭版本；跨页不是历史快照，总数与记录状态可改变。游标是带范围的读取位置，不是签名或来源证明。上一页重新读取原位置；刷新回到第一页并显示新调用。读取失败保留当前页；未提交核对输入按调用编号留在当前页面内，刷新浏览器不会保存这些输入。
+
+`tests/k1_builder_repair_api_acceptance.py`在一次性库验证同时间UUID顺序与页间新增、游标边界、原接口、家庭404/422及孩子403。55条合成Denied记录仅作为排序夹具，之后清除，不当作真实提供者调用。设BUILDER_CURSOR_BROWSER=1时再运行实际隔离页面翻页、刷新与受控503恢复专项；浏览器需要已构建页面及可用Chromium。

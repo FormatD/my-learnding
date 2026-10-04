@@ -1,0 +1,24 @@
+import {test,expect} from '@playwright/test';
+test('ledger uses cursor pages and preserves displayed page on read failure',async({page})=>{
+ test.skip(!process.env.BUILDER_CURSOR_USER);
+ await page.goto('/');
+ await page.getByLabel('家长用户名').fill(process.env.BUILDER_CURSOR_USER!);
+ await page.getByLabel('家长密码').fill(process.env.BUILDER_CURSOR_PASSWORD!);
+ await page.getByRole('button',{name:'登录',exact:true}).click();
+ const firstRead=page.waitForResponse(r=>r.url().includes('/builder/calls/window?')&&r.status()===200);
+ await page.getByRole('button',{name:/辅助建库/}).click();
+ const first=await (await firstRead).json();expect(first.calls).toHaveLength(20);
+ const work=page.getByRole('region',{name:'建库调用账本'});
+ await expect(work.locator('article')).toHaveCount(20);
+ const secondRead=page.waitForResponse(r=>r.url().includes('/builder/calls/window?')&&r.url().includes('cursor=')&&r.status()===200);
+ await work.getByRole('button',{name:'下一页'}).click();const second=await (await secondRead).json();
+ expect(second.calls).toHaveLength(20);expect(second.calls.every((c:any)=>!first.calls.some((f:any)=>f.id===c.id))).toBeTruthy();
+ await expect(work).toContainText('第 2 页');
+ await page.route('**/api/v1/builder/calls/window?*',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({title:'受控分页读取失败'})}));
+ await work.getByRole('button',{name:'下一页'}).click();await expect(work.getByRole('alert')).toHaveText('受控分页读取失败');await expect(work).toContainText('第 2 页');await expect(work.locator('article')).toHaveCount(20);
+ await page.unroute('**/api/v1/builder/calls/window?*');
+ await work.getByRole('button',{name:'上一页'}).click();await expect(work).toContainText('第 1 页');
+ await expect(work.getByRole('button',{name:'上一页'})).toBeDisabled();
+ await work.getByRole('button',{name:'下一页'}).click();await expect(work).toContainText('第 2 页');
+ await work.getByRole('button',{name:'刷新调用账本'}).click();await expect(work).toContainText('第 1 页');
+});
