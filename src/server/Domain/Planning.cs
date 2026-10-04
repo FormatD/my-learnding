@@ -122,6 +122,7 @@ public static class Planning
         foreach (var o in selection.Selected)
         {
             var task=new StudyTask { GoalSnapshots=Json.Write(goalOptions.Where(g=>g.Key==o.Key).Select(g=>Goals.Snapshot(g.Goal)).ToArray()),FamilyId=s.FamilyId,StudentId=s.Id,ReleaseId=release.Id,Title=o.Title,Type=o.Type,Minutes=o.Minutes,Mandatory=o.Mandatory,KCId=o.KCId,QuestionId=o.QuestionId,ReviewTargetId=o.ReviewTargetId,ReasonCode=o.ReasonCode,Reason=o.Reason,ResourceRef=o.ResourceRef,ResourceUrl=o.ResourceUrl };
+            if(o.Type=="Resource"&&o.Key.StartsWith("explain:",StringComparison.Ordinal)){var resource=content.Resources.Single(r=>o.Key==$"explain:{o.KCId}:{r.Id}");ResourceFiles.Bind(task,resource);}
             db.Tasks.Add(task); db.Placements.Add(new() { FamilyId=s.FamilyId,RevisionId=rev.Id,TaskId=task.Id,Sequence=index++ });
         }
         return rev; // Generating a draft does not replace the currently executable plan.

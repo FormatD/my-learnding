@@ -74,8 +74,8 @@ public static class FamilyData
             var data=new SortedDictionary<string,object>(StringComparer.Ordinal);
             foreach(var type in PrivateTypes.Where(t=>t!=typeof(Account) && t!=typeof(AuthSession) && t!=typeof(CommandRecord) && t!=typeof(PrivateFile)))data[type.Name]=await (Task<object>)typeof(FamilyData).GetMethod(nameof(ReadRows),BindingFlags.Static|BindingFlags.NonPublic)!.MakeGenericMethod(type).Invoke(null,[db,family.Id,ctx.RequestAborted])!;
             var members=await (from membership in db.Set<FamilyMembership>() join account in db.Accounts on membership.AccountId equals account.Id where membership.FamilyId==family.Id select new {account.Id,account.FamilyId,account.UserName,membership.Roles,account.CreatedAt}).ToArrayAsync();
-            var files=await db.Set<PrivateFile>().AsNoTracking().Where(f=>f.FamilyId==family.Id).OrderBy(f=>f.Id).Select(f=>new {f.Id,f.FamilyId,f.Name,f.MimeType,f.Hash,size=f.Bytes.Length}).ToArrayAsync(ctx.RequestAborted);
-            var metadata=files.Select(f=>new {f.Id,f.FamilyId,f.Name,f.MimeType,f.Hash,f.size,archivePath=$"files/{f.Id}/{FileName(new PrivateFile{Name=f.Name,MimeType=f.MimeType})}"}).ToArray();
+            var files=await db.Set<PrivateFile>().AsNoTracking().Where(f=>f.FamilyId==family.Id).OrderBy(f=>f.Id).Select(f=>new {f.Id,f.FamilyId,f.Name,f.MimeType,f.Hash,f.Purpose,size=f.Bytes.Length}).ToArrayAsync(ctx.RequestAborted);
+            var metadata=files.Select(f=>new {f.Id,f.FamilyId,f.Name,f.MimeType,f.Hash,f.Purpose,f.size,archivePath=$"files/{f.Id}/{FileName(new PrivateFile{Name=f.Name,MimeType=f.MimeType})}"}).ToArray();
             var path=ExportCleanup.NewPath(config,family.Id);
             try
             {

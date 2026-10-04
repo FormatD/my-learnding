@@ -25,7 +25,7 @@ def verify(document,client,env):
             assert ('Origin' in headers)==write
             if write:assert not headers['Origin'].get('required',False)
             assert ('Idempotency-Key' in headers)==(write and not anonymous)
-            expected_version=write and not anonymous and (method in {'put','patch'} or path.endswith((':publish',':decide',':correct',':adjust')))
+            expected_version=write and not anonymous and (method in {'put','patch'} or path=='/api/v1/content/resource-files' or path.endswith((':publish',':decide',':correct',':adjust')))
             assert ('If-Match' in headers)==expected_version
             if write:assert headers['X-Learning-Request']['required'] and headers['X-Learning-Request']['schema']['enum']==['1']
             if write and not anonymous: assert headers['Idempotency-Key']['schema']['minLength']==8 and headers['Idempotency-Key']['schema']['maxLength']==100

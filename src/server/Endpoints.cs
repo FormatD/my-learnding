@@ -13,7 +13,7 @@ public record TransitionInput(string Status,string Reason="",int? ActualMinutes=
 public record AnswerInput(Guid ClientSubmissionId,string Answer);
 public record HintInput(int Level);
 public record GradeInput(string Result,string Reason,ObservedStep[]? Steps=null,string? PreviewHash=null);
-public record ManualTaskInput(string Title,int Minutes,string ResourceRef,string Type="Resource",bool Mandatory=true,Guid? QuestionId=null);
+public record ManualTaskInput(string Title,int Minutes,string ResourceRef,string Type="Resource",bool Mandatory=true,Guid? QuestionId=null,[property:System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] Guid? ResourceId=null);
 public record AdjustInput(Guid[] TaskIds,Guid[] LockedIds,string Reason);
 public record ReasonInput(string Reason);
 public static class Endpoints
@@ -158,7 +158,7 @@ public static class Endpoints
         {
             var a=ctx.Actor();a.Require("Parent");var rev=await Owned<PlanRevision>(db,a,id);var plan=await Owned<Plan>(db,a,rev.PlanId);
             if (rev.Status!="Draft") throw new ApiError(409,"IMMUTABLE","请重新生成草稿再调整。");
-            if (input.Minutes<1 || input.Minutes>180 || string.IsNullOrWhiteSpace(input.ResourceRef)) throw new ApiError(422,"INVALID_TASK","任务需要时长和可执行说明。");
+            if (input.Minutes<1 || input.Minutes>180 || string.IsNullOrWhiteSpace(input.ResourceRef)&&input.ResourceId==null) throw new ApiError(422,"INVALID_TASK","任务需要时长和可执行说明。");
             if (input.Type=="Schoolwork" && rev.Reserved>0) throw new ApiError(422,"SCHOOLWORK_DOUBLE_COUNT","请先取消预留作业时间。");
             Question? question=null;
             if(input.QuestionId.HasValue)
@@ -168,7 +168,9 @@ public static class Endpoints
                 question=Json.Read<Catalog>(release.Payload).Questions.SingleOrDefault(q=>q.Id==input.QuestionId)??throw new ApiError(422,"QUESTION_NOT_IN_PLAN_RELEASE","请选择本计划内容版本中的题目。");
             }
             if(!new[] {"Schoolwork","Resource","Practice"}.Contains(input.Type) || input.Type=="Practice" && question==null || string.IsNullOrWhiteSpace(input.Title))throw new ApiError(422,"INVALID_TASK","请选择任务类型并填写标题；练习任务需要正式题目。");
-            var task=new StudyTask { FamilyId=a.FamilyId,StudentId=plan.StudentId,ReleaseId=rev.ReleaseId,QuestionId=question?.Id,KCId=question?.Mappings.FirstOrDefault(m=>m.Mode!="None")?.KCId,Title=input.Title,Type=question!=null?"Practice":input.Type,Minutes=input.Minutes,ResourceRef=input.ResourceRef,Mandatory=input.Mandatory,Locked=true,ReasonCode="PARENT_LOCKED",Reason="家长安排的必做任务" };db.Tasks.Add(task);
+            Resource? resource=null;
+            if(input.ResourceId!=null){if(input.Type!="Resource"||question!=null)throw new ApiError(422,"INVALID_TASK","正式学习资源须使用资源任务类型。");var release=await Owned<Release>(db,a,rev.ReleaseId);if(release.Withdrawn)throw new ApiError(422,"CONTENT_WITHDRAWN","该内容版本已撤回。");resource=Json.Read<Catalog>(release.Payload).Resources.SingleOrDefault(r=>r.Id==input.ResourceId)??throw new ApiError(422,"RESOURCE_NOT_IN_PLAN_RELEASE","请选择本计划固定版本中的学习资源。");if(resource.FileId!=null)await ResourceFiles.Resolve(db,a.FamilyId,resource);}
+            var task=new StudyTask { FamilyId=a.FamilyId,StudentId=plan.StudentId,ReleaseId=rev.ReleaseId,QuestionId=question?.Id,KCId=question?.Mappings.FirstOrDefault(m=>m.Mode!="None")?.KCId,Title=input.Title,Type=question!=null?"Practice":input.Type,Minutes=input.Minutes,ResourceRef=input.ResourceRef,Mandatory=input.Mandatory,Locked=true,ReasonCode="PARENT_LOCKED",Reason="家长安排的必做任务" };if(resource!=null)ResourceFiles.Bind(task,resource);db.Tasks.Add(task);
             db.Placements.Add(new() { FamilyId=a.FamilyId,RevisionId=id,TaskId=task.Id,Sequence=await db.Placements.CountAsync(p => p.RevisionId==id) });rev.InputHash=Content.Hash(rev.InputHash+Json.Write(input));await Planning.RefreshBudget(db,rev);return TypedResults.Ok(task);
         });
         api.MapPost("/plans/{id:guid}:adjust",async (Guid id,AdjustInput input,Database db,HttpContext ctx) =>
@@ -311,6 +313,7 @@ public static class Endpoints
         ReviewTargetConfirmations.Map(api);
         Deferral.Map(api);
         ResourceIssues.Map(api);
+        ResourceFiles.Map(api);
     }
     static void ValidateStudent(StudentInput input)
     {

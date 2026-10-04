@@ -123,11 +123,11 @@ def verify(document, client, registered):
         assert set(properties(root))==expected
     print('PASS same anonymous property types with different names have independent schemas')
 
-    samples={'image/png':bytes([137,80,78,71,13,10,26,10])+b'contract', 'image/jpeg':b'\xff\xd8\xffcontract', 'application/pdf':b'%PDF-1.4\ncontract'}
+    samples={'image/png':bytes([137,80,78,71,13,10,26,10])+b'contract', 'image/jpeg':b'\xff\xd8\xffcontract', 'application/pdf':b'%PDF-1.4\ncontract','audio/wav':b'RIFF'+b'\x00'*4+b'WAVE','audio/mpeg':b'ID3contract'}
     media=paths['/api/v1/files/{id}']['get']['responses']['200']['content']
     assert set(media)==set(samples)
     for mime, data in samples.items():
-        file=client.request('/files',{'name':'local.dat','mimeType':mime,'base64':base64.b64encode(data).decode()},expected=201)
+        file=client.request('/content/resource-files' if mime.startswith('audio/') else '/files',{'name':'local.dat','mimeType':mime,'base64':base64.b64encode(data).decode()},expected=201)
         with client.http.open(urllib.request.Request(api_acceptance.BASE+'/files/'+file['id'])) as downloaded:
             assert downloaded.status==200 and downloaded.headers.get_content_type()==mime and downloaded.read()==data
         assert media[mime]['schema']=={'type':'string','format':'binary'}
@@ -140,4 +140,4 @@ def verify(document, client, registered):
             assert 'attachment' in downloaded.headers.get('Content-Disposition','')
             if mime=='application/json': assert json.loads(data)['student']['id']==sid
             else: assert data.startswith(b'PK')
-    print('PASS actual private PDF/PNG/JPEG and student JSON/family ZIP download media and bytes')
+    print('PASS actual private PDF/PNG/JPEG/WAV/MP3 and student JSON/family ZIP download media and bytes')

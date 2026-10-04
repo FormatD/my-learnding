@@ -184,6 +184,10 @@
     {
       "id": "20261004172710_BoundedCheckpointDeltas",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261004224054_PrivateLearningResources",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -10487,6 +10491,14 @@
           "identity": "",
           "generated": "",
           "default": null
+        },
+        {
+          "name": "Purpose",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [
@@ -12366,6 +12378,22 @@
           "identity": "",
           "generated": "",
           "default": "'[]'::text"
+        },
+        {
+          "name": "ResourceId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ResourceRevisionId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
         }
       ],
       "constraints": [

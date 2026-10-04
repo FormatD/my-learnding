@@ -48,7 +48,8 @@ public static class Content
         foreach (var (r,index) in c.Resources.Select((r,i)=>(r,i)))
         {
             if(r.Id==Guid.Empty || r.RevisionId==Guid.Empty)errors.Add($"第 {index+1} 个资源: 稳定身份或修订身份无效");
-            if (string.IsNullOrWhiteSpace(r.Title) || r.Minutes is <1 or >180 || r.KCIds.Length==0 || r.KCIds.Any(id => !ids.Contains(id)) || (string.IsNullOrWhiteSpace(r.PaperReference) && r.Url == null)) errors.Add($"第 {index+1} 个资源: 资源不可执行");
+            if (string.IsNullOrWhiteSpace(r.Title) || r.Minutes is <1 or >180 || r.KCIds.Length==0 || r.KCIds.Any(id => !ids.Contains(id)) || (string.IsNullOrWhiteSpace(r.PaperReference) && r.Url == null && r.FileId==null)) errors.Add($"第 {index+1} 个资源: 资源不可执行");
+            if((r.FileId==null)!=(r.FileSnapshotHash==null)||r.FileId==Guid.Empty||r.FileId!=null&&(r.RevisionId==null||!System.Text.RegularExpressions.Regex.IsMatch(r.FileSnapshotHash??"","^[a-f0-9]{64}$")))errors.Add($"第 {index+1} 个资源: 文件须有准确快照与独立资源修订");
             if (r.Url != null && (!Uri.TryCreate(r.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https")) errors.Add($"第 {index+1} 个资源: 外链只允许 HTTPS");
         }
         if(c.Resources.Select(r=>r.Id).Distinct().Count()!=c.Resources.Length || c.Lessons.Select(l=>l.Id).Distinct().Count()!=c.Lessons.Length)errors.Add("资源/课时身份必须唯一");

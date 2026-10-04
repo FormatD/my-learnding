@@ -33,11 +33,21 @@ while IFS=, read -r task_family_id task_student_id; do
   case "$task_family_id,$task_student_id" in *[!0-9a-f,-]*) echo 'Invalid deletion ledger' >&2; exit 1;; esac
   test -n "$task_student_id" || continue
   psql --set=ON_ERROR_STOP=1 --set=student="$task_student_id" --set=family="$task_family_id" <<'SQL'
+SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='PrivateFile' AND column_name='Purpose') AS file_has_purpose \gset
+\if :file_has_purpose
+DELETE FROM "PrivateFile" f
+WHERE f."Purpose" IS DISTINCT FROM 'LearningResource'
+  AND f."FamilyId" = :'family'::uuid
+  AND f."Id" IN (SELECT p."FileId" FROM "PaperWrong" p WHERE p."StudentId" = :'student'::uuid)
+  AND NOT EXISTS (SELECT 1 FROM "PaperWrong" p WHERE p."FileId" = f."Id" AND p."StudentId" <> :'student'::uuid)
+  AND NOT EXISTS (SELECT 1 FROM "Sources" s WHERE s."FamilyId" = :'family'::uuid AND s."Hash" = f."Hash");
+\else
 DELETE FROM "PrivateFile" f
 WHERE f."FamilyId" = :'family'::uuid
   AND f."Id" IN (SELECT p."FileId" FROM "PaperWrong" p WHERE p."StudentId" = :'student'::uuid)
   AND NOT EXISTS (SELECT 1 FROM "PaperWrong" p WHERE p."FileId" = f."Id" AND p."StudentId" <> :'student'::uuid)
   AND NOT EXISTS (SELECT 1 FROM "Sources" s WHERE s."FamilyId" = :'family'::uuid AND s."Hash" = f."Hash");
+\endif
 DELETE FROM "Audits" a WHERE a."FamilyId"=:'family'::uuid AND (
   (CASE WHEN a."Action"='TaskTransition' THEN a."Details"::jsonb ELSE '{}'::jsonb END)->>'studentId'=:'student'
   OR (CASE WHEN a."Action"='PlanAdjusted' THEN a."Details"::jsonb ELSE '{}'::jsonb END)->>'planId'

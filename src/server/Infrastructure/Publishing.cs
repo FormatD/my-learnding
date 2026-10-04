@@ -25,6 +25,7 @@ public static class Publishing
 {
     public static async Task Register(Database db,Release release,ContentReviewRecord? review=null)
     {
+        await ResourceFiles.Validate(db,release.FamilyId,Json.Read<Catalog>(release.Payload));
         var c=Json.Read<Catalog>(release.Payload);await CatalogDirectory.ValidateSources(db,release.FamilyId,c);
         var owners=c.Questions.Select(q=>new MappingOwnerSelection("Question",q.Id,q.RevisionId)).Concat(c.Lessons.Where(l=>l.RevisionId!=null).Select(l=>new MappingOwnerSelection("Lesson",l.Id,l.RevisionId!.Value))).Concat(c.Resources.Where(r=>r.RevisionId!=null).Select(r=>new MappingOwnerSelection("Resource",r.Id,r.RevisionId!.Value))).ToArray();
         var ownerRevisions=owners.Select(o=>o.OwnerRevisionId).ToArray();

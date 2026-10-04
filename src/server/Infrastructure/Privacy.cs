@@ -15,7 +15,9 @@ public static class Privacy
             var attempts=await db.Attempts.Where(x => x.StudentId==id).OrderBy(x => x.Sequence).ToListAsync();var aids=attempts.Select(x => x.Id).ToArray();
             var plans=await db.Plans.Where(x => x.StudentId==id).ToListAsync();var pids=plans.Select(x => x.Id).ToArray();var revisions=await db.PlanRevisions.Where(x => pids.Contains(x.PlanId)).ToListAsync();var rids=revisions.Select(x => x.Id).ToArray();
             var paperWrongs=await db.Set<PaperWrong>().Where(x=>x.StudentId==id).ToListAsync();
-            var fileIds=paperWrongs.Where(x=>x.FileId!=null).Select(x=>x.FileId!.Value).Distinct().ToArray();
+            var resourceReleaseIds=revisions.Select(r=>r.ReleaseId).Append(s.ActiveReleaseId??Guid.Empty).Distinct().ToArray();
+            var resourceFiles=(await db.Releases.Where(r=>r.FamilyId==a.FamilyId&&resourceReleaseIds.Contains(r.Id)).Select(r=>r.Payload).ToArrayAsync()).SelectMany(payload=>Json.Read<Catalog>(payload).Resources).Where(r=>r.FileId!=null).Select(r=>r.FileId!.Value);
+            var fileIds=paperWrongs.Where(x=>x.FileId!=null).Select(x=>x.FileId!.Value).Concat(resourceFiles).Distinct().ToArray();
             var corrections=await db.Set<CorrectionBatch>().Where(x=>x.StudentId==id).ToListAsync();var correctionIds=corrections.Select(x=>x.Id).ToArray();
             var sessionRows=await db.Sessions.Where(x=>x.StudentId==id).ToListAsync();
             var correctionItems=await db.Set<CorrectionItem>().Where(x=>correctionIds.Contains(x.BatchId)).ToListAsync();
@@ -49,7 +51,7 @@ public static class Privacy
             // Cached command responses may contain answers or the student's name.
             db.Commands.RemoveRange(await db.Commands.Where(x => x.FamilyId==a.FamilyId).ToListAsync());
             var fileIds=await db.Set<PaperWrong>().Where(p => p.StudentId==id && p.FileId!=null).Select(p => p.FileId).ToArrayAsync();
-            var files=await db.Set<PrivateFile>().Where(f => fileIds.Contains(f.Id)).ToListAsync();
+            var files=await db.Set<PrivateFile>().Where(f => fileIds.Contains(f.Id)&&f.Purpose!="LearningResource").ToListAsync();
             foreach (var f in files)
                 if (!await db.Set<PaperWrong>().AnyAsync(p => p.FileId==f.Id && p.StudentId!=id) && !await db.Sources.AnyAsync(source => source.FamilyId==a.FamilyId && source.Hash==f.Hash)) db.Remove(f);
             // Retain only opaque identifiers outside database backups to prevent restoration resurrection.

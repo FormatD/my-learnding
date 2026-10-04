@@ -1,7 +1,7 @@
 using Microsoft.OpenApi;
 
 namespace Learning;
-public record DownloadResponseMetadata(string[] MediaTypes);
+public record DownloadResponseMetadata(string[] MediaTypes,bool SupportsRanges=false);
 public record NullableResponseMetadata;
 // Additive fields may be absent when a client reads an older server response.
 public record OptionalResponseFieldsMetadata(params string[] Fields);
@@ -26,6 +26,14 @@ public static class OpenApiResponses
                     Description="Private file download",
                     Content=download.MediaTypes.ToDictionary(t=>t,t=>new OpenApiMediaType {Schema=new OpenApiSchema{Type=JsonSchemaType.String,Format="binary"}})
                 };
+                if(download.SupportsRanges)
+                {
+                    operation.Parameters??=[];
+                    operation.Parameters.Add(new OpenApiParameter{Name="Range",In=ParameterLocation.Header,Required=false,Description="Optional HTTP byte range for this private task file.",Schema=new OpenApiSchema{Type=JsonSchemaType.String}});
+                    var rangeHeader=new Dictionary<string,IOpenApiHeader>{{"Content-Range",new OpenApiHeader{Description="Returned byte boundary or complete length for an unsatisfiable range.",Schema=new OpenApiSchema{Type=JsonSchemaType.String}}}};
+                    operation.Responses["206"]=new OpenApiResponse{Description="Private file byte range",Content=download.MediaTypes.ToDictionary(t=>t,t=>new OpenApiMediaType{Schema=new OpenApiSchema{Type=JsonSchemaType.String,Format="binary"}}),Headers=rangeHeader};
+                    operation.Responses["416"]=new OpenApiResponse{Description="Unsatisfiable byte range; empty body",Headers=rangeHeader};
+                }
             }
             if(metadata.OfType<NullableResponseMetadata>().Any())
             {

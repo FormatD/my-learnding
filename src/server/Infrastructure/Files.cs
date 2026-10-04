@@ -5,6 +5,7 @@ using UglyToad.PdfPig;
 namespace Learning;
 public class PrivateFile : Row
 {
+    [System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] public string? Purpose { get; set; }
     public string Name { get; set; } = "";
     public string MimeType { get; set; } = "";
     public string Hash { get; set; } = "";
@@ -46,9 +47,9 @@ public static class Files
         {
             var a=ctx.Actor();if (a.Role=="Child") throw new ApiError(404,"NOT_FOUND","文件不存在。");
             var file=await db.Set<PrivateFile>().SingleOrDefaultAsync(f => f.Id==id && f.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","文件不存在。");
-            if(!a.Can("Parent") && (!a.Can("ContentEditor") || !await db.Sources.AnyAsync(s=>s.FamilyId==a.FamilyId && s.FileId==file.Id)))throw new ApiError(404,"NOT_FOUND","文件不存在。");
+            if(!a.Can("Parent") && (!a.Can("ContentEditor") || file.Purpose!="LearningResource" && !await db.Sources.AnyAsync(s=>s.FamilyId==a.FamilyId && s.FileId==file.Id)))throw new ApiError(404,"NOT_FOUND","文件不存在。");
             return Results.File(file.Bytes,file.MimeType,file.Name);
-        }).WithMetadata(new DownloadResponseMetadata(["application/pdf","image/png","image/jpeg"]));
+        }).WithMetadata(new DownloadResponseMetadata(["application/pdf","image/png","image/jpeg","audio/wav","audio/mpeg"]));
         api.MapPost("/content/pdf-sources",async Task<Results<Ok<Source>,Accepted<PDFSourceResponse>>> (PDFInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");var file=await db.Set<PrivateFile>().SingleOrDefaultAsync(f => f.Id==input.FileId && f.FamilyId==a.FamilyId && f.MimeType=="application/pdf") ?? throw new ApiError(404,"NOT_FOUND","PDF 不存在。");

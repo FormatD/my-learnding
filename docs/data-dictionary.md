@@ -63,6 +63,7 @@
 | 20261003205749_PlanProjectionSnapshot | 10.0.4 |
 | 20261003220215_ReviewTargetConfirmations | 10.0.4 |
 | 20261004172710_BoundedCheckpointDeltas | 10.0.4 |
+| 20261004224054_PrivateLearningResources | 10.0.4 |
 
 ## Accounts
 
@@ -2105,6 +2106,7 @@
 | Bytes | bytea | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| Purpose | text | 是 | 无 |
 
 约束：
 
@@ -2485,6 +2487,8 @@
 | TrackedSeconds | integer | 否 | 0 |
 | ResourceUrl | text | 是 | 无 |
 | GoalSnapshots | text | 否 | '[]'::text |
+| ResourceId | uuid | 是 | 无 |
+| ResourceRevisionId | uuid | 是 | 无 |
 
 约束：
 
