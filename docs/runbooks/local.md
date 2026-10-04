@@ -180,3 +180,24 @@ API 错误带 traceId，可在私有应用日志定位。模型不可用时继�
 
 
 状态恢复和分支优化（2026-10-05）：当前服务已采用复合证据引用索引和直接内存Snapshot新世代分支，避免重复上下文扫描及两次整份JSON往返；旧状态格式、恢复核对和历史保护保持。61/61规则、整套后台/故障/契约检查及主服务连续作答/历史更正/取消3/3（14.1秒）通过，健康200。115路径164结构、69表45迁移不变，无新迁移或本轮备份恢复。完整状态累计存储成本仍未缩减；方法、合成对比范围及退出条件见[增量评估手册](incremental-assessment.md)。
+
+## 本地应用与数据库自动恢复（2026-10-05）
+
+macOS 当前用户登录服务 `local.learning.runtime.ff5dcd2f8fa8` 已安装。它运行 `scripts/local_runtime.py`，使用私有 `.local/runtime-config.json`，每两秒核对本项目 PG16 数据目录、端口及应用进程；数据库停止后启动既有集群，数据库启动时间变化时重启应用，清除旧连接池。应用退出后重新启动；管理进程退出由 launchd 重新拉起，并核对 PID、启动时间、用户、完整命令和配置摘要后清理记录中的孤儿应用。其他服务占用端口时记录明确错误，不停止它们。
+
+登录时只运行已构建的 `src/server/bin/Debug/net10.0/Learning.Api.dll` 与已有网页，不安装依赖、不构建、不初始化数据库。应用本身仍执行既有迁移及后台恢复。首次准备继续使用开发启动方式；启用自动服务前必须已有 PG16 集群、目标数据库及完整构建。配置字段为绝对路径 root/dotnet/postgresBin/dataDir/stateFile、databasePort/apiPort、database/user 和可空 backupConfig，配置须当前用户持有、权限600，状态目录须700。此实现使用本机信任认证，不支持直接对外部署。
+
+准备和安装：
+
+```sh
+python3 scripts/install_runtime_agent.py --config .local/runtime-config.json
+python3 scripts/install_runtime_agent.py --config .local/runtime-config.json --install
+```
+
+准备先生成 `.local/launchagents/<项目标签>.plist`；安装只操作当前用户对应项目的 LaunchAgent，拒绝无关已有配置或同名已载入服务。现有备份 LaunchAgent 独立保留。状态 `.local/runtime-state.json` 分别记录 Starting/Healthy/Unavailable/Stopped；日志为 runtime-api.log、runtime-postgres.log 和 runtime-agent.log，均私有保存。Healthy 同时要求数据库目录身份一致、记录的应用 PID 实际监听及健康接口成功；它不是整套业务或备份验收证明。
+
+停用时执行 `launchctl bootout gui/$(id -u)/local.learning.runtime.ff5dcd2f8fa8`，应用会有序停止，数据库保留运行。如要取消下次登录启动，在停用后删除本项目对应的 `~/Library/LaunchAgents/local.learning.runtime.ff5dcd2f8fa8.plist`。改配置或更新构建先停用服务，完成构建/配置后再安装启动；不要在受管理服务运行时另开 `dev.sh`。不同目录副本的项目标签不同，以上标签仅对应当前工作区。
+
+专项 `python3 tests/local_runtime_acceptance.py` 使用临时独立 PG16 集群和真实应用，验证停止集群启动、实际学生记录、应用强制退出、数据库停止/新连接、管理进程强制退出与孤儿处理、重复管理器拒绝、优雅停止、陌生端口及数据库身份、公开/符号链接配置和无关登录项拒绝；结束清理测试集群。可用 RUNTIME_POSTGRES_BIN 指定PG16工具目录。此专项针对当前本机工具和构建，不纳入远程Ubuntu CI，也未声称跨平台验收。
+
+本机实际 launchd 管理下的应用强制退出与管理进程强制退出均已恢复，数据库身份及健康200核对通过。并未执行整机重启或退出/重新登录；RunAtLoad配置与实际系统管理运行不替代该验收。独立物理磁盘、连续RPO、正式灾难切换RTO仍开放。
