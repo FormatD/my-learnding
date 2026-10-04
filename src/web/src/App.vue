@@ -129,7 +129,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
       <a class="brand" href="#" @click.prevent="navigate(isChild||can('Parent')?'today':'content')"><span class="brand-mark">步</span><span>小步<small>家庭学习系统</small></span></a>
       <div class="family-label">{{ me.family.name }}</div>
       <nav aria-label="页面导航"><template v-if="isChild||can('Parent')"><button :class="{selected:page==='today'}" @click="navigate('today')">☀　今日学习</button></template><template v-if="can('Parent')"><button @click="navigate('plan')">▤　进度与计划</button><button @click="navigate('assessment')">◎　证据与复习</button><button @click="navigate('report')">▥　每周回顾</button></template><template v-if="!isChild"><div class="nav-label">内容工作台</div><button @click="navigate('content')">▧　内容与发布</button><button v-if="can('ContentEditor')" @click="navigate('builder')">✧　辅助建库</button><button v-if="can('Parent')" @click="navigate('settings')">⚙　家庭设置</button></template></nav>
-      <div class="sidebar-foot"><span class="privacy-dot"></span>本地私有 · {{ isChild ? '孩子模式' : can('Parent') ? '家长模式' : '内容模式' }}<button class="text-button" @click="logout">{{isChild?'返回家长登录':'退出登录'}}</button></div>
+      <div class="sidebar-foot"><span class="privacy-dot"></span>本地私有 · {{ isChild ? '孩子模式' : can('Parent') ? '家长模式' : '内容模式' }}<button class="text-button" @click="logout" :disabled="busy">{{isChild?'返回家长登录':'退出登录'}}</button></div>
     </aside>
     <main :class="{'login-main':!me}">
       <div v-if="error" class="alert error" role="alert">{{ error }}</div><div v-if="notice" class="alert success" role="status">{{ notice }}</div><div v-if="offline" class="alert error">当前离线，无法提交或同步。恢复网络后再试。</div>

@@ -27,6 +27,7 @@ python3 tests/builder_candidate_review_acceptance.py
 python3 tests/unit_pack_service_acceptance.py
 python3 tests/builder_retrieval_acceptance.py
 python3 tests/kc_descriptions_api_acceptance.py
+python3 tests/kc_types_api_acceptance.py
 python3 tests/builder_retrieval_api_acceptance.py
 python3 tests/rebuild_job_fault_acceptance.py
 

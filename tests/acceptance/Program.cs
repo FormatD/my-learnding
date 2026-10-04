@@ -20,6 +20,7 @@ AssessmentOutput Replay(params AssessmentInput[] inputs)=>Assessment.Replay(fami
 Test("评估前缀流式双摘要保持原JSON字节与单次枚举",AssessmentPrefixHashCases.Run);
 Test("完整评估输入流式摘要保留任务流程字段及原JSON字节",AssessmentInputHashCases.Run);
 Test("评估状态差量逐字恢复、字段变动与错误格式拒绝",AssessmentStateDeltaCases.Run);
+Test("设计六类能力、既有误区兼容与原候选协议保持",KCTypesCases.Run);
 Test("能力学科年级元数据、旧JSON保持及同学科跨年级检索",KCMetadataCases.Run);
 Test("M0 混合运算 20 题发布校验",()=>{var c=Content.Fixture();Eq(c.Questions.Length,20);Eq(Content.Validate(c).Length,0);});
 Test("原创题包身份稳定、目录合法、变式分组与人工步骤映射",()=>{

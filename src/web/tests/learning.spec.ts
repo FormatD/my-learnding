@@ -106,7 +106,7 @@ test('空白草稿补齐能力、测量题和资源后发布进入孩子学习',
   await page.getByRole('button',{name:'新建空白内容草稿'}).click();
   await page.getByRole('button',{name:'新增独立能力'}).click();
   const kc=page.locator('[aria-label="能力 1"]');
-  await kc.getByLabel('能力名称').fill('确定乘加运算顺序');
+  await kc.getByLabel('能力名称').fill('确定乘加运算顺序');await expect(kc.getByLabel('能力类型').locator('option')).toHaveCount(7);await kc.getByLabel('能力类型').selectOption('Strategy');
   await kc.getByLabel('独立可测行为').fill('独立先算乘法再算加法');
   await kc.getByLabel('测量边界与排除范围').fill('不含括号，表内乘法，不推断阅读能力');
   await page.getByRole('button',{name:'保存并退回待审核'}).click();
@@ -128,6 +128,8 @@ test('空白草稿补齐能力、测量题和资源后发布进入孩子学习',
   await page.screenshot({path:'../../test-results/content-editor-tablet.png',fullPage:true});
   await page.getByRole('button',{name:'保存并退回待审核'}).click();
   await page.getByRole('button',{name:'审核答案与映射后发布'}).click();
+  await expect(page.getByRole('heading',{name:'内容版本 1',exact:true})).toBeVisible();
+  const classified=await page.evaluate(async()=>{const data=await(await fetch('/api/v1/content')).json();return JSON.parse(data.releases[0].payload).kcs[0];});expect(classified.type).toBe('Strategy');
   await page.getByRole('button',{name:'绑定当前学生'}).click();
   await page.getByRole('button',{name:/进度与计划/}).click();
   await page.getByRole('combobox',{name:'课时',exact:true}).selectOption({label:'自编混合运算小练习'});
@@ -137,7 +139,7 @@ test('空白草稿补齐能力、测量题和资源后发布进入孩子学习',
   await expect(page.getByText('这次做对了！',{exact:true})).toBeVisible();await page.getByRole('button',{name:'完成这个任务 ✓'}).click();
   await page.getByRole('button',{name:'返回家长登录'}).click();await page.getByLabel('家长用户名').fill(name);await page.getByLabel('家长密码').fill(password);await page.getByRole('button',{name:'登录',exact:true}).click();
   await page.getByRole('button',{name:/内容与发布/}).click();await page.getByRole('button',{name:'创建新修订',exact:true}).click();await page.getByRole('button',{name:'编辑',exact:true}).click();
-  await expect(page.locator('[aria-label="能力 1"]').getByLabel('独立可测行为')).toHaveAttribute('readonly','');
+  await expect(page.locator('[aria-label="能力 1"]').getByLabel('独立可测行为')).toHaveAttribute('readonly','');await expect(page.locator('[aria-label="能力 1"]').getByLabel('能力类型')).toBeDisabled();await expect(page.locator('[aria-label="能力 1"]').getByLabel('能力类型')).toHaveValue('Strategy');
 });
 
 test('建库候选保留引用，审核草稿可继续编辑并发布',async({page})=>{

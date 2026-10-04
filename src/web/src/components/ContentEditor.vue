@@ -47,7 +47,7 @@ function save(){error.value='';for(const k of catalog.value!.kcs){for(const key 
       <p class="muted">这些描述由审核人填写，不从题目或教材推定。能力复杂度与每道题的难度分开记录；修改描述需要重新审核发布，不改变历史判分。</p>
       <label>独立可测行为<input v-model="k.behavior" :readonly="publishedIds.includes(k.id)" :disabled="busy"></label>
       <label>测量边界与排除范围<input v-model="k.boundary" :readonly="publishedIds.includes(k.id)" :disabled="busy"></label>
-      <label>能力类型<select v-model="k.type" :disabled="busy||publishedIds.includes(k.id)"><option value="Procedure">计算与操作</option><option value="Concept">概念理解</option><option value="Application">应用与建模</option></select></label>
+      <label>能力类型<select v-model="k.type" :disabled="busy||publishedIds.includes(k.id)"><option value="Procedure">计算与操作</option><option value="Concept">概念理解</option><option value="Representation">表征与转换</option><option value="Strategy">解题策略</option><option value="Application">应用与建模</option><option value="Expression">表达与说明</option><option value="Misconception">误区辨析（兼容已有类型）</option></select></label>
       <button @click="catalog!.kcs.splice(Number(index),1)" :disabled="busy||linked(k.id)">移除此能力</button><p v-if="linked(k.id)" class="muted">已有题目、资源、课时或前置关系引用，须先调整引用。</p>
     </div><button @click="addKC" :disabled="busy">新增独立能力</button>
   </details>
