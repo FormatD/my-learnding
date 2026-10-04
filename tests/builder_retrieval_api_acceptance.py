@@ -47,6 +47,12 @@ def main():
                 if os.environ.get('RETRIEVAL_BROWSER'):
                     browser_env=env.copy();browser_env.update(LEARNING_TEST_URL=origin,BUILDER_ALIAS_USER=fixture['userName'],BUILDER_ALIAS_PASSWORD=env['RETRIEVAL_PASSWORD'],BUILDER_ALIAS_ID=alias_candidate['id'],BUILDER_ALIAS_NAME=alias_candidate['name'],BUILDER_ALIAS_SOURCE=new['id'])
                     subprocess.run(['npm','run','test:e2e','--','tests/builder-alias-review.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env,check=True)
+                    # Explicit controlled compatibility/corruption fixtures, not historical program upgrades.
+                    subprocess.run(['psql','-v','ON_ERROR_STOP=1','-c',f'UPDATE "Candidates" SET "ReviewReason"=\'\', "ReviewedBy"=NULL, "ReviewedAt"=NULL WHERE "Id"=\'{new["id"]}\''],env=env,check=True,stdout=subprocess.DEVNULL)
+                    browser_env['BUILDER_ALIAS_CASE']='legacy';subprocess.run(['npm','run','test:e2e','--','tests/builder-alias-review.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env,check=True)
+                    subprocess.run(['psql','-v','ON_ERROR_STOP=1','-c',f'UPDATE "Candidates" SET "ExistingKCId"=NULL WHERE "Id"=\'{new["id"]}\''],env=env,check=True,stdout=subprocess.DEVNULL)
+                    browser_env['BUILDER_ALIAS_CASE']='mismatch';subprocess.run(['npm','run','test:e2e','--','tests/builder-alias-review.spec.ts','--workers=1'],cwd=root/'src/web',env=browser_env,check=True)
+
                 print('PASS 实际人工审核接口创建别名，新请求固定来源和摘要，实际后台命中同类型别名，审核上下文保留来源；原请求不改')
                 print('PASS 当前服务真实配置一项时，预先冻结两项任务实际后台仍返回两项，旧任务保留原片段方式；新请求真实使用一项且摘要不同，重复请求复用，原候选/配置字节不改')
     finally:

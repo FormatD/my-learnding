@@ -67,3 +67,12 @@ tests/builder_retrieval_acceptance.py使用明确受控的已接受别名来源�
 原Match.Score仍为实际模拟相似原值，不加关键词分数。新Match.RetrievalEvidence保存真实命中词片、关键词分数/名次、模拟相似名次、融合分数和原规则。某路未进入前列的名次为NULL，即使有少量词片命中也不假称进入前列；页面显示命中词片及各路排序，仍仅供人工核对。旧Match不补retrievalEvidence:null，旧配置不加keywordPolicy/fusionPolicy:null。后台和重试读取原方法与固定库，后续请求方法变化形成不同配置/输入摘要。
 
 算法参考：[Stanford信息检索教材中的BM25](https://nlp.stanford.edu/IR-book/html/htmledition/okapi-bm25-a-non-binary-model-1.html)及[原始RRF论文](https://cormack.uwaterloo.ca/cormacksigir09-rrf.pdf)。本地正值IDF、Unicode词片和候选列表策略已通过上述明确版本固定；引用方法不等于此教材上的召回质量已评测。真实Embedding、语义判断、独立学科/年级元数据及固定人工质量金标仍未关闭。
+
+
+## 核对别名的原审核来源（2026-10-04）
+
+命中别名后点击“核对别名审核来源”，复用本家庭内容维护者已有的候选审核上下文读取接口。显示原候选名称/行为/边界、实际审核依据与时间、来源标题/定位、真实引用及完整片段，不再要求家长凭候选UUID自行定位。读取的是当前保存的原审核记录；本次命中仍以运行创建时固定的别名为依据，不把当前读取当作重新计算或更换原快照。
+
+核对原候选身份、Accepted状态和相同ExistingKCId，原记录有ReviewedBy时须与固定别名来源相符。不一致则提示并停止展示为已核实来源，不替换原命中结果。旧原记录未保存理由/时间时明确标未知，不补造；旧缺失Reviewer也不回填。读取失败在该别名旁显示，当前候选的校正和依据保留。只读查看既不提交决定，也不采用这次读取的较新家庭版本覆盖当前候选保存时的版本；过期审核仍须明确重新读取。切换候选清空原来源查看状态，迟到结果不能写入新的候选。
+
+设置RETRIEVAL_BROWSER=1运行tests/builder_retrieval_api_acceptance.py，依次验证实际审核来源/校正保留/真实另一页写入后的412，以及明确受控的旧缺失审核字段和关联不一致两种夹具。后两项由隔离数据库明确修改测试来源记录，不是旧程序真实升级或正式人工教材审核证据。
