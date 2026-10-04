@@ -10,7 +10,12 @@ public static class Builder
     public static void Map(RouteGroupBuilder api)
     {
         Provenance.Map(api);BuilderCandidateReviews.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);BackgroundJobs.Map(api);ProjectionJobs.Map(api);DomainEvents.Map(api);
-        api.MapGet("/builder",async (Database db,HttpContext ctx) => { ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;return new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(),provider="Mock · 仅验证流程，不代表模型效果" }; });
+        api.MapGet("/builder",async (Database db,HttpContext ctx) =>
+        {
+            ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;var ct=ctx.RequestAborted;await using var transaction=await ReadSnapshot.Begin(db,ctx);
+            var response=new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(ct),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(ct),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(ct),provider="Mock · 仅验证流程，不代表模型效果" };
+            await transaction.CommitAsync(ct);return response;
+        });
         api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");if (string.IsNullOrWhiteSpace(input.Title) || input.Text.Length<5 || input.Text.Length>100_000 || string.IsNullOrWhiteSpace(input.UsageScope)) throw new ApiError(422,"INVALID_SOURCE","来源需标题、许可范围与 5～100000 字文本。");

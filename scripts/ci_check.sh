@@ -31,6 +31,7 @@ python3 tests/unit_pack_service_acceptance.py
 python3 tests/k1_mapping_api_acceptance.py
 python3 tests/k1_builder_api_acceptance.py
 python3 tests/k1_builder_repair_api_acceptance.py
+python3 tests/evaluation_capture_consistency_acceptance.py
 python3 tests/builder_retrieval_acceptance.py
 python3 tests/builder_v2_api_acceptance.py
 python3 tests/kc_descriptions_api_acceptance.py

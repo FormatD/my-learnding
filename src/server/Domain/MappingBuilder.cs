@@ -21,10 +21,10 @@ public static class MappingBuilder
         if(source.Questions.GroupBy(q=>q.RevisionId).Any(g=>g.Count()>1) || source.Resources.Where(r=>r.RevisionId!=null).GroupBy(r=>r.RevisionId).Any(g=>g.Count()>1) || source.Lessons.Where(l=>l.RevisionId!=null).GroupBy(l=>l.RevisionId).Any(g=>g.Count()>1))
             throw new ApiError(422,"MAPPING_SOURCE_INVALID","草稿中存在重复对象修订，来源定位不明确，请先保存独立修订。");
     }
-    static async Task<MappingRun> Owned(Database db,Actor actor,Guid id)=>await db.Set<MappingRun>().SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==actor.FamilyId)??throw new ApiError(404,"NOT_FOUND","映射建议运行不存在。");
-    static async Task<Catalog> Library(Database db,MappingRun run,bool accepting=false)
+    static async Task<MappingRun> Owned(Database db,Actor actor,Guid id,CancellationToken ct=default)=>await db.Set<MappingRun>().SingleOrDefaultAsync(r=>r.Id==id && r.FamilyId==actor.FamilyId,ct)??throw new ApiError(404,"NOT_FOUND","映射建议运行不存在。");
+    static async Task<Catalog> Library(Database db,MappingRun run,bool accepting=false,CancellationToken ct=default)
     {
-        var release=await db.Releases.SingleOrDefaultAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId)??throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","冻结能力库已不可用。");
+        var release=await db.Releases.SingleOrDefaultAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct)??throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","冻结能力库已不可用。");
         if(Content.Hash(release.Payload)!=run.LibraryHash || Content.Hash(run.SourcePayload)!=run.SourceHash)throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入摘要不一致，不能继续使用本次建议。");
         if(accepting && release.Withdrawn)throw new ApiError(422,"LIBRARY_WITHDRAWN","本次能力库已经撤回；可拒绝旧建议，请选择有效版本重新准备。");
         return Json.Read<Catalog>(release.Payload);
@@ -74,18 +74,18 @@ public static class MappingBuilder
         });
         api.MapGet("/builder/mapping-runs/{id:guid}",async(Guid id,Database db,HttpContext ctx)=>
         {
-            var a=ctx.Actor();a.Require("ContentEditor");var run=await Owned(db,a,id);var library=await Library(db,run);
-            var suggestions=await db.Set<MappingSuggestion>().Where(s=>s.RunId==id && s.FamilyId==a.FamilyId).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync();var ids=suggestions.Select(s=>s.Id).ToArray();
-            var decisions=await db.Set<MappingReviewDecision>().Where(d=>d.FamilyId==a.FamilyId && ids.Contains(d.SuggestionId)).OrderBy(d=>d.CreatedAt).ThenBy(d=>d.Id).ToArrayAsync();var dids=decisions.Select(d=>d.Id).ToArray();
-            var sets=await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==a.FamilyId && s.ReviewDecisionId!=null && dids.Contains(s.ReviewDecisionId.Value)).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync();var sids=sets.Select(s=>s.Id).ToArray();
-            var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==a.FamilyId && sids.Contains(i.SetRevisionId)).OrderBy(i=>i.SetRevisionId).ThenBy(i=>i.Sequence).ToArrayAsync();
+            var a=ctx.Actor();a.Require("ContentEditor");var ct=ctx.RequestAborted;await using var transaction=await ReadSnapshot.Begin(db,ctx);var run=await Owned(db,a,id,ct);var library=await Library(db,run,ct:ct);
+            var suggestions=await db.Set<MappingSuggestion>().Where(s=>s.RunId==id && s.FamilyId==a.FamilyId).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync(ct);var ids=suggestions.Select(s=>s.Id).ToArray();
+            var decisions=await db.Set<MappingReviewDecision>().Where(d=>d.FamilyId==a.FamilyId && ids.Contains(d.SuggestionId)).OrderBy(d=>d.CreatedAt).ThenBy(d=>d.Id).ToArrayAsync(ct);var dids=decisions.Select(d=>d.Id).ToArray();
+            var sets=await db.Set<MappingSetRevision>().Where(s=>s.FamilyId==a.FamilyId && s.ReviewDecisionId!=null && dids.Contains(s.ReviewDecisionId.Value)).OrderBy(s=>s.OwnerType).ThenBy(s=>s.OwnerId).ToArrayAsync(ct);var sids=sets.Select(s=>s.Id).ToArray();
+            var items=await db.Set<MappingSetItem>().Where(i=>i.FamilyId==a.FamilyId && sids.Contains(i.SetRevisionId)).OrderBy(i=>i.SetRevisionId).ThenBy(i=>i.Sequence).ToArrayAsync(ct);
             var accepted=decisions.Where(d=>d.Decision=="Accept").ToArray();var corrected=accepted.Count(d=>
             {
                 var original=suggestions.Single(s=>s.Id==d.SuggestionId);
                 return !MappingSuggestions.SameMapping(new(original.EvidencePolicy,Json.Read<SuggestedMappingItem[]>(original.SuggestedItems)),Json.Read<MappingProposal>(d.CorrectedPayload));
             });
             var quality=new MappingQuality(suggestions.Length,suggestions.Count(s=>s.Status=="Pending"),accepted.Length,decisions.Count(d=>d.Decision=="Reject"),corrected,accepted.Length-corrected,"NotEvaluated","仅统计人工处理与校正次数；处理次数、模拟排序和接受率不代表映射正确率，没有正式金标准质量评测。");
-            return new MappingRunDetail(run,suggestions,decisions,sets.Select(MappingReviewedSetDto.From).ToArray(),items,library.Kcs,quality);
+            await transaction.CommitAsync(ct);return new MappingRunDetail(run,suggestions,decisions,sets.Select(MappingReviewedSetDto.From).ToArray(),items,library.Kcs,quality);
         });
         api.MapPost("/builder/mapping-runs",async Task<Results<Ok<MappingRun>,Created<MappingRun>>>(MappingRunInput input,Database db,HttpContext ctx)=>
         {
