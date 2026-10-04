@@ -68,13 +68,14 @@ def main():
                 # Controlled damaged-modern and legacy-with-unknown-protocol fixtures, never reported as historical upgrades.
                 cid=candidates[4]['id'];rid=run['id']
                 def sql(query):return subprocess.check_output(['psql','-Atc',query],env=env,text=True).strip()
+                original_config=original[cid]["run"]["modelConfigPayload"].replace("\'","\'\'");original_config_hash=original[cid]["run"]["modelConfigHash"]
                 original_payload=sql(f'SELECT "ProtocolPayload" FROM "Candidates" WHERE "Id"=\'{cid}\';')
                 sql(f'UPDATE "Candidates" SET "ProtocolPayload"=NULL WHERE "Id"=\'{cid}\';')
                 assert c.request('/builder/candidates/'+cid+'/review-context',expected=422)['code']=='CANDIDATE_PROTOCOL_UNKNOWN'
-                sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/2\' WHERE "Id"=\'{rid}\';')
+                sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/2\', "PromptVersion"=\'kc-candidate/1\', "ModelConfigPayload"=NULL, "ModelConfigHash"=NULL WHERE "Id"=\'{rid}\';')
                 legacy=c.request('/builder/candidates/'+cid+'/review-context');assert legacy['protocol'] is None and '不补造' in legacy['notice'] and legacy['source']['fragments']
                 assert sql(f'SELECT "ProtocolPayload" IS NULL FROM "Candidates" WHERE "Id"=\'{cid}\';')=='t'
-                sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/4\' WHERE "Id"=\'{rid}\';')
+                sql(f'UPDATE "BuilderRuns" SET "InputVersion"=\'builder-input/4\', "PromptVersion"=\'kc-candidate/2\', "ModelConfigPayload"=\'{original_config}\', "ModelConfigHash"=\'{original_config_hash}\' WHERE "Id"=\'{rid}\';')
                 payload=json.loads(original_payload);payload['supportingQuotes'][0]=None;encoded=json.dumps(payload,ensure_ascii=False).replace("'","''")
                 sql(f'UPDATE "Candidates" SET "ProtocolPayload"=\'{encoded}\' WHERE "Id"=\'{cid}\';')
                 assert c.request('/builder/candidates/'+cid+'/review-context',expected=422)['code']=='BUILDER_SOURCE_INVALID'

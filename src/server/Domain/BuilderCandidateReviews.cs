@@ -19,7 +19,9 @@ public static class BuilderCandidateReviews
         var ids=protocol?.SourceChunkIds??[candidate.ChunkId];
         var fragments=await db.Chunks.Where(c=>c.FamilyId==actor.FamilyId && c.SourceId==source.Id && ids.Contains(c.Id)).OrderBy(c=>c.Locator).ThenBy(c=>c.Id).ToArrayAsync(ct);
         if(!ids.Contains(candidate.ChunkId) || fragments.Length!=ids.Distinct().Count())throw new ApiError(422,"SOURCE_QUOTE_INVALID","原候选引用与来源片段不一致，请核对原运行记录。");
-        if(protocol!=null)BuilderProtocol.Validate("{\"schemaVersion\":\"kc-candidate/1\",\"candidates\":["+candidate.ProtocolPayload+"]}",fragments.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray());
+        if(run.PromptVersion=="kc-candidate/2")BuilderConfiguration.Resolve(run);
+        if(protocol!=null)BuilderProtocol.Validate("{\"schemaVersion\":"+Json.Write(run.PromptVersion)+",\"candidates\":["+candidate.ProtocolPayload+"]}",fragments.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),version:run.PromptVersion);
+        if(run.PromptVersion=="kc-candidate/2" && protocol!=null && (candidate.Type!=protocol.KcType || candidate.Name!=protocol.Name || candidate.Behavior!=protocol.MeasurableBehavior || candidate.Boundary!=protocol.Boundary))throw new ApiError(422,"CANDIDATE_PROTOCOL_UNKNOWN","原候选字段与固定结构输出不一致，请核对运行记录；不会混用其他类型或改写原输出。");
         if(string.IsNullOrWhiteSpace(candidate.Quote) || !fragments.Single(c=>c.Id==candidate.ChunkId).Text.Contains(candidate.Quote,StringComparison.Ordinal) || protocol!=null && (ids[0]!=candidate.ChunkId || protocol.SupportingQuotes[0]!=candidate.Quote))throw new ApiError(422,"SOURCE_QUOTE_INVALID","原候选主引用与来源不一致，请核对运行记录。");
         var library=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==actor.FamilyId,ct);
         var catalog=library==null?null:Json.Read<Catalog>(library.Payload);

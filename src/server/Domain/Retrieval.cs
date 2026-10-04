@@ -46,7 +46,7 @@ public static class Retrieval
     public static Match[] Candidates(BuilderCandidateOutput candidate,IEnumerable<KC> kcs,BuilderRetrievalConfiguration configuration)
     {
         configuration.Validate();
-        if(candidate.Subject!="MATH" || !new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(candidate.KcType))throw new ApiError(422,"BUILDER_SCHEMA_INVALID","候选学科或能力类型无效。");
+        if(candidate.Subject!="MATH" || !KCTypes.ValidDefinition(candidate.KcType))throw new ApiError(422,"BUILDER_SCHEMA_INVALID","候选学科或能力类型无效。");
         var query=Vector(candidate.Name+" "+candidate.MeasurableBehavior+" "+candidate.Boundary);
         var name=Normalize(candidate.Name);
         var matches=kcs.Where(k=>k.Type==candidate.KcType && (configuration.Version!="builder-retrieval/4" || k.Subject==candidate.Subject)).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,configuration.Space,Vector(k.Name+" "+k.Behavior+" "+k.Boundary),configuration.Space),configuration.Space,configuration.Aliases?.Where(a=>a.KCId==k.Id && a.Normalized==name).ToArray())).ToArray();

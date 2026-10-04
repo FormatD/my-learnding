@@ -17,6 +17,7 @@ if(args[0].StartsWith("mapping-compat")){await MappingCompatibilityCases.Run(db,
 if(args[0]=="assessment-source-loading"){await AssessmentSourceLoadingCases.Run(db);return;}
 if(args[0]=="plan-projection"){await PlanProjectionCases.Run(db);return;}
 if(args[0].StartsWith("cursor-")){await AssessmentConsumptionCases.Run(db,args[0]);return;}
+if(args[0].StartsWith("builder-v2")){await BuilderProtocolV2PersistenceCases.Run(db,args[0]);return;}
 if(args[0]=="kc-metadata"){await KCMetadataPersistenceCases.Run(db);return;}
 if(args[0]=="checkpoint-deltas"){await CheckpointDeltaCases.Run(db);return;}
 if(args[0].StartsWith("online-")){await OnlineAssessmentCases.Run(db,args[0]);return;}

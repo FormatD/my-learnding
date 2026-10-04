@@ -10,7 +10,7 @@ public static class BuilderRetrievalPersistenceCases
         var text="独立计算混合运算，不能把应用建模当成计算能力。";var source=new Source{FamilyId=family.Id,Title="实际冻结检索来源",Text=text,Hash=Content.Hash(text)};var chunk=new Chunk{FamilyId=family.Id,SourceId=source.Id,Locator="段落1",Text=text};db.AddRange(source,chunk);await db.SaveChangesAsync();
         async Task<BuilderRun> Prepare(string input,BuilderModelConfiguration configuration)
         {
-            var payload=Json.Write(configuration);var hash=Content.Hash(payload);var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,LibraryReleaseId=release.Id,InputVersion=input,ModelConfigPayload=payload,ModelConfigHash=hash,InputHash=Content.Hash(source.Hash+":Mock:fixture/1:kc-candidate/1:"+input+":"+release.Hash+":"+hash)};db.Add(run);await db.SaveChangesAsync();return run;
+            var payload=Json.Write(configuration);var hash=Content.Hash(payload);var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,LibraryReleaseId=release.Id,PromptVersion=configuration.PromptVersion,InputVersion=input,ModelConfigPayload=payload,ModelConfigHash=hash,InputHash=Content.Hash(source.Hash+":Mock:fixture/1:"+configuration.PromptVersion+":"+input+":"+release.Hash+":"+hash)};db.Add(run);await db.SaveChangesAsync();return run;
         }
         var legacy=await Prepare("builder-input/3",new("builder-config/1","Mock","fixture/1","kc-candidate/1",Content.Hash(BuilderProtocol.Schema),new BuilderLimits()));var legacyOriginal=legacy.ModelConfigPayload;
         var frozen=BuilderConfiguration.Current(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Builder:RetrievalTopK","2"}}).Build());var modern=await Prepare("builder-input/4",frozen);var original=modern.ModelConfigPayload;

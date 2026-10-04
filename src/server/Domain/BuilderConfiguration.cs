@@ -28,7 +28,7 @@ public static class BuilderConfiguration
         int Setting(string key,int fallback)=>configuration.GetValue<int?>("Builder:"+key)??fallback;
         var limits=new BuilderLimits(Setting("MaxFragments",100),Setting("MaxInputCharacters",100_000),Setting("MaxOutputCharacters",1_000_000),Setting("TimeoutMilliseconds",30_000),Setting("RepairAttempts",1));limits.Validate();
         var retrieval=new BuilderRetrievalConfiguration("builder-retrieval/4",Setting("RetrievalTopK",10),Learning.Retrieval.Space,"CandidateDefinition","ExactKCType",[],BuilderLexicalRetrieval.KeywordPolicy,BuilderLexicalRetrieval.FusionPolicy,"ExactRecordedSubject","NoGradeExclusion");retrieval.Validate();
-        return new("builder-config/2","Mock","fixture/1","kc-candidate/1",Content.Hash(BuilderProtocol.Schema),limits,retrieval);
+        return new("builder-config/3","Mock","fixture/1","kc-candidate/2",Content.Hash(BuilderProtocol.SchemaV2),limits,retrieval);
     }
     static ApiError Unknown()=>new(422,"RUN_CONFIGURATION_UNKNOWN","原建库配置无法验证，请重新准备任务；不会替换为当前配置。");
     static void Fields(JsonElement value,params string[] names)
@@ -40,15 +40,15 @@ public static class BuilderConfiguration
     static BuilderModelConfiguration? ResolveConfiguration(BuilderRun run)
     {
         // Preserve an explicit legacy path; never backfill a configuration never saved.
-        if(run.ModelConfigPayload==null && run.ModelConfigHash==null){if(run.InputVersion is "builder-input/3" or "builder-input/4")throw Unknown();return null;}
+        if(run.ModelConfigPayload==null && run.ModelConfigHash==null){if(run.InputVersion is "builder-input/3" or "builder-input/4" || run.PromptVersion!="kc-candidate/1")throw Unknown();return null;}
         if(run.ModelConfigPayload==null || run.ModelConfigHash==null || Content.Hash(run.ModelConfigPayload)!=run.ModelConfigHash)throw Unknown();
         try
         {
             using var doc=JsonDocument.Parse(run.ModelConfigPayload);
-            var modern=doc.RootElement.GetProperty("version").GetString()=="builder-config/2";
+            var modern=doc.RootElement.GetProperty("version").GetString() is "builder-config/2" or "builder-config/3";
             Fields(doc.RootElement,modern?["version","provider","model","promptVersion","schemaHash","limits","retrieval"]:["version","provider","model","promptVersion","schemaHash","limits"]);Fields(doc.RootElement.GetProperty("limits"),"maxFragments","maxInputCharacters","maxOutputCharacters","timeoutMilliseconds","repairAttempts");
             var c=Json.Read<BuilderModelConfiguration>(run.ModelConfigPayload);
-            if(c.Version is not ("builder-config/1" or "builder-config/2") || (run.InputVersion=="builder-input/4")!=modern || c.Provider!=run.Provider || c.Model!=run.Model || c.PromptVersion!=run.PromptVersion || c.SchemaHash!=Content.Hash(BuilderProtocol.Schema) || c.Limits==null)throw Unknown();
+            if(c.Version is not ("builder-config/1" or "builder-config/2" or "builder-config/3") || (run.InputVersion=="builder-input/4")!=modern || c.Provider!=run.Provider || c.Model!=run.Model || c.PromptVersion!=run.PromptVersion || (c.Version=="builder-config/3"?c.PromptVersion!="kc-candidate/2":c.PromptVersion!="kc-candidate/1") || c.SchemaHash!=Content.Hash(BuilderProtocol.SchemaFor(c.PromptVersion)) || c.Limits==null)throw Unknown();
             if(modern)
             {
                 if(c.Retrieval==null)throw Unknown();var element=doc.RootElement.GetProperty("retrieval");

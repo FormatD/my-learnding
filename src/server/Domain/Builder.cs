@@ -28,8 +28,8 @@ public static class Builder
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
             var config=BuilderConfiguration.Current(configuration);config=config with{Retrieval=config.Retrieval! with{Aliases=await BuilderAliases.Capture(db,a.FamilyId,library==null?null:Json.Read<Catalog>(library.Payload))}};config.Retrieval!.Validate();
             var configPayload=Json.Write(config);var configHash=Content.Hash(configPayload);
-            var hash=Content.Hash(source.Hash+":"+input.Provider+":fixture/1:kc-candidate/1:builder-input/4:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
-            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,InputVersion="builder-input/4",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
+            var hash=Content.Hash(source.Hash+":"+input.Provider+":"+config.Model+":"+config.PromptVersion+":builder-input/4:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
+            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,PromptVersion=config.PromptVersion,InputVersion="builder-input/4",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/runs/{id:guid}:retry",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>
         {
@@ -86,7 +86,7 @@ public static class Builder
         {
             if(run.Type!="Candidates" || run.InputVersion is not ("builder-input/2" or "builder-input/3" or "builder-input/4"))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
             if(run.Provider!="Mock")throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
-            if(run.Model!="fixture/1" || run.PromptVersion!="kc-candidate/1")throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
+            if(run.Model!="fixture/1" || run.PromptVersion is not ("kc-candidate/1" or "kc-candidate/2"))throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
             BuilderConfiguration.Resolve(run);
             var retrieval=BuilderConfiguration.ResolveRetrieval(run);var frozenLibrary=run.LibraryReleaseId==null?null:await db.Releases.SingleOrDefaultAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
             await BuilderAliases.Validate(db,run,frozenLibrary==null?null:Json.Read<Catalog>(frozenLibrary.Payload),retrieval,ct);
@@ -99,7 +99,7 @@ public static class Builder
             if(string.IsNullOrWhiteSpace(source.Text))throw new ApiError(422,"SOURCE_NOT_READY","来源尚未准备完成。");
         }
     }
-    public static async Task ProcessOne(Database db,CancellationToken ct,ILogger? logger=null)
+    public static async Task ProcessOne(Database db,CancellationToken ct,ILogger? logger=null,IBuilderCandidateProvider? provider=null)
     {
         var stopping=ct;await BackgroundJobs.EnsureBuilderJobs(db,ct);await using var lease=await BackgroundJobs.Claim(db,ct);if(lease==null)return;ct=lease.Token;
         try
@@ -116,7 +116,7 @@ public static class Builder
             {
                 if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","后台任务多次中断后已停止，请核对原调用后人工恢复。");
                 if(Content.Hash(lease.Job.InputPayload)!=lease.Job.InputHash || BackgroundJobs.Snapshot(run)!=lease.Job.InputPayload)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","后台任务原输入已变化，请重新准备来源，不直接重试。");
-                await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct,lease);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+                await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct,lease,provider);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
                 var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
             }
             catch(Exception ex)when(ex is not OperationCanceledException)
@@ -133,7 +133,7 @@ public static class Builder
         catch(OperationCanceledException)when(lease.Lost && !stopping.IsCancellationRequested){db.ChangeTracker.Clear();logger?.LogWarning("Builder lease lost; uncommitted result discarded {JobId}",lease.Job.Id);}
     }
     static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=BackgroundJobs.Snapshot(run)};
-    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct,JobLease? lease=null)
+    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct,JobLease? lease=null,IBuilderCandidateProvider? provider=null)
     {
         if (run.Type=="ParsePDF")
         {
@@ -156,7 +156,7 @@ public static class Builder
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,new MockBuilderCandidateProvider(),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct);
+        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,provider??new MockBuilderCandidateProvider(),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct,run.PromptVersion);
         var retrieval=BuilderConfiguration.ResolveRetrieval(run);
         foreach (var candidate in output.Output.Candidates)
         {

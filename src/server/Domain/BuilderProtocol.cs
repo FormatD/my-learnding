@@ -19,6 +19,8 @@ public static class BuilderProtocol
     public const string Schema="""
     {"type":"object","additionalProperties":false,"required":["schemaVersion","candidates"],"properties":{"schemaVersion":{"const":"kc-candidate/1"},"candidates":{"type":"array","maxItems":100,"items":{"type":"object","additionalProperties":false,"required":["name","subject","kcType","gradeMin","gradeMax","measurableBehavior","boundary","sourceChunkIds","supportingQuotes","modelScore"],"properties":{"name":{"type":"string","minLength":1,"maxLength":100},"subject":{"const":"MATH"},"kcType":{"enum":["Procedure","Concept","Application","Representation","Misconception"]},"gradeMin":{"type":"integer","minimum":1,"maximum":12},"gradeMax":{"type":"integer","minimum":1,"maximum":12},"measurableBehavior":{"type":"string","minLength":1,"maxLength":4000},"boundary":{"type":"string","minLength":1,"maxLength":4000},"sourceChunkIds":{"type":"array","minItems":1,"maxItems":10,"uniqueItems":true,"items":{"type":"string","format":"uuid"}},"supportingQuotes":{"type":"array","minItems":1,"maxItems":10,"items":{"type":"string","minLength":1,"maxLength":1000}},"modelScore":{"type":"number","minimum":0,"maximum":1}}}}}}
     """;
+    public static readonly string SchemaV2=Schema.Replace("kc-candidate/1","kc-candidate/2",StringComparison.Ordinal).Replace("\"Representation\",\"Misconception\"","\"Representation\",\"Misconception\",\"Strategy\",\"Expression\"",StringComparison.Ordinal);
+    public static string SchemaFor(string version)=>version switch{"kc-candidate/1"=>Schema,"kc-candidate/2"=>SchemaV2,_=>throw Invalid("BUILDER_SCHEMA_INVALID")};
     static ApiError Invalid(string code)=>new(422,code,"建库输出未通过结构或来源核对，请人工检查；没有生成正式内容。");
     public static void ValidateInput(BuilderFragment[] fragments,BuilderLimits? limits=null)
     {
@@ -41,21 +43,21 @@ public static class BuilderProtocol
     {
         var field=value.GetProperty(name);if(field.ValueKind!=JsonValueKind.Array || field.GetArrayLength()<min || field.GetArrayLength()>max)throw Invalid("BUILDER_SCHEMA_INVALID");return field.EnumerateArray().ToArray();
     }
-    public static BuilderEnvelope Validate(string output,BuilderFragment[] fragments,BuilderLimits? limits=null)
+    public static BuilderEnvelope Validate(string output,BuilderFragment[] fragments,BuilderLimits? limits=null,string version="kc-candidate/1")
     {
-        limits??=new();ValidateInput(fragments,limits);
+        limits??=new();SchemaFor(version);ValidateInput(fragments,limits);
         if(output==null)throw Invalid("BUILDER_SCHEMA_INVALID");
         if(output.Length>limits.MaxOutputCharacters)throw Invalid("BUILDER_OUTPUT_LIMIT");
         try
         {
             using var document=JsonDocument.Parse(output,new JsonDocumentOptions{MaxDepth=8});var root=document.RootElement;
-            Shape(root,"schemaVersion","candidates");if(Text(root,"schemaVersion",40)!="kc-candidate/1")throw Invalid("BUILDER_SCHEMA_INVALID");
+            Shape(root,"schemaVersion","candidates");if(Text(root,"schemaVersion",40)!=version)throw Invalid("BUILDER_SCHEMA_INVALID");
             var chunks=fragments.ToDictionary(f=>f.Id);var result=new List<BuilderCandidateOutput>();
             foreach(var item in Array(root,"candidates",0,100))
             {
                 Shape(item,"name","subject","kcType","gradeMin","gradeMax","measurableBehavior","boundary","sourceChunkIds","supportingQuotes","modelScore");
                 var name=Text(item,"name",100);var subject=Text(item,"subject",20);var type=Text(item,"kcType",20);var behavior=Text(item,"measurableBehavior",4000);var boundary=Text(item,"boundary",4000);
-                if(subject!="MATH" || !new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(type) || !item.GetProperty("gradeMin").TryGetInt32(out var min) || !item.GetProperty("gradeMax").TryGetInt32(out var max) || min<1 || max>12 || min>max || !item.GetProperty("modelScore").TryGetDecimal(out var score) || score<0 || score>1)throw Invalid("BUILDER_SCHEMA_INVALID");
+                if(subject!="MATH" || !(version=="kc-candidate/1"?new[]{"Procedure","Concept","Application","Representation","Misconception"}.Contains(type):KCTypes.ValidDefinition(type)) || !item.GetProperty("gradeMin").TryGetInt32(out var min) || !item.GetProperty("gradeMax").TryGetInt32(out var max) || min<1 || max>12 || min>max || !item.GetProperty("modelScore").TryGetDecimal(out var score) || score<0 || score>1)throw Invalid("BUILDER_SCHEMA_INVALID");
                 var refs=Array(item,"sourceChunkIds",1,10);var quotes=Array(item,"supportingQuotes",1,10);
                 if(refs.Length!=quotes.Length)throw Invalid("BUILDER_SOURCE_INVALID");
                 var ids=new List<Guid>();var texts=new List<string>();
@@ -68,7 +70,7 @@ public static class BuilderProtocol
                 if(ids.Distinct().Count()!=ids.Count)throw Invalid("BUILDER_SOURCE_INVALID");
                 result.Add(new(name,subject,type,min,max,behavior,boundary,ids.ToArray(),texts.ToArray(),score));
             }
-            return new("kc-candidate/1",result.ToArray());
+            return new(version,result.ToArray());
         }
         catch(Exception ex)when(ex is JsonException or InvalidOperationException or FormatException or OverflowException){throw Invalid("BUILDER_SCHEMA_INVALID");}
     }
@@ -77,18 +79,18 @@ public static class BuilderProtocol
         if(timeout<=TimeSpan.Zero || timeout>TimeSpan.FromMinutes(2))throw new ArgumentOutOfRangeException(nameof(timeout));
         return await Run(provider,fragments,new BuilderLimits(TimeoutMilliseconds:(int)timeout.TotalMilliseconds),ct);
     }
-    public static async Task<BuilderProtocolResult> Run(IBuilderCandidateProvider provider,BuilderFragment[] fragments,BuilderLimits limits,CancellationToken ct)
+    public static async Task<BuilderProtocolResult> Run(IBuilderCandidateProvider provider,BuilderFragment[] fragments,BuilderLimits limits,CancellationToken ct,string version="kc-candidate/1")
     {
-        fragments=fragments.ToArray();ValidateInput(fragments,limits);
+        var schema=SchemaFor(version);fragments=fragments.ToArray();ValidateInput(fragments,limits);
         using var deadline=CancellationTokenSource.CreateLinkedTokenSource(ct);deadline.CancelAfter(limits.TimeoutMilliseconds);
         try
         {
             string? invalid=null;string? code=null;
             for(var call=1;call<=1+limits.RepairAttempts;call++)
             {
-                var response=await provider.Generate(new(fragments.ToArray(),Schema,invalid,code),deadline.Token).WaitAsync(deadline.Token);
+                var response=await provider.Generate(new(fragments.ToArray(),schema,invalid,code),deadline.Token).WaitAsync(deadline.Token);
                 var raw=response.Output;
-                try{return new(Validate(raw,fragments,limits),call,call==2);}
+                try{return new(Validate(raw,fragments,limits,version),call,call==2);}
                 catch(ApiError ex)when(ex.Code is "BUILDER_SCHEMA_INVALID" or "BUILDER_SOURCE_INVALID")
                 {if(call==1+limits.RepairAttempts)throw Invalid("BUILDER_NEEDS_REPAIR");invalid=raw;code=ex.Code;}
             }
@@ -106,10 +108,11 @@ public sealed class MockBuilderCandidateProvider:IBuilderCandidateProvider
     public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        var version=request.Schema==BuilderProtocol.Schema?"kc-candidate/1":request.Schema==BuilderProtocol.SchemaV2?"kc-candidate/2":throw new ApiError(422,"BUILDER_SCHEMA_INVALID","未知模拟协议。");
         var candidates=request.Fragments.Select(f=>{
             var length=Math.Min(80,f.Text.Length);if(length<f.Text.Length && char.IsHighSurrogate(f.Text[length-1]))length--;var quote=f.Text[..length];
             return new BuilderCandidateOutput(Prefix(quote,24),"MATH","Procedure",1,12,"请审核者补充独立可测行为","请审核者补充排除范围",[f.Id],[quote],0);
         }).ToArray();
-        return Task.FromResult(new BuilderProviderResponse(Json.Write(new BuilderEnvelope("kc-candidate/1",candidates)),new BuilderUsage(null,null,0,null,"LocalNoCharge")));
+        return Task.FromResult(new BuilderProviderResponse(Json.Write(new BuilderEnvelope(version,candidates)),new BuilderUsage(null,null,0,null,"LocalNoCharge")));
     }
 }

@@ -5,7 +5,7 @@ def verify(c):
     source=c.request('/content/sources',{'title':'结构协议验收','text':'先乘除后加减。\n遇到括号先算括号里面。'},expected=201)
     run=c.request('/builder/runs',{'sourceId':source['id']},expected=202)
     assert run['inputVersion']=='builder-input/4' and hashlib.sha256(run['modelConfigPayload'].encode()).hexdigest()==run['modelConfigHash']
-    config=json.loads(run['modelConfigPayload']);assert config['version']=='builder-config/2' and config['limits']['timeoutMilliseconds']==30000 and config['limits']['repairAttempts']==1
+    config=json.loads(run['modelConfigPayload']);assert config['version']=='builder-config/3' and config['promptVersion']=='kc-candidate/2' and config['limits']['timeoutMilliseconds']==30000 and config['limits']['repairAttempts']==1
     def finished(id):
         for _ in range(150):
             state=c.request('/builder');item=next(r for r in state['runs'] if r['id']==id)
@@ -18,7 +18,7 @@ def verify(c):
     for candidate in candidates:
         payload=json.loads(candidate['protocolPayload']);assert payload['sourceChunkIds']==[candidate['chunkId']] and payload['supportingQuotes']==[candidate['quote']] and candidate['quote'] in chunks[candidate['chunkId']]['text'] and payload['gradeMin']==1 and payload['gradeMax']==12 and payload['modelScore']==0
     attempts=[x for x in state['attempts'] if x['runId']==run['id']];assert len(attempts)==1
-    result=json.loads(attempts[0]['protocolResult']);assert result['calls']==1 and result['repaired'] is False and result['output']['schemaVersion']=='kc-candidate/1'
+    result=json.loads(attempts[0]['protocolResult']);assert result['calls']==1 and result['repaired'] is False and result['output']['schemaVersion']=='kc-candidate/2'
     calls=c.request('/builder/calls?runId='+run['id']);assert calls['total']==1;call=calls['calls'][0];assert call['status']=='Returned' and call['billingStatus']=='LocalNoCharge' and call['chargedCost']==0 and call['inputTokens'] is None and call['outputTokens'] is None and call['currency'] is None and call['modelConfigHash']==run['modelConfigHash'] and call['outputHash'] and call['elapsedMilliseconds']>=0
     c.request('/builder/calls?page=0',expected=422);c.request('/builder/calls?pageSize=51',expected=422)
     assert c.request('/builder/runs',{'sourceId':source['id']})['id']==run['id']

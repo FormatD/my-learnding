@@ -1,6 +1,6 @@
 # Builder 结构与来源校验
 
-本地候选流程经过 `IBuilderCandidateProvider`、固定 `kc-candidate/1` JSON Schema及额外来源核对，再生成待人工处理的候选。当前唯一实际提供者仍为 Mock；外部来源许可检查和未配置模型拒绝继续生效。Mock保持“请审核者补充”的可测行为和边界，不能直接接受为正式能力；它的0分仅为模拟占位，1～12年级仅为模拟宽范围，不是对来源的年级或抽取质量判断。
+本地候选流程经过 `IBuilderCandidateProvider`、保存版本对应的 JSON Schema（新任务 `kc-candidate/2`，旧任务 `/1`）及额外来源核对，再生成待人工处理的候选。当前唯一实际提供者仍为 Mock；外部来源许可检查和未配置模型拒绝继续生效。Mock保持“请审核者补充”的可测行为和边界，不能直接接受为正式能力；它的0分仅为模拟占位，1～12年级仅为模拟宽范围，不是对来源的年级或抽取质量判断。
 
 固定协议要求名称、MATH学科、能力类型、1～12且有序的年级范围、可测行为、边界、合法UUID来源片段及成对真实引文、0～1模型分数。类型与正式目录允许值相同：Procedure、Concept、Application、Representation、Misconception。拒绝缺字段、多余字段、重复JSON字段、不合法数值或类型、Markdown包裹的非JSON响应。引文逐项对应片段Id，必须在本次实际输入片段中逐字存在；不接受其他来源、虚构定位、重复片段引用或不相等的引用/引文数组长度。结构合法不等于教材内容、测量行为或语义正确，仍须人工审核。
 
@@ -36,7 +36,7 @@ builder-input/2且两个配置字段均NULL的旧记录保留明确兼容流程�
 
 ## 固定候选检索
 
-当前新任务采用builder-input/4、builder-config/2。ModelConfigPayload/Hash同时固定builder-retrieval/4、独立学科/宽年级策略、审核别名快照、关键词/融合规则、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列已记录同学科、相同KC.Type的正式能力，不按年级排除，规范化名称完全命中的已审核别名优先，其他结果使用关键词与模拟相似排序融合及稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
+当前新任务采用builder-input/4、builder-config/3及kc-candidate/2；原builder-config/2保存的协议仍为kc-candidate/1。ModelConfigPayload/Hash同时固定builder-retrieval/4、独立学科/宽年级策略、审核别名快照、关键词/融合规则、TopK、模拟空间、CandidateDefinition查询和ExactKCType类型规则。Builder:RetrievalTopK（环境变量Builder__RetrievalTopK）默认10，允许1～50；仅影响新请求，数量变化纳入输入摘要，不把原完成任务当成新的设置结果。新任务以原候选名称/可测行为/边界组成查询，只列已记录同学科、相同KC.Type的正式能力，不按年级排除，规范化名称完全命中的已审核别名优先，其他结果使用关键词与模拟相似排序融合及稳定Id排序，没有同类型能力时返回空列表，不自动关联、新建或发布。页面显示原数量和方式。
 
 现有数学候选协议仍只接受MATH。KC已提供独立Subject/GradeMin/GradeMax；新/4固定同已记录学科和不排除跨年级策略，旧/1～/3沿原策略。未知旧定义不自动推定，需新修订人工审核。详见[能力元数据](kc-metadata.md)。其他学科抽取、真实Embedding、语义判断及K1固定评测仍待推进。模拟空间与方法不是模型质量证明。
 
@@ -81,3 +81,18 @@ tests/builder_retrieval_acceptance.py使用明确受控的已接受别名来源�
 ## 独立学科和年级（builder-retrieval/4）
 
 新任务固定ExactRecordedSubject、NoGradeExclusion及原同类型/关键词融合/别名/TopK设置，未知定义不自动参与新学科筛选，跨年级同能力保持可列出。候选新草稿保留原结构的学科和年级，编辑后另行审核发布；原修订不改。旧配置不补策略字段。最终63/63规则、全套本地CI、固定原创能力与160题接口、实际学科冲突拒绝通过；主服务4/4（21.7秒）、健康200。115路径164结构、69表46迁移保持，无新迁移/回填或本轮备份恢复。正式质量和完整V1门槛仍开放，详见[能力元数据手册](kc-metadata.md)。
+
+
+## 第二版结构协议与旧运行恢复
+
+新任务保存kc-candidate/2和builder-config/3，独立SchemaHash纳入原ModelConfigHash及builder-input/4配方。配方仍按实际SourceHash/Provider/Model/PromptVersion/InputVersion/LibraryHash/ModelConfigHash计算，不改变旧输入算法；新请求明确设置PromptVersion，BuilderRun的旧默认值保留用于真实旧记录。
+
+第二版允许设计六类Concept/Procedure/Representation/Strategy/Application/Expression，另保留Misconception兼容类型。第一版Schema文本、五类范围、旧SchemaHash及builder-config/1、/2恢复规则保持。后台按原PromptVersion选择Schema，修复请求和结果也保持该版本；未知版本、错配摘要/配置及现代配置缺失拒绝，不能降级或换为当前Schema。
+
+版本不改变严格字段、MATH范围、来源Chunk/真实原文片段配对、一次修复、输入/输出上限和超时。审核按保存运行版本校验原ProtocolPayload，第二版额外核对候选Name/Behavior/Boundary/Type与原结构输出完全一致，防止混用另一类型或改写原输出。新类型仍只检索同已记录学科、同类型正式能力，并按原固定库/别名/关键词规则执行；人工新草稿保留原类型/学科年级，不能因类型相似而关联其他类型。
+
+后台提供者接口允许服务端代码注入实现；正常产品入口仍只选择本地Mock，HTTP不能指定任意提供者对象。本地Mock继续生成待补充的Procedure占位输出，仅按传入固定Schema返回对应版本；它不自动识别Strategy/Expression，也不声明语义质量、真实Token或费用。
+
+真实数据库专项使用明确受控提供者，在实际BackgroundJob领取、调用账本、Schema、同类型检索和结果提交中返回Strategy/Expression：旧版经过一次修复仍拒绝且零候选，新版保留两个类型及固定版本；记录不一致拒绝、重复消费不改、删除闭合。实际审核接口另验证新建策略草稿、表达拒绝跨类型后合法关联、权限与零证据。这些是结构和流程测试，不是真实模型抽取质量证据。
+
+本次实际验证：65/65规则、最终完整本地CI/契约7组、原中断恢复与review/1旧程序升级通过；受控提供者真实持久流程和独立HTTP审核通过。主服务五条页面5/5（31.0秒），确认新实际运行/2与config/3，旧79运行/77候选/30尝试全部字段摘要保持。实际115路径164结构和69表46迁移不变，本轮没有新迁移/历史回填或新备份恢复，本地管理服务健康200，完整V1质量/实际环境条件未关闭。
