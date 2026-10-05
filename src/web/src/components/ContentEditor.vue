@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import {api,apiWithVersion} from '../api';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import {api} from '../api';
+import {prepareFileUpload,type FileUploadAttempt} from '../fileUpload';
 import CoverageField from './CoverageField.vue';
 import {pruneCoverage,teachingMapping} from '../coverage';
 const sources=ref<Record<string,any>[]>([]);onMounted(async()=>{try{sources.value=await api('/content/directory-sources')}catch(e){error.value=(e as Error).message}});
@@ -8,7 +9,8 @@ type Item=Record<string,any>;
 const props=defineProps<{modelValue:Item|null,title:string,busy:boolean,publishedIds:string[],expectedVersion:string}>();
 const emit=defineEmits<{save:[],cancel:[],'update:title':[string],version:[string]}>();
 const catalog=computed(()=>props.modelValue),error=ref('');
-const uploading=ref(false),blocked=computed(()=>props.busy||uploading.value);let alive=true;onUnmounted(()=>{alive=false});
+const uploading=ref(false),blocked=computed(()=>props.busy||uploading.value);const uploadAttempts=new Map<string,FileUploadAttempt>();let alive=true;onUnmounted(()=>{alive=false;uploadAttempts.clear()});
+watch(()=>props.modelValue,()=>uploadAttempts.clear());
 const identity=()=>crypto.randomUUID();
 function directories(){const c=catalog.value!;c.textbooks??=[];c.units??=[];c.courses??=[];return c;}
 function addTextbook(){directories().textbooks.push({id:identity(),revisionId:identity(),publisher:'',edition:'具体版本待核对',subject:'Math',grade:3,semester:'上册',sourceId:null});}
@@ -22,11 +24,11 @@ function addQuestion(){catalog.value!.questions.push({id:identity(),revisionId:i
 function policy(q:Item){const kc=q.mappings.find((m:Item)=>m.role==='Primary')?.kcId||catalog.value!.kcs[0]?.id;if(q.policy==='SingleKC')q.mappings=[{kcId:kc,role:'Primary',share:1,mode:'WholeItem',step:null}];if(q.policy==='NoEvidence')q.mappings=[{kcId:kc,role:'Context',share:0,mode:'None',step:null}];if(q.policy==='ObservedSteps'){q.type='MultiStep';q.mappings=[{kcId:kc,role:'Primary',share:1,mode:'StepObserved',step:'步骤1'}];}}
 async function uploadResource(event:Event,r:Item){
  const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file||blocked.value)return;
- const version=props.expectedVersion,model=props.modelValue;uploading.value=true;error.value='';
- try{if(file.size>10_000_000)throw new Error('文件须在10 MB以内');const bytes=new Uint8Array(await file.arrayBuffer());let text='';for(let i=0;i<bytes.length;i+=32768)text+=String.fromCharCode(...bytes.subarray(i,i+32768));
- const mime=(file.type||(/\.wav$/i.test(file.name)?'audio/wav':/\.mp3$/i.test(file.name)?'audio/mpeg':'')).replace('audio/x-wav','audio/wav').replace('audio/mp3','audio/mpeg');
- const result=await apiWithVersion('/content/resource-files',{name:file.name,mimeType:mime,base64:btoa(text)},'POST',undefined,version);
- if(alive&&props.modelValue===model&&props.expectedVersion===version){r.fileId=result.data.id;r.fileSnapshotHash=result.data.fileSnapshotHash;r.revisionId=identity();if(!r.title)r.title=file.name;emit('version',result.version);}
+ const model=props.modelValue,acceptedVersions=new Set([props.expectedVersion]);uploading.value=true;error.value='';
+ const advance=(v:string)=>{if(alive&&props.modelValue===model&&acceptedVersions.has(props.expectedVersion)){acceptedVersions.add(v);emit('version',v);}};
+ try{const prepared=await prepareFileUpload(file,'LearningResource',props.expectedVersion),prior=uploadAttempts.get(r.id);const attempt=prior?.fingerprint===prepared.fingerprint?prior:prepared;uploadAttempts.set(r.id,attempt);
+ const uploaded=await attempt.run(advance);
+ if(alive&&props.modelValue===model&&acceptedVersions.has(props.expectedVersion)){r.fileId=uploaded.id;r.fileSnapshotHash=uploaded.fileSnapshotHash;r.revisionId=identity();if(!r.title)r.title=file.name;uploadAttempts.delete(r.id);}
  }catch(e){if(alive)error.value=(e as Error).message}finally{uploading.value=false;input.value='';}
 }
 function addResource(){catalog.value!.resources.push({id:identity(),revisionId:identity(),title:'',paperReference:'',minutes:5,kcIds:[catalog.value!.kcs[0].id],url:null});}

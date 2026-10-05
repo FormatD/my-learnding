@@ -21,6 +21,7 @@ builder.Configuration["ExportDirectory"]??=Path.Combine(privateRoot,"exports");
 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(builder.Configuration["FamilyDeletionLedger"]!))!);
 using(var ledger=new FileStream(builder.Configuration["FamilyDeletionLedger"]!,FileMode.OpenOrCreate,FileAccess.Write,FileShare.Read)){}
 builder.Services.AddHostedService<ExportCleanup>();
+builder.Services.AddHostedService<FileUploadCleanup>();
 builder.Services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(keyRoot)).SetApplicationName("FamilyLearning");
 builder.Services.AddHostedService<ProjectionWorker>();
 builder.Services.AddSingleton<RequestMetrics>();
@@ -101,8 +102,12 @@ app.Use(async (ctx,next) =>
     { var readFamily=await db.Families.SingleOrDefaultAsync(f=>f.Id==actor.FamilyId)??throw new ApiError(401,"LOGIN_REQUIRED","请重新登录。");ctx.Response.Headers.ETag=$"\"{readFamily.Version}\""; await next(); return; }
     var key=ctx.Request.Headers[ApiPolicy.IdempotencyHeader].ToString();
     if (key.Length<ApiPolicy.MinIdempotencyLength || key.Length>ApiPolicy.MaxIdempotencyLength) throw new ApiError(422,"IDEMPOTENCY_REQUIRED","请提供有效的请求标识。");
-    ctx.Request.EnableBuffering(); using var reader=new StreamReader(ctx.Request.Body,leaveOpen:true); var body=await reader.ReadToEndAsync(); ctx.Request.Body.Position=0;
-    var requestHash=Content.Hash(body); var scopeKey=ctx.Request.Method+ctx.Request.Path;
+    ctx.Request.EnableBuffering();string body="",requestHash;
+    if(ctx.GetEndpoint()?.Metadata.GetMetadata<UploadBodyMetadata>()!=null){using var uploadBuffer=new MemoryStream();await ctx.Request.Body.CopyToAsync(uploadBuffer,ctx.RequestAborted);requestHash=FileUploads.Digest(uploadBuffer.ToArray());}
+    else{using var reader=new StreamReader(ctx.Request.Body,leaveOpen:true);body=await reader.ReadToEndAsync();requestHash=Content.Hash(body);}
+    ctx.Request.Body.Position=0;
+    if(ctx.GetEndpoint()?.Metadata.GetMetadata<UploadCommandGuardMetadata>() is {Creation:false})requestHash=Content.Hash(requestHash+":"+Content.Hash(ctx.Request.Headers[FileUploads.CredentialHeader].ToString()));
+    var scopeKey=ctx.Request.Method+ctx.Request.Path;
     if(ctx.GetEndpoint()?.Metadata.GetMetadata<JobControlCommandMetadata>()!=null){await JobControlCommands.Execute(ctx,next,db,actor,key,scopeKey,requestHash);return;}
     await using var tx=await db.Database.BeginTransactionAsync(); await db.Lock(actor.FamilyId);
     var currentSession=await db.AuthSessions.AsNoTracking().SingleOrDefaultAsync(s=>s.Id==actor.SessionId && !s.Revoked && s.ExpiresAt>DateTimeOffset.UtcNow);
@@ -114,8 +119,11 @@ app.Use(async (ctx,next) =>
     if (cached!=null)
     {
         if (cached.Hash!=requestHash) throw new ApiError(409,"IDEMPOTENCY_CONFLICT","同一请求标识不能提交不同内容。");
+        await FileUploads.CheckReplay(db,ctx,body);
+        var replay=cached.Response;
+        if(ctx.GetEndpoint()?.Metadata.GetMetadata<SensitiveCommandResponseMetadata>()!=null)replay=ctx.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("CommandResponses/1").Unprotect(replay);
         if(cached.CookieCipher!=null){var protector=ctx.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("CommandCookies/1");ctx.Response.Headers.SetCookie=protector.Unprotect(cached.CookieCipher);}
-        ctx.Response.StatusCode=cached.StatusCode; ctx.Response.ContentType="application/json"; await ctx.Response.WriteAsync(cached.Response); return;
+        ctx.Response.StatusCode=cached.StatusCode; ctx.Response.ContentType="application/json"; await ctx.Response.WriteAsync(replay); return;
     }
     var family=await db.Families.SingleAsync(f => f.Id==actor.FamilyId);
     if (ApiPolicy.RequiresVersion(ctx.Request.Method,ctx.Request.Path) && ctx.Request.Headers.IfMatch!=$"\"{family.Version}\"") throw new ApiError(412,"VERSION_CONFLICT","数据已更新，请刷新后重新确认。");
@@ -134,8 +142,9 @@ app.Use(async (ctx,next) =>
             family.Version++; await db.SaveChangesAsync();
             buffer.Position=0; var result=await new StreamReader(buffer,leaveOpen:true).ReadToEndAsync();
             var cookie=ctx.Response.Headers.SetCookie.ToString();var cookieCipher=cookie.Length==0 ? null : ctx.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("CommandCookies/1").Protect(cookie);
-            db.Commands.Add(new() { FamilyId=actor.FamilyId,ActorId=actor.Id,Scope=scopeKey,Key=key,Hash=requestHash,Response=result,StatusCode=ctx.Response.StatusCode,CookieCipher=cookieCipher });
-            db.Audits.Add(new() { FamilyId=actor.FamilyId,ActorId=actor.Id,Action=scopeKey,Details=Content.Hash(body) });
+            var savedResponse=ctx.GetEndpoint()?.Metadata.GetMetadata<SensitiveCommandResponseMetadata>()!=null?ctx.RequestServices.GetRequiredService<IDataProtectionProvider>().CreateProtector("CommandResponses/1").Protect(result):result;
+            db.Commands.Add(new() { FamilyId=actor.FamilyId,ActorId=actor.Id,Scope=scopeKey,Key=key,Hash=requestHash,Response=savedResponse,StatusCode=ctx.Response.StatusCode,CookieCipher=cookieCipher });
+            db.Audits.Add(new() { FamilyId=actor.FamilyId,ActorId=actor.Id,Action=scopeKey,Details=requestHash });
             await db.SaveChangesAsync(); await tx.CommitAsync(); ctx.Response.Headers.ETag=$"\"{family.Version}\"";
             }
 

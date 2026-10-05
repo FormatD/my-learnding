@@ -6,6 +6,7 @@ import KCDescriptions from './components/KCDescriptions.vue';
 import EvaluationDownload from './components/EvaluationDownload.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { api, apiWithVersion, localDate } from './api';
+import {prepareFileUpload} from './fileUpload';
 import EvidenceRevocations from './components/EvidenceRevocations.vue';
 import AssessmentHistory from './components/AssessmentHistory.vue';
 import AssessmentRebuild from './components/AssessmentRebuild.vue';
@@ -108,7 +109,7 @@ async function previewMapping(){await run(async()=>{const input={releaseId:mappi
 async function confirmMapping(){await run(async()=>{const p=mappingPreview.value!;await api(`/students/${studentId.value}/mapping-corrections:confirm`,{...p.input,previewHash:p.previewHash});mappingPreview.value=null;await refresh();notice.value='映射更正已确认，后台将重放证据与日程。';});}
 async function defer(){await run(async()=>{await api(`/tasks/${deferTask.value!.id}:defer`,{date:deferDate.value,reason:deferReason.value});deferTask.value=null;selectedTask.value=null;session.value=null;await refresh();notice.value='任务已顺延，请到目标日期确认并发布草稿。';});}
 async function confirmGrade(){await run(async()=>{const p=gradingPreview.value!;await api(`/attempts/${p.attemptId}/grading-revisions`,{...p.input,previewHash:p.previewHash});gradingPreview.value=null;reviewingPaper.value=null;gradingContext.value=null;await refresh();notice.value='判分已保存，证据将重新计算。';});}
-async function upload(event:Event,pdf:boolean){await run(async()=>{const file=(event.target as HTMLInputElement).files?.[0];if(!file)return;const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=reject;reader.readAsDataURL(file)});const saved=await api('/files',{name:file.name,mimeType:file.type,base64});if(pdf){await api('/content/pdf-sources',{fileId:saved.id,title:file.name,allowExternalAI:false,usageScope:'FamilyOnly'});await refresh();notice.value='PDF 已私有保存，正在后台解析；刷新查看结果。';}else{paper.value.fileId=saved.id;notice.value='图片已私有保存，可以登记纸质错题。';}});}
+async function upload(event:Event,pdf:boolean){await run(async()=>{const input=event.target as HTMLInputElement,file=input.files?.[0];if(!file)return;const owner=studentId.value,originalPaper=paper.value;try{const attempt=await prepareFileUpload(file);const saved=await attempt.run();if(pdf){await api('/content/pdf-sources',{fileId:saved.id,title:file.name,allowExternalAI:false,usageScope:'FamilyOnly'});await refresh();notice.value='PDF 已私有保存，正在后台解析；刷新查看结果。';}else if(studentId.value===owner&&paper.value===originalPaper){paper.value.fileId=saved.id;notice.value='图片已私有保存，可以登记纸质错题。';}else notice.value='文件已私有保存；页面已切换，请在正确学生页面重新选择图片。';}finally{input.value='';}});}
 async function openCandidateDraft(c:Item){await navigate('content');const d=content.value.drafts.find((d:Item)=>d.id===c.createdDraftId);if(d?.status==='Published'){notice.value='这份草稿已发布；如需修改，请创建新修订。';}else if(d)await editDraft(d);else error.value='草稿不存在，请刷新后检查。';}
 async function showProvenance(id:string){await run(async()=>{provenance.value=await api(`/content/kcs/${id}/provenance`);});}
 async function changePlanTasks(t:Item,action:'up'|'down'|'lock'|'remove'){

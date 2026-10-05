@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "FileUploadTicket": "本人限时上传声明、凭据摘要及暂存状态；完成校验后才产生私有文件，过期暂存字节清除，凭据和暂存字节不进入家庭导出。",
     "AssessmentConsumerCursor": "实际顺序消费进度，关联原事件、回执与不可修改应用记录；旧数据不补造游标",
     "AssessmentCheckpoint": "实际评估的增量状态、原输入前缀摘要与不可修改状态负载；旧世代不补造。",
     "AssessmentRebuildRequest": "家长后台重建的不可修改请求，固定学生、规则版本、时区和目标世代；基线为提交时已完成结果，处理时追平最新已提交输入。",

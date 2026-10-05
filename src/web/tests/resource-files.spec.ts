@@ -8,10 +8,10 @@ test('私有学习文件上传保存，固定计划选择及孩子任务下载',
  await resource.getByLabel('资源名称',{exact:true}).fill('私有学习图片验收');await resource.getByLabel('纸笔材料与执行说明',{exact:true}).fill('阅读原创验收图片');
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64');
  let resume!:()=>void;const gate=new Promise<void>(resolve=>{resume=resolve});let sent!:()=>void;const started=new Promise<void>(resolve=>{sent=resolve});
- await page.route('**/api/v1/content/resource-files',async route=>{sent();await gate;await route.continue();});
+ await page.route('**/api/v1/files/uploads/*',async route=>{sent();await gate;await route.continue();});
  await resource.getByLabel('上传私有学习文件（PDF、图片、WAV或MP3）',{exact:true}).setInputFiles({name:'原创验收.png',mimeType:'image/png',buffer:png});await started;
  await expect(editor.getByRole('button',{name:'保存并退回待审核'})).toBeDisabled();await expect(editor.getByRole('button',{name:'取消',exact:true})).toBeDisabled();resume();
- await expect(resource).toContainText('已关联私有材料');const material=resource.getByRole('link',{name:'核对已关联文件 ↗'});const materialResponse=await context.request.get(await material.getAttribute('href')||'');expect(materialResponse.status()).toBe(200);expect(await materialResponse.body()).toEqual(png);await page.unroute('**/api/v1/content/resource-files');
+ await expect(resource).toContainText('已关联私有材料');const material=resource.getByRole('link',{name:'核对已关联文件 ↗'});const materialResponse=await context.request.get(await material.getAttribute('href')||'');expect(materialResponse.status()).toBe(200);expect(await materialResponse.body()).toEqual(png);await page.unroute('**/api/v1/files/uploads/*');
  const uploadSaved=await call('/content');const before=uploadSaved.drafts.find((d:any)=>d.id===draft.id);expect(JSON.parse(before.payload).resources[0].fileId).toBeUndefined();
  // Own upload advances only the editor's captured version; a subsequent save is real.
  await editor.getByRole('button',{name:'保存并退回待审核'}).click();await expect(editor).toHaveCount(0);

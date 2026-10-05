@@ -12,7 +12,7 @@ public static class ApiPolicy
     public static bool AllowsAnonymous(PathString path)=>path.StartsWithSegments("/api/v1/auth") || path=="/api/health";
     public static bool RequiresIdempotency(string method,PathString path)=>!IsRead(method) && !AllowsAnonymous(path);
     public static bool RequiresVersion(string method,PathString path)=>RequiresIdempotency(method,path) &&
-        (method is "PUT" or "PATCH" || path=="/api/v1/content/resource-files" || new[]{":publish",":decide",":correct",":adjust"}.Any(s=>path.Value!.EndsWith(s,StringComparison.Ordinal)));
+        (method is "PUT" or "PATCH" || path=="/api/v1/content/resource-files" || path=="/api/v1/files/upload-tickets" || path.StartsWithSegments("/api/v1/files")&&path.Value!.EndsWith(":complete",StringComparison.Ordinal) || new[]{":publish",":decide",":correct",":adjust"}.Any(s=>path.Value!.EndsWith(s,StringComparison.Ordinal)));
 }
 
 public record ApiProblem(string Type,string Title,int Status,string Code,string TraceId,IReadOnlyDictionary<string,string[]> Errors);

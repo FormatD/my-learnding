@@ -26,6 +26,7 @@ from budget_reporting_acceptance import verify as verify_budget
 from resource_revision_acceptance import verify as verify_resources
 from resource_issue_acceptance import verify as verify_resource_issues
 from resource_file_acceptance import verify as verify_resource_files
+from upload_ticket_acceptance import verify as verify_upload_tickets
 from mapping_suggestion_acceptance import verify as verify_mappings
 from content_review_acceptance import verify as verify_content_reviews
 from published_mapping_acceptance import verify as verify_published_mappings
@@ -75,6 +76,7 @@ def main():
     created = False
     with tempfile.TemporaryDirectory(prefix="learning-openapi-") as directory:
         temp = Path(directory)
+        env["FileUploadCleanupSeconds"]="1"
         env.update(DeletionLedger=str(temp / "deleted-students.txt"),
                    FamilyDeletionLedger=str(temp / "deleted-families.txt"), ExportDirectory=str(temp / "exports"))
         env.pop("BackupConfigFile", None)
@@ -114,6 +116,7 @@ def main():
                     verify_resources(document,client)
                     verify_resource_issues(client)
                     verify_resource_files(client,env,credentials)
+                    verify_upload_tickets(client,env,credentials)
                     verify_mappings(document,client)
                     verify_content_reviews(document,client)
                     verify_published_mappings(document,client)

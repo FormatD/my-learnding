@@ -313,7 +313,7 @@ public static class Endpoints
         ReviewTargetConfirmations.Map(api);
         Deferral.Map(api);
         ResourceIssues.Map(api);
-        ResourceFiles.Map(api);
+        ResourceFiles.Map(api);FileUploads.Map(api);
     }
     static void ValidateStudent(StudentInput input)
     {

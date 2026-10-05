@@ -1,0 +1,17 @@
+import {test,expect} from '@playwright/test';
+test('上传完成响应丢失后复用原文件，另一页写入仍拒绝过期草稿',async({page,context})=>{
+ let etag='';async function call(path:string,body?:unknown,status=200){const r=await context.request.fetch('/api/v1'+path,{method:body===undefined?'GET':'POST',headers:{'X-Learning-Request':'1','If-Match':etag,'Idempotency-Key':crypto.randomUUID()},...(body===undefined?{}:{data:body})});expect(r.status()).toBe(status);etag=r.headers()['etag']||etag;return r.json();}
+ await call('/auth/register',{userName:'upload-retry-ui-'+Date.now(),password:'upload-retry-browser-2026'},201);await call('/students',{name:'上传重试验收'},201);const draft=await call('/content/fixture',{});
+ await page.goto('/');await page.getByRole('button',{name:/内容与发布/}).click();await page.locator('.content-row').filter({hasText:draft.title}).getByRole('button',{name:'编辑',exact:true}).click();
+ const editor=page.getByLabel('内容草稿编辑器'),resource=editor.getByLabel('资源 1',{exact:true}),input=resource.getByLabel('上传私有学习文件（PDF、图片、WAV或MP3）',{exact:true});
+ const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=','base64'),file={name:'同一原始图.png',mimeType:'image/png',buffer:bytes};
+ let committed:any,firstKey='';let issues=0,stages=0;page.on('request',r=>{if(r.url().endsWith('/files/upload-tickets')&&r.method()==='POST')issues++;if(r.url().includes('/files/uploads/')&&r.method()==='PUT')stages++;});
+ const completePattern='**/api/v1/files/*:complete';await page.route(completePattern,async route=>{firstKey=route.request().headers()['idempotency-key'];const response=await route.fetch();expect(response.status()).toBe(200);committed=await response.json();await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({title:'完成响应中断，请重新选择同一文件重试'})});});
+ await input.setInputFiles(file);await expect(editor.getByRole('alert')).toHaveText('完成响应中断，请重新选择同一文件重试');await expect(resource.getByRole('link',{name:'核对已关联文件 ↗'})).toHaveCount(0);expect(committed.id).toBeTruthy();expect((await context.request.get('/api/v1/files/'+committed.id)).status()).toBe(200);
+ await page.unroute(completePattern);const replay=page.waitForResponse(r=>r.url().endsWith('/files/'+committed.id+':complete')&&r.request().method()==='POST');await input.setInputFiles(file);const recovered=await replay;expect(recovered.status()).toBe(200);expect(recovered.request().headers()['idempotency-key']).toBe(firstKey);expect(await recovered.json()).toEqual(committed);
+ await expect(resource.getByRole('link',{name:'核对已关联文件 ↗'})).toHaveAttribute('href','/api/v1/files/'+committed.id);expect(issues).toBe(1);expect(stages).toBe(1);
+ const status=await call('/files/upload-tickets/'+committed.id);expect(status.status).toBe('Completed');
+ await call('/students',{name:'另一页已提交的改动'},201);const changed=(await call('/content')).drafts.find((d:any)=>d.id===draft.id);expect(JSON.parse(changed.payload).resources[0].fileId).toBeUndefined();
+ const rejected=page.waitForResponse(r=>r.url().endsWith('/content/drafts/'+draft.id)&&r.request().method()==='PUT');await editor.getByRole('button',{name:'保存并退回待审核'}).click();expect((await rejected).status()).toBe(412);await expect(editor).toBeVisible();await expect(resource.getByRole('link',{name:'核对已关联文件 ↗'})).toBeVisible();
+ const final=(await call('/content')).drafts.find((d:any)=>d.id===draft.id);expect(final.payload).toBe(changed.payload);expect(final.version).toBe(changed.version);
+});

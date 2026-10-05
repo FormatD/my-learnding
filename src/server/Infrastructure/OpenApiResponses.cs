@@ -62,6 +62,8 @@ public static class OpenApiResponses
                         response.Headers["ETag"]=new OpenApiHeader{Description="Family version; retained on reads/writes, but cached idempotency replies may omit it. Re-read the edited resource before another mutation.",Schema=new OpenApiSchema{Type=JsonSchemaType.String}};
                     }
             }
+            if(metadata.OfType<UploadBodyMetadata>().Any())operation.RequestBody=new OpenApiRequestBody{Required=true,Content=new Dictionary<string,OpenApiMediaType>{{"application/octet-stream",new(){Schema=new OpenApiSchema{Type=JsonSchemaType.String,Format="binary"}}}}};
+            if(metadata.OfType<UploadCommandGuardMetadata>().Any(g=>!g.Creation))Header(FileUploads.CredentialHeader,new(){Type=JsonSchemaType.String,MinLength=64,MaxLength=64});
             var problem=await context.GetOrCreateSchemaAsync(typeof(ApiProblem),null,ct);
             document.Components.Schemas??=new Dictionary<string,IOpenApiSchema>();
             document.Components.Schemas[nameof(ApiProblem)]=problem;
@@ -70,6 +72,7 @@ public static class OpenApiResponses
             if(!ApiPolicy.AllowsAnonymous(path) || path=="/api/v1/auth/login")failures.Add(401);
             if(ApiPolicy.RequiresVersion(method,path) || !ApiPolicy.IsRead(method))failures.Add(412);
             if(metadata.OfType<Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute>().Any())failures.Add(429);
+            foreach(var extra in metadata.OfType<AdditionalProblemStatusMetadata>())foreach(var status in extra.StatusCodes)failures.Add(status);
             foreach(var status in failures)
                 operation.Responses![status.ToString(System.Globalization.CultureInfo.InvariantCulture)]=new OpenApiResponse{Description="Common API problem; code describes the cause",Content=new Dictionary<string,OpenApiMediaType>{{"application/problem+json",new(){Schema=new OpenApiSchemaReference(nameof(ApiProblem),document)}}}};
         });

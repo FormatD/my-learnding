@@ -5,7 +5,7 @@ public static class ResourceFiles
 {
  public static string Snapshot(PrivateFile file)=>Content.Hash(Json.Write(new{file.Id,file.Name,file.MimeType,file.Hash,purpose="LearningResource"}));
  static string BytesHash(byte[] bytes)=>Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
- static bool Header(string mime,byte[] bytes)=>mime switch{
+ public static bool ValidHeader(string mime,byte[] bytes)=>mime switch{
   "application/pdf"=>bytes.AsSpan().StartsWith("%PDF-"u8),
   "image/png"=>bytes.AsSpan().StartsWith(new byte[]{137,80,78,71,13,10,26,10}),
   "image/jpeg"=>bytes.Length>3&&bytes[0]==255&&bytes[1]==216&&bytes[2]==255,
@@ -15,7 +15,7 @@ public static class ResourceFiles
  public static async Task<PrivateFile> Resolve(Database db,Guid family,Resource resource,CancellationToken ct=default)
  {
   var file=await db.Set<PrivateFile>().AsNoTracking().SingleOrDefaultAsync(f=>f.Id==resource.FileId&&f.FamilyId==family&&f.Purpose=="LearningResource",ct)??throw new ApiError(422,"RESOURCE_FILE_UNKNOWN","学习文件不可用，请重新上传并审核资源。");
-  if(resource.FileSnapshotHash!=Snapshot(file)||file.Hash!=BytesHash(file.Bytes)||!Header(file.MimeType,file.Bytes))throw new ApiError(422,"RESOURCE_FILE_CHANGED","学习文件与审核快照不一致，请重新核对并发布新修订。");return file;
+  if(resource.FileSnapshotHash!=Snapshot(file)||file.Hash!=BytesHash(file.Bytes)||!ValidHeader(file.MimeType,file.Bytes))throw new ApiError(422,"RESOURCE_FILE_CHANGED","学习文件与审核快照不一致，请重新核对并发布新修订。");return file;
  }
  public static async Task Validate(Database db,Guid family,Catalog catalog)
  {
@@ -31,7 +31,7 @@ public static class ResourceFiles
   api.MapPost("/content/resource-files",(FileInput input,Database db,HttpContext ctx)=>{
    var actor=ctx.Actor();actor.Require("ContentEditor");byte[] bytes;try{bytes=Convert.FromBase64String(input.Base64);}catch(Exception ex)when(ex is FormatException or ArgumentException){throw new ApiError(422,"INVALID_FILE","文件编码无效。");}
    if(bytes.Length==0||bytes.Length>10_000_000||string.IsNullOrWhiteSpace(input.Name)||input.Name.Length>200||string.IsNullOrWhiteSpace(Path.GetFileName(input.Name))||input.Name.Any(char.IsControl))throw new ApiError(422,"FILE_SIZE","文件须在10 MB以内且有有效名称。");
-   if(!Header(input.MimeType,bytes))throw new ApiError(422,"FILE_TYPE","学习文件支持PDF、PNG、JPEG、WAV或MP3，须有正确文件头。");
+   if(!ValidHeader(input.MimeType,bytes))throw new ApiError(422,"FILE_TYPE","学习文件支持PDF、PNG、JPEG、WAV或MP3，须有正确文件头。");
    var file=new PrivateFile{FamilyId=actor.FamilyId,Purpose="LearningResource",Name=Path.GetFileName(input.Name),MimeType=input.MimeType,Hash=BytesHash(bytes),Bytes=bytes};db.Add(file);
    return TypedResults.Created($"/api/v1/files/{file.Id}",new{file.Id,file.Name,file.MimeType,file.Hash,size=bytes.Length,fileSnapshotHash=Snapshot(file)});
   });

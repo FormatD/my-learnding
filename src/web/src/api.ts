@@ -22,3 +22,13 @@ export async function readJsonText(path:string):Promise<string>{
   if(!response.headers.get('content-type')?.includes('application/json'))throw new Error('评测材料格式无法确认，请刷新后重试。');
   return body;
 }
+
+export function captureFamilyVersion(){return etag;}
+export async function uploadBytesWithVersion(path:string,bytes:ArrayBuffer,key:string,credential:string,expectedVersion:string){
+ const response=await fetch('/api/v1'+path,{method:'PUT',credentials:'same-origin',headers:{'Content-Type':'application/octet-stream','X-Learning-Request':'1','Idempotency-Key':key,'If-Match':expectedVersion,'X-Upload-Credential':credential},body:bytes});
+ const next=response.headers.get('etag');if(next)etag=next;const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.title||`请求失败（${response.status}）`);return {data,version:next||''};
+}
+export async function completeUploadWithVersion(path:string,key:string,credential:string,expectedVersion:string){
+ const response=await fetch('/api/v1'+path,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Learning-Request':'1','Idempotency-Key':key,'If-Match':expectedVersion,'X-Upload-Credential':credential},body:'{}'});
+ const next=response.headers.get('etag');if(next)etag=next;const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.title||`请求失败（${response.status}）`);return {data,version:next||''};
+}

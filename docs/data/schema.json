@@ -188,6 +188,10 @@
     {
       "id": "20261004224054_PrivateLearningResources",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261004233734_RestrictedFileUploadTickets",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -6133,6 +6137,205 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_FamilyMembership\" ON public.\"FamilyMembership\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "FileUploadTicket",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OwnerAccountId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Name",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "MimeType",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Size",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Hash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Purpose",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ExpiresAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Status",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CompletedFileId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CredentialHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StagedBytes",
+          "type": "bytea",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_UploadTicket_Declaration",
+          "kind": "c",
+          "definition": "CHECK (\"Size\" >= 1 AND \"Size\" <= 10000000 AND length(\"Name\") >= 1 AND length(\"Name\") <= 200 AND \"Hash\" ~ '^[a-f0-9]{64}$'::text AND \"CredentialHash\" ~ '^[a-f0-9]{64}$'::text AND (\"Purpose\" = ANY (ARRAY['Attachment'::text, 'LearningResource'::text])) AND \"ExpiresAt\" > \"CreatedAt\" AND \"ExpiresAt\" <= (\"CreatedAt\" + '00:15:00'::interval))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_UploadTicket_State",
+          "kind": "c",
+          "definition": "CHECK ((\"Status\" = ANY (ARRAY['AwaitingBytes'::text, 'Stored'::text, 'Completed'::text, 'Expired'::text])) AND (\"Status\" = 'Stored'::text AND octet_length(\"StagedBytes\") = \"Size\" OR \"Status\" <> 'Stored'::text AND octet_length(\"StagedBytes\") = 0) AND (\"Status\" = 'Completed'::text AND \"CompletedFileId\" = \"Id\" AND \"CompletedFileId\" IS NOT NULL OR \"Status\" <> 'Completed'::text AND \"CompletedFileId\" IS NULL))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_FileUploadTicket_Accounts_FamilyId_OwnerAccountId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"OwnerAccountId\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_FileUploadTicket_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_FileUploadTicket_PrivateFile_FamilyId_CompletedFileId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CompletedFileId\") REFERENCES \"PrivateFile\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_FileUploadTicket",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_FileUploadTicket_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_FileUploadTicket_FamilyId\" ON public.\"FileUploadTicket\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_FileUploadTicket_FamilyId_CompletedFileId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_FileUploadTicket_FamilyId_CompletedFileId\" ON public.\"FileUploadTicket\" USING btree (\"FamilyId\", \"CompletedFileId\")"
+        },
+        {
+          "name": "IX_FileUploadTicket_FamilyId_OwnerAccountId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_FileUploadTicket_FamilyId_OwnerAccountId\" ON public.\"FileUploadTicket\" USING btree (\"FamilyId\", \"OwnerAccountId\")"
+        },
+        {
+          "name": "IX_FileUploadTicket_Status_ExpiresAt",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_FileUploadTicket_Status_ExpiresAt\" ON public.\"FileUploadTicket\" USING btree (\"Status\", \"ExpiresAt\")"
+        },
+        {
+          "name": "PK_FileUploadTicket",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_FileUploadTicket\" ON public.\"FileUploadTicket\" USING btree (\"Id\")"
         }
       ]
     },

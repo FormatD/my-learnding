@@ -41,6 +41,12 @@ public class Database(DbContextOptions<Database> options) : DbContext(options)
             e.HasOne(typeof(Family)).WithMany().HasForeignKey("FamilyId").OnDelete(DeleteBehavior.Cascade);
             e.HasIndex("FamilyId");
         }
+        Foreign<Account,FileUploadTicket>(b,"OwnerAccountId");Foreign<PrivateFile,FileUploadTicket>(b,"CompletedFileId");
+        b.Entity<FileUploadTicket>().HasIndex(t=>new{t.Status,t.ExpiresAt});
+        b.Entity<FileUploadTicket>().ToTable(t=>{
+            t.HasCheckConstraint("CK_UploadTicket_Declaration","\"Size\" BETWEEN 1 AND 10000000 AND length(\"Name\") BETWEEN 1 AND 200 AND \"Hash\" ~ '^[a-f0-9]{64}$' AND \"CredentialHash\" ~ '^[a-f0-9]{64}$' AND \"Purpose\" IN ('Attachment','LearningResource') AND \"ExpiresAt\">\"CreatedAt\" AND \"ExpiresAt\"<=\"CreatedAt\"+INTERVAL '15 minutes'");
+            t.HasCheckConstraint("CK_UploadTicket_State","\"Status\" IN ('AwaitingBytes','Stored','Completed','Expired') AND ((\"Status\"='Stored' AND octet_length(\"StagedBytes\")=\"Size\") OR (\"Status\"<>'Stored' AND octet_length(\"StagedBytes\")=0)) AND ((\"Status\"='Completed' AND \"CompletedFileId\"=\"Id\" AND \"CompletedFileId\" IS NOT NULL) OR (\"Status\"<>'Completed' AND \"CompletedFileId\" IS NULL))");
+        });
         b.Entity<Account>().HasIndex(x => x.UserName).IsUnique();
         b.Entity<AuthSession>().HasIndex(x => x.TokenHash).IsUnique();
         b.Entity<Availability>().HasIndex(x => new { x.StudentId, x.Date }).IsUnique();

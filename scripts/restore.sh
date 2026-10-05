@@ -15,6 +15,10 @@ pg_restore --exit-on-error --no-owner --dbname="$PGDATABASE" "$task_plain"
 psql --set=ON_ERROR_STOP=1 <<'SQL'
 DELETE FROM "AuthSessions";
 DELETE FROM "Commands";
+SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='FileUploadTicket') AS has_upload_tickets \gset
+\if :has_upload_tickets
+UPDATE "FileUploadTicket" SET "Status"='Expired',"StagedBytes"=decode('','hex') WHERE "Status" IN ('AwaitingBytes','Stored');
+\endif
 SQL
 while IFS=, read -r task_deleted_family task_receipt; do
   case "$task_deleted_family,$task_receipt" in *[!0-9a-f,-]*) echo 'Invalid family deletion ledger' >&2; exit 1;; esac

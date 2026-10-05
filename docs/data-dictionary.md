@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 69 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 70 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -64,6 +64,7 @@
 | 20261003220215_ReviewTargetConfirmations | 10.0.4 |
 | 20261004172710_BoundedCheckpointDeltas | 10.0.4 |
 | 20261004224054_PrivateLearningResources | 10.0.4 |
+| 20261004233734_RestrictedFileUploadTickets | 10.0.4 |
 
 ## Accounts
 
@@ -1247,6 +1248,44 @@
 - `CREATE INDEX "IX_FamilyMembership_FamilyId" ON public."FamilyMembership" USING btree ("FamilyId")`
 - `CREATE UNIQUE INDEX "IX_FamilyMembership_FamilyId_AccountId" ON public."FamilyMembership" USING btree ("FamilyId", "AccountId")`
 - `CREATE UNIQUE INDEX "PK_FamilyMembership" ON public."FamilyMembership" USING btree ("Id")`
+
+## FileUploadTicket
+
+本人限时上传声明、凭据摘要及暂存状态；完成校验后才产生私有文件，过期暂存字节清除，凭据和暂存字节不进入家庭导出。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| OwnerAccountId | uuid | 否 | 无 |
+| Name | text | 否 | 无 |
+| MimeType | text | 否 | 无 |
+| Size | integer | 否 | 无 |
+| Hash | text | 否 | 无 |
+| Purpose | text | 否 | 无 |
+| ExpiresAt | timestamp with time zone | 否 | 无 |
+| Status | text | 否 | 无 |
+| CompletedFileId | uuid | 是 | 无 |
+| CredentialHash | text | 否 | 无 |
+| StagedBytes | bytea | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_UploadTicket_Declaration`：`CHECK ("Size" >= 1 AND "Size" <= 10000000 AND length("Name") >= 1 AND length("Name") <= 200 AND "Hash" ~ '^[a-f0-9]{64}$'::text AND "CredentialHash" ~ '^[a-f0-9]{64}$'::text AND ("Purpose" = ANY (ARRAY['Attachment'::text, 'LearningResource'::text])) AND "ExpiresAt" > "CreatedAt" AND "ExpiresAt" <= ("CreatedAt" + '00:15:00'::interval))`
+- `CK_UploadTicket_State`：`CHECK (("Status" = ANY (ARRAY['AwaitingBytes'::text, 'Stored'::text, 'Completed'::text, 'Expired'::text])) AND ("Status" = 'Stored'::text AND octet_length("StagedBytes") = "Size" OR "Status" <> 'Stored'::text AND octet_length("StagedBytes") = 0) AND ("Status" = 'Completed'::text AND "CompletedFileId" = "Id" AND "CompletedFileId" IS NOT NULL OR "Status" <> 'Completed'::text AND "CompletedFileId" IS NULL))`
+- `FK_FileUploadTicket_Accounts_FamilyId_OwnerAccountId`：`FOREIGN KEY ("FamilyId", "OwnerAccountId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_FileUploadTicket_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_FileUploadTicket_PrivateFile_FamilyId_CompletedFileId`：`FOREIGN KEY ("FamilyId", "CompletedFileId") REFERENCES "PrivateFile"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_FileUploadTicket`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_FileUploadTicket_FamilyId" ON public."FileUploadTicket" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_FileUploadTicket_FamilyId_CompletedFileId" ON public."FileUploadTicket" USING btree ("FamilyId", "CompletedFileId")`
+- `CREATE INDEX "IX_FileUploadTicket_FamilyId_OwnerAccountId" ON public."FileUploadTicket" USING btree ("FamilyId", "OwnerAccountId")`
+- `CREATE INDEX "IX_FileUploadTicket_Status_ExpiresAt" ON public."FileUploadTicket" USING btree ("Status", "ExpiresAt")`
+- `CREATE UNIQUE INDEX "PK_FileUploadTicket" ON public."FileUploadTicket" USING btree ("Id")`
 
 ## Generations
 
