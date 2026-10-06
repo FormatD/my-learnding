@@ -48,7 +48,7 @@ public static class BuilderProtocolCases
         run.ModelConfigPayload=Json.Write(changed);Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.ModelConfigHash=Content.Hash(run.ModelConfigPayload);Assert(BuilderConfiguration.Resolve(run).MaxFragments==2);
         run.Model="different";Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.Model="fixture/1";run.ModelConfigPayload=null;Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.ModelConfigHash=null;Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");run.PromptVersion="kc-candidate/1";run.InputVersion="builder-input/2";Assert(BuilderConfiguration.Resolve(run).MaxFragments==100 && run.ModelConfigPayload==null);
         run.ModelConfigPayload=payload.Replace("\"schemaHash\":", "\"unknown\":0,\"schemaHash\":");run.ModelConfigHash=Content.Hash(run.ModelConfigPayload);Reject(()=>BuilderConfiguration.Resolve(run),"RUN_CONFIGURATION_UNKNOWN");
-        Reject(()=>new BuilderLimits(RepairAttempts:2).Validate(),"BUILDER_CONFIGURATION_INVALID");Reject(()=>new BuilderLimits(TimeoutMilliseconds:120001).Validate(),"BUILDER_CONFIGURATION_INVALID");
+        Reject(()=>new BuilderLimits(RepairAttempts:2).Validate(),"BUILDER_CONFIGURATION_INVALID");Reject(()=>new BuilderLimits(TimeoutMilliseconds:600001).Validate(),"BUILDER_CONFIGURATION_INVALID");
     }
     sealed class Fake(params string[] outputs):IBuilderCandidateProvider
     {

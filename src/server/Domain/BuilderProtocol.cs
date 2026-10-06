@@ -76,7 +76,7 @@ public static class BuilderProtocol
     }
     public static async Task<BuilderProtocolResult> Run(IBuilderCandidateProvider provider,BuilderFragment[] fragments,TimeSpan timeout,CancellationToken ct)
     {
-        if(timeout<=TimeSpan.Zero || timeout>TimeSpan.FromMinutes(2))throw new ArgumentOutOfRangeException(nameof(timeout));
+        if(timeout<=TimeSpan.Zero || timeout>TimeSpan.FromMilliseconds(BuilderLimits.MaxTimeoutMilliseconds))throw new ArgumentOutOfRangeException(nameof(timeout));
         return await Run(provider,fragments,new BuilderLimits(TimeoutMilliseconds:(int)timeout.TotalMilliseconds),ct);
     }
     public static async Task<BuilderProtocolResult> Run(IBuilderCandidateProvider provider,BuilderFragment[] fragments,BuilderLimits limits,CancellationToken ct,string version="kc-candidate/1")

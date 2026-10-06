@@ -18,9 +18,9 @@ python3 scripts/prepare_textbook_source.py '/绝对路径/教材.pdf' --first 6 
 
 ## 本地配置与处理
 
-私有`.local/omlx.json`指定Omlx.Endpoint、Model、MaxOutputTokens；当前端口8000，模型Qwen3.5-9B-MLX-4bit，输出1536 Token。认证只读`.local/omlx-api-key.txt`，文件须仅本人可读写，密钥不进入Git、任务配置、导出或URL。适配依据[oMLX官方接口](https://github.com/jundot/omlx/blob/main/omlx/server.py)，调用`/v1/chat/completions`，请求JSON响应、关闭思考输出。地址只接受字面127.0.0.1、HTTP、/v1；不使用代理、不跟随重定向。
+私有`.local/omlx.json`指定Omlx.Endpoint、Model、MaxOutputTokens、TimeoutMilliseconds；当前端口8000，模型Qwen3.5-9B-MLX-4bit，新任务默认输出4096 Token、总处理上限600000毫秒。认证只读`.local/omlx-api-key.txt`，文件须仅本人可读写，密钥不进入Git、任务配置、导出或URL。适配依据[oMLX官方接口](https://github.com/jundot/omlx/blob/main/omlx/server.py)，调用`/v1/chat/completions`，请求JSON响应、关闭思考输出。地址只接受字面127.0.0.1、HTTP、/v1；不使用代理、不跟随重定向。
 
-新任务Provider为LocalOmlx，配置builder-config/4固定模型、地址、输出限额及提示摘要；旧Mock配置JSON形状保持。运行沿用后台领取/提交围栏、角色授权、独立调用账本、严格候选Schema、逐字引文检查与最多一次修复。每个候选限定单片段/单引文；未知结构、改写引文、超时、截断或不同模型响应均拒绝候选提交。输入上限12000字符，完整协议含修复最多120秒。来源AllowExternalAI=false可调用本机适配，但仍禁止未配置的外部提供者。
+新任务Provider为LocalOmlx，配置builder-config/4固定模型、地址、输出限额及提示摘要；旧Mock配置JSON形状保持。运行沿用后台领取/提交围栏、角色授权、独立调用账本、严格候选Schema、逐字引文检查与最多一次修复。每个候选限定单片段/单引文；未知结构、改写引文、超时、截断或不同模型响应均拒绝候选提交。输入上限12000字符，新任务完整协议含修复最多600秒，配置可缩短；既有120秒/1536 Token任务仍使用原快照。来源AllowExternalAI=false可调用本机适配，但仍禁止未配置的外部提供者。
 
 真实本地Token记录为LocalMeasured，无外部美元账单；缺失Token保留未知，旧模拟LocalNoCharge不改。原USD/外部Token预算仍适用于相应提供者；本地Token不占外部付费额度，家庭并发名额仍受控。不据此声称GPU耗时、电费或整机资源无成本。
 
@@ -51,3 +51,10 @@ python3 scripts/prepare_textbook_source.py '/绝对路径/教材.pdf' --first 6 
 2026-10-07 调用结束与输出完整性分离：本机完整HTTP响应即使finish_reason非stop，也先保留原输出摘要、实际响应Token及LocalMeasured结算，再由候选协议以LOCAL_PROVIDER_OUTPUT_INCOMPLETE拒绝，不能接受截断的完整形状JSON，也不额外修复。没有HTTP响应的超时/取消继续保持未知，不推算用量。最终完整CI退出0、66/66规则，以及真实PG截断响应/未知费用/事务回滚独立账本检查通过（omlx-completeness-ci.log、omlx-completeness-ledger.log）。主服务健康200，应用22697于2026-10-07 00:32:22运行。
 
 两页转写稿的当前家庭实测仍未完成候选生成：第11页被1536 Token输出上限截断；第13页先因名额限制停止，原配置恢复后首次调用返回1989输入/700输出Token，修复调用在完整120秒截止时间内未结束，因此整体BUILDER_TIMEOUT，无新候选或草稿。实际oMLX /api/status显示平均生成11 Token/秒，Qwen3.5运行于VLM引擎；该硬件速度与两次调用共120秒的旧限额不匹配。后续应结合真实速度、可验证输出长度和保留的篇章上下文调整新任务限额；旧任务配置仍固定，不静默扩限。已分别依据完整HTTP返回、实际active_requests=0/waiting_requests=0追加本机调用结束核对释放名额；缺失Token继续未知。私有provider-ended-status.json保存终止状态证据。不得据此声称整单元抽取质量或V1完成。
+
+
+2026-10-07 中文原文请求版本：受控对照中，同一整页上下文使用直接中文输入时982输入/762输出Token、46.74秒stop；中文转义输入时2056输入/1024输出Token、65.93秒length。直接调用仍有数学错误，不能视为合格教材内容，也不据此认定所有截断都由编码引起。新提示v3增加余数条件、最多/至少分离及错误对话识别，只在模型请求内层JSON保留中文；原v1/v2提示、请求编码和结构约束均按原摘要解析，已建运行不切换新版本。新任务提高受控输出/时间上限，失败验证也保存实际运行与账本记录。
+
+真实隔离接口的整页转写稿验证：书内第11页一次41.413秒返回1109输入/646输出Token、3项Pending候选（桌子、树叶、完整租船小时）；书内第13页一次18.358秒返回1103输入/236输出Token、1项Pending竖式候选。结构及逐字引文检查通过，开发核对未再次发现余数大于等于除数的错误，但两个进一法情境可能应归并为同一能力，租船引文还需核对独立上下文。原图转写与候选的人类审核仍Pending，不能作为完整质量或覆盖率验收。事实在私有actual-context-15-result.json、actual-context-17-result.json；隔离ID不能在当前家庭使用。
+
+当前家长家庭通过页面实际保存两份整页来源并完成新版本机建库：书内第11页3项、第13页1项新Pending候选；实际账本41.237秒/1110输入649输出Token、18.472秒/1107输入240输出Token，均已返回、无外部账单，刷新预算占用名额0/1。现共17份来源、7份来源生成成功、9项本机模型待审核，0候选草稿/0本批正式能力；另有1项模拟候选不计入成果。页面仍保留旧失败记录，没有覆盖旧来源、审核、发布或学生绑定。结果截图在私有household-native-model-overview.jpg，V1完整退出条件仍开放。
