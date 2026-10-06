@@ -3,3 +3,18 @@
 .date-chip{white-space:nowrap}.task-row button{min-height:44px}.content-editor-row{padding:18px 0;border-bottom:1px solid #e5ebdf}
 
 .release-row{flex-wrap:wrap}.release-row>div:first-child{flex:1 0 100%}.release-row>.release-withdrawal{flex:1 0 100%;min-width:0}
+
+/* Draft metadata and review notes need their own rows; actions must never squeeze them. */
+main{min-width:0}
+.content-heading{flex-wrap:wrap;justify-content:flex-start}
+.content-heading>div{flex:1 0 100%;min-width:0}
+.content-heading>button{flex:0 0 auto;max-width:100%}
+.draft-row{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
+.draft-row>div:first-child{min-width:0}
+.draft-row h3,.release-row p{overflow-wrap:anywhere}
+.draft-review-note{min-width:0;margin:0}
+.draft-actions{display:flex;flex-wrap:wrap;gap:10px;min-width:0}
+.draft-actions button,.release-row>button{flex:0 0 auto;max-width:100%}
+.content-authoring .inline-fields{flex-wrap:wrap}
+.content-authoring .inline-fields label{flex:1 1 150px;min-width:0}
+@media(max-width:760px){.content-heading{display:flex;gap:12px}.content-heading>button{margin-top:0}}
