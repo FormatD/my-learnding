@@ -109,19 +109,27 @@ public static class Builder
         var stopping=ct;await BackgroundJobs.EnsureBuilderJobs(db,ct);await using var lease=await BackgroundJobs.Claim(db,ct);if(lease==null)return;ct=lease.Token;
         try
         {
+            var prepared=await PrepareCandidates(db,lease,provider,ct);
             await using var tx=await db.Database.BeginTransactionAsync(ct);await db.Lock(lease.Job.FamilyId,ct);
             var run=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==lease.Job.InputRef && r.FamilyId==lease.Job.FamilyId,ct);
             if(run==null){await lease.Finish(db,"Failed","JOB_INPUT_MISSING",null,ct);await tx.CommitAsync(ct);return;}
             await db.Entry(run).ReloadAsync(ct);
             if(run.Status!="Queued"){await lease.Finish(db,run.Status=="Completed"?"Succeeded":"Failed",run.Error,null,ct);await tx.CommitAsync(ct);return;}
             if(run.NextAttemptAt>DateTimeOffset.UtcNow){await lease.Finish(db,"Retrying",run.Error,run.NextAttemptAt,ct);await tx.CommitAsync(ct);return;}
-            var started=DateTimeOffset.UtcNow;var number=(await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id && a.RetryRound==run.RetryRound).MaxAsync(a=>(int?)a.Number,ct)??0)+1;
+            if(run.Type=="Candidates" && prepared==null){await lease.Finish(db,"Retrying",run.Error,DateTimeOffset.UtcNow,ct);await tx.CommitAsync(ct);return;}
+            var started=prepared?.StartedAt??DateTimeOffset.UtcNow;var number=(await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id && a.RetryRound==run.RetryRound).MaxAsync(a=>(int?)a.Number,ct)??0)+1;
             var id=run.Id;await tx.CreateSavepointAsync("builder_work",ct);
             try
             {
                 if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","后台任务多次中断后已停止，请核对原调用后人工恢复。");
                 if(Content.Hash(lease.Job.InputPayload)!=lease.Job.InputHash || BackgroundJobs.Snapshot(run)!=lease.Job.InputPayload)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","后台任务原输入已变化，请重新准备来源，不直接重试。");
-                await ValidateRun(db,run,ct);var protocol=await Execute(db,run,number,ct,lease,provider);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
+                await ValidateRun(db,run,ct);
+                if(prepared!=null)
+                {
+                    if(prepared.Error!=null)throw prepared.Error;
+                    if(prepared.Number!=number || prepared.RetryRound!=run.RetryRound || prepared.Snapshot!=BackgroundJobs.Snapshot(run) || prepared.SourceSnapshot!=await CandidateSourceSnapshot(db,run,ct))throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","模型运行期间原输入已变化，结果未保存，请重新准备来源。");
+                }
+                var protocol=await Execute(db,run,ct,prepared?.Output);if(run.Status=="Completed")run.Error=null;if(run.Status!="Queued")run.NextAttemptAt=null;
                 var attempt=Attempt(run,number,started,run.Status);attempt.ProtocolResult=protocol==null?null:Json.Write(protocol);db.Add(attempt);await db.SaveChangesAsync(ct);
             }
             catch(Exception ex)when(ex is not OperationCanceledException)
@@ -138,7 +146,46 @@ public static class Builder
         catch(OperationCanceledException)when(lease.Lost && !stopping.IsCancellationRequested){db.ChangeTracker.Clear();logger?.LogWarning("Builder lease lost; uncommitted result discarded {JobId}",lease.Job.Id);}
     }
     static BuilderAttempt Attempt(BuilderRun run,int number,DateTimeOffset started,string status)=>new(){FamilyId=run.FamilyId,RunId=run.Id,RetryRound=run.RetryRound,Number=number,StartedAt=started,FinishedAt=DateTimeOffset.UtcNow,Status=status,ErrorCode=run.Error,NextAttemptAt=run.NextAttemptAt,InputSnapshot=BackgroundJobs.Snapshot(run)};
-    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,int attemptNumber,CancellationToken ct,JobLease? lease=null,IBuilderCandidateProvider? provider=null)
+    sealed record PreparedCandidates(int Number,int RetryRound,DateTimeOffset StartedAt,string Snapshot,string? SourceSnapshot,BuilderProtocolResult? Output,Exception? Error);
+    static async Task<string> CandidateSourceSnapshot(Database db,BuilderRun run,CancellationToken ct)
+    {
+        var text=await db.Sources.Where(s=>s.Id==run.SourceId && s.FamilyId==run.FamilyId).Select(s=>s.Text).SingleAsync(ct);
+        var chunks=await db.Chunks.Where(c=>c.SourceId==run.SourceId && c.FamilyId==run.FamilyId).OrderBy(c=>c.Id).Select(c=>new{c.Id,c.Locator,c.Text}).ToArrayAsync(ct);
+        return Content.Hash(Json.Write(new{text,chunks}));
+    }
+    // Capture inputs in a short transaction. Model waits and their durable call ledger never hold the family lock.
+    static async Task<PreparedCandidates?> PrepareCandidates(Database db,JobLease lease,IBuilderCandidateProvider? provider,CancellationToken ct)
+    {
+        BuilderRun run;PreparedCandidates prepared;BuilderFragment[] fragments=[];
+        await using(var tx=await db.Database.BeginTransactionAsync(ct))
+        {
+            await db.Lock(lease.Job.FamilyId,ct);
+            var found=await db.BuilderRuns.SingleOrDefaultAsync(r=>r.Id==lease.Job.InputRef && r.FamilyId==lease.Job.FamilyId,ct);
+            if(found==null || found.Type!="Candidates" || found.Status!="Queued" || found.NextAttemptAt>DateTimeOffset.UtcNow){await tx.CommitAsync(ct);db.ChangeTracker.Clear();return null;}
+            run=found;await db.Entry(run).ReloadAsync(ct);
+            var number=(await db.Set<BuilderAttempt>().Where(a=>a.RunId==run.Id && a.RetryRound==run.RetryRound).MaxAsync(a=>(int?)a.Number,ct)??0)+1;
+            prepared=new(number,run.RetryRound,DateTimeOffset.UtcNow,BackgroundJobs.Snapshot(run),null,null,null);
+            try
+            {
+                if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","后台任务多次中断后已停止，请核对原调用后人工恢复。");
+                if(Content.Hash(lease.Job.InputPayload)!=lease.Job.InputHash || prepared.Snapshot!=lease.Job.InputPayload)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","后台任务原输入已变化，请重新准备来源。");
+                await ValidateRun(db,run,ct);
+                prepared=prepared with{SourceSnapshot=await CandidateSourceSnapshot(db,run,ct)};
+                fragments=await db.Chunks.Where(c=>c.SourceId==run.SourceId && c.FamilyId==run.FamilyId).OrderBy(c=>c.Locator).Select(c=>new BuilderFragment(c.Id,c.Text)).ToArrayAsync(ct);
+            }
+            catch(Exception ex)when(ex is not OperationCanceledException){prepared=prepared with{Error=ex};}
+            await tx.CommitAsync(ct);
+        }
+        db.ChangeTracker.Clear();
+        if(prepared.Error!=null)return prepared;
+        try
+        {
+            var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,prepared.Number,provider??(run.Provider=="LocalOmlx"?new LocalOmlxProvider(run,db.RuntimeConfiguration):new MockBuilderCandidateProvider()),lease),fragments,BuilderConfiguration.Resolve(run),ct,run.PromptVersion);
+            return prepared with{Output=output};
+        }
+        catch(Exception ex)when(ex is not OperationCanceledException){return prepared with{Error=ex};}
+    }
+    static async Task<BuilderProtocolResult?> Execute(Database db,BuilderRun run,CancellationToken ct,BuilderProtocolResult? preparedOutput)
     {
         if (run.Type=="ParsePDF")
         {
@@ -154,14 +201,14 @@ public static class Builder
             catch(ApiError e){run.Status=e.Code=="NEEDS_OCR"?"NeedsOCR":"Failed";run.Error=e.Code;}
             run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;
         }
-        var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId).OrderBy(c => c.Locator).ToListAsync(ct);
+        var chunks=await db.Chunks.Where(c => c.SourceId==run.SourceId && c.FamilyId==run.FamilyId).OrderBy(c => c.Locator).ToListAsync(ct);
         if(run.InputVersion is not ("builder-input/2" or "builder-input/3" or "builder-input/4"))
         {run.Status="Failed";run.Error="INPUT_SNAPSHOT_UNKNOWN";run.CompletedAt=DateTimeOffset.UtcNow;await db.SaveChangesAsync(ct);return null;}
         var release=run.LibraryReleaseId==null?null:await db.Releases.SingleAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,provider??(run.Provider=="LocalOmlx"?new LocalOmlxProvider(run,db.RuntimeConfiguration):new MockBuilderCandidateProvider()),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct,run.PromptVersion);
+        var output=preparedOutput??throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","建库结果未准备完成，请重新准备任务。");
         var retrieval=BuilderConfiguration.ResolveRetrieval(run);
         foreach (var candidate in output.Output.Candidates)
         {

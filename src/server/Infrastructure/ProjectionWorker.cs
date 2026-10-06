@@ -55,24 +55,28 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
         }
         catch(OperationCanceledException)when(lease.Lost && !stopping.IsCancellationRequested){db.ChangeTracker.Clear();return false;}
     }
-    protected override async Task ExecuteAsync(CancellationToken ct)
+    protected override Task ExecuteAsync(CancellationToken ct)=>Task.WhenAll(RunLane(true,ct),RunLane(false,ct));
+    async Task RunLane(bool learning,CancellationToken ct)
     {
         while(!ct.IsCancellationRequested)
         {
             try
             {
                 await using var scope=scopes.CreateAsyncScope();var db=scope.ServiceProvider.GetRequiredService<Database>();
-                try{await ProcessOne(db,ct);}catch(Exception ex)when(ex is not OperationCanceledException){logger.LogError(ex,"Projection processing failed");db.ChangeTracker.Clear();}
-                db.ChangeTracker.Clear();
-                await Builder.ProcessOne(db,ct,logger);
-                db.ChangeTracker.Clear();
-                await MappingJobs.ProcessOne(db,ct);
-                db.ChangeTracker.Clear();
-                await AssessmentRebuildJobs.ProcessOne(db,ct);
+                if(learning)
+                {
+                    try{await ProcessOne(db,ct);}catch(Exception ex)when(ex is not OperationCanceledException){logger.LogError(ex,"Projection processing failed");db.ChangeTracker.Clear();}
+                    db.ChangeTracker.Clear();await AssessmentRebuildJobs.ProcessOne(db,ct);
+                }
+                else
+                {
+                    await Builder.ProcessOne(db,ct,logger);
+                    db.ChangeTracker.Clear();await MappingJobs.ProcessOne(db,ct);
+                }
             }
             catch(OperationCanceledException)when(ct.IsCancellationRequested){break;}
-            catch(Exception ex){logger.LogError(ex,"Projection worker failed");}
-            await Task.Delay(500,ct);
+            catch(Exception ex){logger.LogError(ex,"Background worker lane failed {Learning}",learning);}
+            try{await Task.Delay(500,ct);}catch(OperationCanceledException)when(ct.IsCancellationRequested){break;}
         }
     }
 }

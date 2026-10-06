@@ -7,9 +7,11 @@ using System.Data.Common;
 
 var connection=Environment.GetEnvironmentVariable("PERSISTENCE_TEST_CONNECTION")??throw new Exception("Supply isolated test database connection");
 if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))throw new Exception("Only disposable learning_fault_ database allowed");
-Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit());return new(options.Options);}
+Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit(args[0]=="builder-call-crash"));return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="builder-worker-lanes"){await BuilderWorkerLaneCases.Run(db);return;}
+if(args[0].StartsWith("builder-responsiveness")){await BuilderResponsivenessCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("builder-retrieval")){await BuilderRetrievalPersistenceCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("review-confirm-")){await ReviewTargetConfirmationCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("review-rule-")){await ReviewRuleUpgradeCases.Run(db,args[0]);return;}
@@ -39,7 +41,8 @@ if(args[0]=="builder-config")
         var payload=Json.Write(new BuilderModelConfiguration("builder-config/1","Mock","fixture/1","kc-candidate/1",Content.Hash(BuilderProtocol.Schema),new BuilderLimits(MaxFragments:limit)));var hash=Content.Hash(payload);var run=new BuilderRun{FamilyId=family.Id,SourceId=source.Id,InputVersion=input,ModelConfigPayload=payload,ModelConfigHash=hash,InputHash=Content.Hash(source.Hash+":Mock:fixture/1:kc-candidate/1:"+input+"::"+hash)};db.Add(run);await db.SaveChangesAsync();return run;
     }
     var frozen=await Create(1);var original=frozen.ModelConfigPayload;await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();frozen=await db.BuilderRuns.SingleAsync(r=>r.Id==frozen.Id);Assert(frozen.Status=="Failed" && frozen.Error=="BUILDER_INPUT_LIMIT" && !await db.Candidates.AnyAsync(),"saved lower limit was ignored or produced partial candidates");
-    frozen.Status="Queued";frozen.Error=null;await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();frozen=await db.BuilderRuns.SingleAsync(r=>r.Id==frozen.Id);Assert(frozen.Error=="BUILDER_INPUT_LIMIT" && frozen.ModelConfigPayload==original && await db.Set<BuilderAttempt>().CountAsync(a=>a.RunId==frozen.Id)==2,"repeat execution changed frozen limits or lost attempts");Console.WriteLine("PASS 固定低限额两次真实处理仍明确失败，原配置保持且无部分候选");
+    // A second explicit test round must also advance the durable job retry identity.
+    frozen.Status="Queued";frozen.Error=null;frozen.CompletedAt=null;frozen.RetryRound++;await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();frozen=await db.BuilderRuns.SingleAsync(r=>r.Id==frozen.Id);Assert(frozen.Error=="BUILDER_INPUT_LIMIT" && frozen.ModelConfigPayload==original && await db.Set<BuilderAttempt>().CountAsync(a=>a.RunId==frozen.Id)==2,"repeat execution changed frozen limits or lost attempts");Console.WriteLine("PASS 固定低限额两次真实处理仍明确失败，原配置保持且无部分候选");
     var higher=await Create(2);await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();higher=await db.BuilderRuns.SingleAsync(r=>r.Id==higher.Id);Assert(higher.Status=="Completed" && higher.InputHash!=frozen.InputHash && await db.Candidates.CountAsync(c=>c.RunId==higher.Id)==2,"different fixed config did not receive an independent result");Console.WriteLine("PASS 新配置有独立摘要，真实完整生成两候选且不影响旧任务");
     var damaged=await Create(3);damaged.ModelConfigPayload=null;await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();damaged=await db.BuilderRuns.SingleAsync(r=>r.Id==damaged.Id);Assert(damaged.Error=="RUN_CONFIGURATION_UNKNOWN" && !await db.Candidates.AnyAsync(c=>c.RunId==damaged.Id),"missing modern config silently defaulted");
     var inconsistent=await Create(4);inconsistent.InputHash="mismatched-input";await db.SaveChangesAsync();await Builder.ProcessOne(db,CancellationToken.None);db.ChangeTracker.Clear();inconsistent=await db.BuilderRuns.SingleAsync(r=>r.Id==inconsistent.Id);Assert(inconsistent.Error=="INPUT_SNAPSHOT_UNKNOWN" && !await db.Candidates.AnyAsync(c=>c.RunId==inconsistent.Id),"changed config bypassed frozen input hash");Console.WriteLine("PASS 现代缺失配置与配置/输入摘要矛盾分别拒绝，零部分输出");
@@ -317,10 +320,11 @@ Assert(student.ActiveGenerationId==projectionReservedTarget && (await db.Set<Con
 await using var again=Open();Assert(!await ProjectionWorker.Consume(again,await again.Outbox.SingleAsync()),"processed event handled again");Assert(await again.Generations.CountAsync()==1,"duplicate replay created generation");
 Console.WriteLine("PASS 崩溃后重试及重复消费不增加评估世代或错误次数");
 
-class CrashBeforeCommit : DbTransactionInterceptor
+class CrashBeforeCommit(bool candidatesOnly=false) : DbTransactionInterceptor
 {
     public override async ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction,TransactionEventData eventData,InterceptionResult result,CancellationToken cancellationToken=default)
     {
+        if(candidatesOnly && !eventData.Context!.ChangeTracker.Entries<Candidate>().Any())return result;
         Console.WriteLine("BEFORE_COMMIT");Console.Out.Flush();await Task.Delay(Timeout.Infinite,cancellationToken);return result;
     }
 }
