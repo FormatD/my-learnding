@@ -11,6 +11,7 @@ import EvidenceRevocations from './components/EvidenceRevocations.vue';
 import AssessmentHistory from './components/AssessmentHistory.vue';
 import AssessmentRebuild from './components/AssessmentRebuild.vue';
 import ContentEditor from './components/ContentEditor.vue';
+import ContentImport from './components/ContentImport.vue';
 import DraftMappingPreview from './components/DraftMappingPreview.vue';
 import PaperReview from './components/PaperReview.vue';
 import GoalEditor from './components/GoalEditor.vue';
@@ -166,6 +167,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
           <button v-if="can('ContentEditor')" @click="run(async()=>{const d=await api('/content/drafts',{title:'我的内容草稿',catalog:{kcs:[],questions:[],resources:[],lessons:[],relations:[]}});await refresh();await loadDraft(d)})" :disabled="busy">新建空白内容草稿</button>
           <div class="warning">20题样例用于开发验证；原创单元题包含160题和15份纸笔资源。教材印次待核对，所有草稿都需要家长审核答案、测量范围和适用性。</div>
           <ContentEditor v-if="draftId" :model-value="editingCatalog" v-model:title="draftTitle" :busy="busy" :published-ids="publishedKCIds" :expected-version="draftVersion" @version="draftVersion=$event" @save="saveDraft" @cancel="draftId=''" />
+          <ContentImport v-if="can('ContentEditor')" :disabled="busy||!!draftId" @created="d=>run(async()=>{await refresh();await loadDraft(d)})" />
           <section v-if="can('ContentEditor')" class="card"><h2>草稿与审核</h2><div v-for="d in content.drafts" :key="d.id" class="content-row draft-row"><div><h3>{{d.title}}</h3><p>{{status[d.status]}} · 版本 {{d.version}}</p></div><label v-if="d.status!=='Published'&&can('Publisher')" class="draft-review-note">审核备注（可选）<input v-model="reviewNotes[d.id]" maxlength="4000" :disabled="busy||!!draftId" placeholder="记录本次答案、能力范围及内容适用性的核对依据"></label><div class="draft-actions"><button @click="coverageDraftId=d.id" :disabled="busy||!!draftId">查看待审映射</button><button @click="reviewDraftId=d.id;reviewHistoryVersion++" :disabled="busy">查看审核记录</button><button v-if="d.status!=='Published'" @click="editDraft(d)">编辑</button><button v-if="d.status!=='Published'&&can('Publisher')" :disabled="busy||!!draftId" @click="publishContent(d)">审核答案与映射后发布</button><button v-else :disabled="busy" @click="cloneDraft(d)">创建新修订</button></div></div><p v-if="!content.drafts.length" class="empty">从样例开始，或在辅助建库中准备来源。</p></section>
           <DraftMappingPreview v-if="coverageDraftId" :key="coverageDraftId+':'+content.drafts.find((d:Item)=>d.id===coverageDraftId)?.version" :draft-id="coverageDraftId" />
           <ContentReviewHistory v-if="reviewDraftId&&can('ContentEditor')" :key="reviewDraftId+':'+reviewHistoryVersion" :draft-id="reviewDraftId" />
