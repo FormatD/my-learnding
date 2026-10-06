@@ -18,3 +18,8 @@ main{min-width:0}
 .content-authoring .inline-fields{flex-wrap:wrap}
 .content-authoring .inline-fields label{flex:1 1 150px;min-width:0}
 @media(max-width:760px){.content-heading{display:flex;gap:12px}.content-heading>button{margin-top:0}}
+
+#builder-sources .content-row{flex-wrap:wrap}
+#builder-sources .content-row>div:first-child{flex:1 0 100%;min-width:0;overflow-wrap:anywhere}
+#builder-sources .content-row>button{flex:0 0 auto;max-width:100%}
+.builder-diagnostics>summary{font-size:14px;padding:16px;color:#405948}
