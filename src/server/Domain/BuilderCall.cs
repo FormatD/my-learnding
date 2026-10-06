@@ -30,4 +30,4 @@ public class BuilderCall:Row
     public string? ErrorCode {get;set;}
 }
 public record BuilderUsage(long? InputTokens,long? OutputTokens,decimal? ChargedCost,string? Currency,string BillingStatus="Unknown");
-public record BuilderProviderResponse(string Output,BuilderUsage? Usage=null);
+public record BuilderProviderResponse(string Output,BuilderUsage? Usage=null,bool OutputComplete=true);

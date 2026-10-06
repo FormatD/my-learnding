@@ -229,7 +229,10 @@ if(args[0]=="builder-ledger-usage")
         await db.Lock(family.Id);var tracker=new BuilderCallTracking(db,run,1,new UsageFixtureProvider(new("{invalid",new(11,22,.000123m,"USD","Confirmed")),new(valid.Output,new(13,24,.000456m,"USD","Confirmed"))));var result=await BuilderProtocol.Run(tracker,fragments,new BuilderLimits(),CancellationToken.None);Assert(result.Calls==2 && result.Repaired,"fixture did not repair once");await transaction.RollbackAsync();
     }
     db.ChangeTracker.Clear();var calls=await db.Set<BuilderCall>().OrderBy(c=>c.CallNumber).ToArrayAsync();Assert(calls.Length==2 && calls[0].ChargedCost==.000123m && calls[0].InputTokens==11 && calls[1].ChargedCost==.000456m && calls[1].OutputTokens==24 && calls[1].Repair && calls.All(c=>c.Status=="Returned" && c.Currency=="USD" && c.BillingStatus=="Confirmed"),"returned simulated usage lost after source validation/transaction rollback");Console.WriteLine("PASS 受控计费响应夹具：首次无效结构与一次修复分别保存实际响应用量、六位小数费用及身份，原事务回滚不删除");
-    var unknown=new BuilderCallTracking(db,run,2,new UsageFixtureProvider(new BuilderProviderResponse(valid.Output)));await unknown.Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None);var missing=await db.Set<BuilderCall>().SingleAsync(c=>c.AttemptNumber==2);Assert(missing.BillingStatus=="Unknown" && missing.ChargedCost==null && missing.InputTokens==null && missing.OutputTokens==null,"missing usage invented zero");Console.WriteLine("PASS 未提供用量的返回保持费用/Token未知，不补零");return;
+    var unknown=new BuilderCallTracking(db,run,2,new UsageFixtureProvider(new BuilderProviderResponse(valid.Output)));await unknown.Generate(new(fragments,BuilderProtocol.Schema),CancellationToken.None);var missing=await db.Set<BuilderCall>().SingleAsync(c=>c.AttemptNumber==2);Assert(missing.BillingStatus=="Unknown" && missing.ChargedCost==null && missing.InputTokens==null && missing.OutputTokens==null,"missing usage invented zero");Console.WriteLine("PASS 未提供用量的返回保持费用/Token未知，不补零");
+    var incomplete=new BuilderCallTracking(db,run,3,new IncompleteLocalUsageProvider(valid.Output));
+    try{await BuilderProtocol.Run(incomplete,fragments,new BuilderLimits(),CancellationToken.None);throw new Exception("Truncated response accepted");}catch(ApiError e)when(e.Code=="LOCAL_PROVIDER_OUTPUT_INCOMPLETE"){}
+    db.ChangeTracker.Clear();var ended=await db.Set<BuilderCall>().SingleAsync(c=>c.AttemptNumber==3);Assert(ended.Status=="Returned" && ended.ErrorCode=="LOCAL_PROVIDER_OUTPUT_INCOMPLETE" && ended.InputTokens==100 && ended.OutputTokens==1536 && ended.BillingStatus=="LocalMeasured" && ended.BudgetState=="Settled" && !await db.Candidates.AnyAsync(),"truncated response lost usage, blocked quota or created candidate");Console.WriteLine("PASS 截断本机响应拒绝候选且不重复调用，真实返回/用量/摘要和结算保留");return;
 }
 if(args[0]=="builder-call-crash-seed")
 {
@@ -353,4 +356,10 @@ sealed class UsageFixtureProvider(params BuilderProviderResponse[] responses):IB
 {
     public BuilderQuote Quote(BuilderProviderRequest request)=>new(.001m,100,"USD");
     int number;public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){ct.ThrowIfCancellationRequested();return Task.FromResult(responses[number++]);}
+}
+
+sealed class IncompleteLocalUsageProvider(string output):IBuilderCandidateProvider
+{
+    public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
+    public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct)=>Task.FromResult(new BuilderProviderResponse(output,new(100,1536,0,null,"LocalMeasured"),false));
 }

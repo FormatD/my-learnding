@@ -89,6 +89,7 @@ public static class BuilderProtocol
             for(var call=1;call<=1+limits.RepairAttempts;call++)
             {
                 var response=await provider.Generate(new(fragments.ToArray(),schema,invalid,code),deadline.Token).WaitAsync(deadline.Token);
+                if(!response.OutputComplete)throw new ApiError(422,"LOCAL_PROVIDER_OUTPUT_INCOMPLETE","模型输出未完整结束，不生成候选；调用返回和实际用量仍保留。");
                 var raw=response.Output;
                 try{return new(Validate(raw,fragments,limits,version),call,call==2);}
                 catch(ApiError ex)when(ex.Code is "BUILDER_SCHEMA_INVALID" or "BUILDER_SOURCE_INVALID")

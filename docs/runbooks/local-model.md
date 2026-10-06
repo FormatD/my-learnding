@@ -35,3 +35,19 @@ python3 scripts/prepare_textbook_source.py '/绝对路径/教材.pdf' --first 6 
 
 
 最终主服务OCR来源导入页面1/1（1.7秒）通过：识别文件先填入表单、不自动保存或调用模型，明确保存后显示家庭私有来源及本机/模拟两个独立按钮。测试等待页面加载完成后操作，初次在禁用控件上强行设置文件造成的用例失败已修正，没有放宽产品门禁。服务管理器65284/应用65293（2026-10-06 10:19:58）与健康200实际核对，原学习数据及数据库结构保持。模型测试为隔离数据库；当前家庭尚需家长登录才能导入，未冒用孩子权限。
+
+2026-10-06晚间，用户完成家长登录后，已在当前家庭实际保存第一单元13页来源，并逐页完成13次LocalOmlx运行：5次协议完成、8次BUILDER_NEEDS_REPAIR停止。真实本机调用21次（包含修复），全部Returned/Settled；合计输入40053、输出5703 Token，无外部账单。另有1次Mock验证及其候选，单独保留，不能计作真实抽取。真实模型产生5项Pending候选，另有1项Mock候选；均未创建草稿或发布，学生原绑定内容保持。
+
+本次发现协议通过仍可能有严重语义错误：OCR除法竖式被推断成减法，舍余场景被写成进一法，错乱竖式数字被解释成不受原文支持的长除法。现有结果不能作为正式学习内容，也不能声称完成教材建库质量验收。私有事实记录位于`.local/textbook-workflow/household-result.json`，开发核对意见位于同目录`household-quality-notes.md`；不是家长审核或独立金标准。后续须改善数学OCR、片段版面与模型语义可靠性，并对照教材原页审核。
+
+
+2026-10-06 本机提取约束升级：新任务按json_schema/2请求严格候选结构、最多3项、单片段单引文及原片段ID枚举，新增中文和不完整OCR跳过规则。旧json-object/1提示字节摘要be2afc8a…保留独立解析，旧运行不会采用新版提示。使用[oMLX官方结构输出定义](https://github.com/jundot/omlx/blob/main/omlx/api/openai_models.py)及本机OpenAPI核对后进行实际验证；不把Schema约束视作语义质量证明。
+
+首次实测中文正则过窄导致输出截断，未部署该版本。修正为允许完整中文句子后，真实隔离接口运行通过：原教材首个页面生成1项中文Pending候选；三类不完整OCR（混乱竖式数字、缺失“小”的余数短语、52-8=）均Completed并返回空候选，各1次LocalMeasured/Settled调用，没有伪造草稿或发布。事实保存于私有actual-model-result.json和actual-ocr-regression-result.json；这些仍是隔离库开发验证，不是独立教材金标准。完整本地CI退出0，最终66/66规则检查通过；协议128路径172结构、数据库70表48迁移保持。
+
+另对照原PDF图片转写书内第11、13页，明确52÷8等除号及完整租船/余钱上下文，空白答案未推算。独立稿位于私有corrected-source-pages，保留原OCR、PDF摘要和AgentVisualTranscription方法，家长复核Pending；不能标作人工教材验收。
+
+
+2026-10-07 调用结束与输出完整性分离：本机完整HTTP响应即使finish_reason非stop，也先保留原输出摘要、实际响应Token及LocalMeasured结算，再由候选协议以LOCAL_PROVIDER_OUTPUT_INCOMPLETE拒绝，不能接受截断的完整形状JSON，也不额外修复。没有HTTP响应的超时/取消继续保持未知，不推算用量。最终完整CI退出0、66/66规则，以及真实PG截断响应/未知费用/事务回滚独立账本检查通过（omlx-completeness-ci.log、omlx-completeness-ledger.log）。主服务健康200，应用22697于2026-10-07 00:32:22运行。
+
+两页转写稿的当前家庭实测仍未完成候选生成：第11页被1536 Token输出上限截断；第13页先因名额限制停止，原配置恢复后首次调用返回1989输入/700输出Token，修复调用在完整120秒截止时间内未结束，因此整体BUILDER_TIMEOUT，无新候选或草稿。实际oMLX /api/status显示平均生成11 Token/秒，Qwen3.5运行于VLM引擎；该硬件速度与两次调用共120秒的旧限额不匹配。后续应结合真实速度、可验证输出长度和保留的篇章上下文调整新任务限额；旧任务配置仍固定，不静默扩限。已分别依据完整HTTP返回、实际active_requests=0/waiting_requests=0追加本机调用结束核对释放名额；缺失Token继续未知。私有provider-ended-status.json保存终止状态证据。不得据此声称整单元抽取质量或V1完成。

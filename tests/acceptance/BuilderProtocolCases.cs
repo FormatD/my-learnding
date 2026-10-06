@@ -30,6 +30,7 @@ public static class BuilderProtocolCases
     public static void Control()
     {
         var f=Fragments();var valid=Valid(f);var provider=new Fake("{}",valid);var result=BuilderProtocol.Run(provider,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult();Assert(result.Calls==2 && result.Repaired && provider.Requests[1].InvalidOutput=="{}" && provider.Requests[1].ValidationCode=="BUILDER_SCHEMA_INVALID");
+        var partial=new Incomplete(valid);Reject(()=>BuilderProtocol.Run(partial,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"LOCAL_PROVIDER_OUTPUT_INCOMPLETE");Assert(partial.Calls==1 && partial.Response.Usage!.OutputTokens==1536);
         provider=new Fake("{}","{}",valid);Reject(()=>BuilderProtocol.Run(provider,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_NEEDS_REPAIR");Assert(provider.Requests.Count==2);
         provider=new Fake(new string('x',BuilderProtocol.MaxOutputCharacters+1),valid);Reject(()=>BuilderProtocol.Run(provider,f,TimeSpan.FromSeconds(1),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_OUTPUT_LIMIT");Assert(provider.Requests.Count==1);
         var slow=new Slow();Reject(()=>BuilderProtocol.Run(slow,f,TimeSpan.FromMilliseconds(20),CancellationToken.None).GetAwaiter().GetResult(),"BUILDER_TIMEOUT");Assert(slow.Calls==1);
@@ -60,5 +61,12 @@ public static class BuilderProtocolCases
         public int Calls;
         public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
         public async Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){Calls++;await Task.Delay(Timeout.Infinite,ct);return new("{}");}
+    }
+    sealed class Incomplete(string valid):IBuilderCandidateProvider
+    {
+        public int Calls;
+        public BuilderProviderResponse Response=new(valid,new(100,1536,0,null,"LocalMeasured"),false);
+        public BuilderQuote Quote(BuilderProviderRequest request)=>BuilderQuote.Local;
+        public Task<BuilderProviderResponse> Generate(BuilderProviderRequest request,CancellationToken ct){Calls++;return Task.FromResult(Response);}
     }
 }

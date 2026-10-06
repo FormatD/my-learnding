@@ -23,7 +23,7 @@ public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemp
         try
         {
             var response=await inner.Generate(request,ct).WaitAsync(ct);ValidateUsage(response.Usage);
-            await Finish(call.Id,"Returned",response,null,watch.ElapsedMilliseconds);return response;
+            await Finish(call.Id,"Returned",response,response.OutputComplete?null:"LOCAL_PROVIDER_OUTPUT_INCOMPLETE",watch.ElapsedMilliseconds);return response;
         }
         catch(Exception ex)
         {
