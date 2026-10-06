@@ -13,7 +13,7 @@ public static class Builder
         api.MapGet("/builder",async (Database db,HttpContext ctx) =>
         {
             ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;var ct=ctx.RequestAborted;await using var transaction=await ReadSnapshot.Begin(db,ctx);
-            var response=new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(ct),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(ct),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(ct),provider="Mock · 仅验证流程，不代表模型效果" };
+            var response=new { sources=await db.Sources.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),chunks=await db.Chunks.Where(s => s.FamilyId==family).ToListAsync(ct),runs=await db.BuilderRuns.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),attempts=await db.Set<BuilderAttempt>().Where(a=>a.FamilyId==family).OrderBy(a=>a.CreatedAt).ToArrayAsync(ct),candidates=await db.Candidates.Where(s => s.FamilyId==family).OrderByDescending(s => s.CreatedAt).ToListAsync(ct),libraries=await db.Releases.Where(r=>r.FamilyId==family).Select(r=>new {r.Id,r.Number,r.Hash,r.Withdrawn}).ToListAsync(ct),provider=string.IsNullOrWhiteSpace(db.RuntimeConfiguration["Omlx:Model"])?"Mock · 仅验证流程，不代表模型效果":"LocalOmlx · 本机模型生成，OCR与候选仍需人工审核" };
             await transaction.CommitAsync(ct);return response;
         });
         api.MapPost("/content/sources",async Task<Results<Ok<Source>,Created<Source>>> (SourceInput input,Database db,HttpContext ctx) =>
@@ -28,13 +28,13 @@ public static class Builder
         api.MapPost("/builder/runs",async Task<Results<Ok<BuilderRun>,Accepted<BuilderRun>>> (RunInput input,Database db,HttpContext ctx,IConfiguration configuration) =>
         {
             var a=ctx.Actor();a.Require("ContentEditor");var source=await db.Sources.SingleOrDefaultAsync(s => s.Id==input.SourceId && s.FamilyId==a.FamilyId) ?? throw new ApiError(404,"NOT_FOUND","来源不存在。");
-            if (input.Provider!="Mock") throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED",source.AllowExternalAI?"模型尚未配置，学习功能可继续使用。":"来源未允许发送外部模型。");
+            if (input.Provider is not ("Mock" or "LocalOmlx")) throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED",source.AllowExternalAI?"模型尚未配置，学习功能可继续使用。":"来源未允许发送外部模型。");
             if (string.IsNullOrWhiteSpace(source.Text)) throw new ApiError(422,"SOURCE_NOT_READY","来源尚未解析完成，或没有文本层。");
             var library=await db.Releases.Where(r=>r.FamilyId==a.FamilyId && !r.Withdrawn).OrderByDescending(r=>r.Number).FirstOrDefaultAsync();
-            var config=BuilderConfiguration.Current(configuration);config=config with{Retrieval=config.Retrieval! with{Aliases=await BuilderAliases.Capture(db,a.FamilyId,library==null?null:Json.Read<Catalog>(library.Payload))}};config.Retrieval!.Validate();
+            var config=BuilderConfiguration.Current(configuration,input.Provider);config=config with{Retrieval=config.Retrieval! with{Aliases=await BuilderAliases.Capture(db,a.FamilyId,library==null?null:Json.Read<Catalog>(library.Payload))}};config.Retrieval!.Validate();
             var configPayload=Json.Write(config);var configHash=Content.Hash(configPayload);
             var hash=Content.Hash(source.Hash+":"+input.Provider+":"+config.Model+":"+config.PromptVersion+":builder-input/4:"+library?.Hash+":"+configHash);var old=await db.BuilderRuns.SingleOrDefaultAsync(r => r.FamilyId==a.FamilyId && r.InputHash==hash);if (old!=null) return TypedResults.Ok(old);
-            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,PromptVersion=config.PromptVersion,InputVersion="builder-input/4",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
+            var run=new BuilderRun { FamilyId=a.FamilyId,SourceId=source.Id,LibraryReleaseId=library?.Id,Provider=config.Provider,Model=config.Model,PromptVersion=config.PromptVersion,InputVersion="builder-input/4",InputHash=hash,ModelConfigPayload=configPayload,ModelConfigHash=configHash };db.BuilderRuns.Add(run);return TypedResults.Accepted("/api/v1/builder",run);
         });
         api.MapPost("/builder/runs/{id:guid}:retry",async(Guid id,ReasonInput input,Database db,HttpContext ctx)=>
         {
@@ -90,8 +90,8 @@ public static class Builder
         else
         {
             if(run.Type!="Candidates" || run.InputVersion is not ("builder-input/2" or "builder-input/3" or "builder-input/4"))throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","原输入快照未记录，请重新准备任务。");
-            if(run.Provider!="Mock")throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
-            if(run.Model!="fixture/1" || run.PromptVersion is not ("kc-candidate/1" or "kc-candidate/2"))throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
+            if(run.Provider is not ("Mock" or "LocalOmlx"))throw new ApiError(422,source.AllowExternalAI?"PROVIDER_UNCONFIGURED":"EXTERNAL_AI_DENIED","外部模型尚未配置，不能借重试发送来源。");
+            if(run.Provider=="Mock" && run.Model!="fixture/1" || run.PromptVersion is not ("kc-candidate/1" or "kc-candidate/2"))throw new ApiError(422,"RUN_CONFIGURATION_UNKNOWN","原模型或提示配置无法恢复，请重新准备任务。");
             BuilderConfiguration.Resolve(run);
             var retrieval=BuilderConfiguration.ResolveRetrieval(run);var frozenLibrary=run.LibraryReleaseId==null?null:await db.Releases.SingleOrDefaultAsync(r=>r.Id==run.LibraryReleaseId && r.FamilyId==run.FamilyId,ct);
             await BuilderAliases.Validate(db,run,frozenLibrary==null?null:Json.Read<Catalog>(frozenLibrary.Payload),retrieval,ct);
@@ -161,7 +161,7 @@ public static class Builder
         var kcs=release==null ? [] : Json.Read<Catalog>(release.Payload).Kcs;
         foreach (var kc in kcs)
             if (!await db.Set<Embedding>().AnyAsync(e=>e.FamilyId==run.FamilyId && e.EntityRevisionId==kc.RevisionId && e.Space==Retrieval.Space,ct)) db.Add(new Embedding { FamilyId=run.FamilyId,EntityRevisionId=kc.RevisionId,TextHash=Content.Hash(kc.Name+kc.Behavior+kc.Boundary),Vector=Json.Write(Retrieval.Vector(kc.Name+" "+kc.Behavior+" "+kc.Boundary)) });
-        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,provider??new MockBuilderCandidateProvider(),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct,run.PromptVersion);
+        var output=await BuilderProtocol.Run(new BuilderCallTracking(db,run,attemptNumber,provider??(run.Provider=="LocalOmlx"?new LocalOmlxProvider(run,db.RuntimeConfiguration):new MockBuilderCandidateProvider()),lease),chunks.Select(c=>new BuilderFragment(c.Id,c.Text)).ToArray(),BuilderConfiguration.Resolve(run),ct,run.PromptVersion);
         var retrieval=BuilderConfiguration.ResolveRetrieval(run);
         foreach (var candidate in output.Output.Candidates)
         {

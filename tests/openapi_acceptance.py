@@ -117,6 +117,9 @@ def main():
                     verify_resource_issues(client)
                     verify_resource_files(client,env,credentials)
                     verify_upload_tickets(client,env,credentials)
+                    if os.environ.get("OMLX_SMOKE")=="1":
+                        from local_omlx_acceptance import verify as verify_local_omlx
+                        verify_local_omlx(client)
                     verify_mappings(document,client)
                     verify_content_reviews(document,client)
                     verify_published_mappings(document,client)

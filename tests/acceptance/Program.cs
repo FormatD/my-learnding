@@ -7,6 +7,7 @@ var tests=new List<(string,Action)>();
 void Test(string name,Action action) => tests.Add((name,action));
 void Eq<T>(T actual,T expected) { if (!Equals(actual,expected)) throw new Exception($"expected {expected}, actual {actual}"); }
 void Near(decimal actual,decimal expected) { if (Math.Abs(actual-expected)>.00001m) throw new Exception($"expected {expected}, actual {actual}"); }
+Test("本地oMLX固定模型/传输/提示摘要，拒绝外部或矛盾配置，旧Mock字节保持",LocalOmlxCases.Run);
 var family=Guid.NewGuid();var student=Guid.NewGuid();var generation=Guid.NewGuid();var kc=new KC(Guid.NewGuid(),Guid.NewGuid(),"TEST","测试","独立计算","仅计算");
 var anchor=new DateTimeOffset(2026,1,1,8,0,0,TimeSpan.Zero);
 AssessmentInput Input(int n,bool correct=true,int day=0,Guid? questionId=null,int hint=0,string difficulty="Medium",string type="Practice",int attemptNo=1,string? result=null)

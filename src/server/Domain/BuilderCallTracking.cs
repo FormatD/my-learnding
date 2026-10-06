@@ -11,7 +11,7 @@ public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemp
     public static void ValidateUsage(BuilderUsage? usage)
     {
         if(usage==null)return;
-        if(usage.InputTokens<0 || usage.OutputTokens<0 || usage.ChargedCost<0 || usage.ChargedCost>9_999_999_999.999999m || usage.ChargedCost!=null && decimal.Round(usage.ChargedCost.Value,6)!=usage.ChargedCost.Value || usage.BillingStatus is not ("Unknown" or "Confirmed" or "LocalNoCharge") || usage.Currency!=null && !Regex.IsMatch(usage.Currency,"^[A-Z]{3}$") || usage.ChargedCost!=null && usage.BillingStatus=="Unknown" || usage.BillingStatus=="Confirmed" && (usage.ChargedCost==null || usage.Currency==null) || usage.BillingStatus=="LocalNoCharge" && (usage.ChargedCost!=0 || usage.Currency!=null || usage.InputTokens!=null || usage.OutputTokens!=null))
+        if(usage.InputTokens<0 || usage.OutputTokens<0 || usage.ChargedCost<0 || usage.ChargedCost>9_999_999_999.999999m || usage.ChargedCost!=null && decimal.Round(usage.ChargedCost.Value,6)!=usage.ChargedCost.Value || usage.BillingStatus is not ("Unknown" or "Confirmed" or "LocalNoCharge" or "LocalMeasured") || usage.Currency!=null && !Regex.IsMatch(usage.Currency,"^[A-Z]{3}$") || usage.ChargedCost!=null && usage.BillingStatus=="Unknown" || usage.BillingStatus=="Confirmed" && (usage.ChargedCost==null || usage.Currency==null) || usage.BillingStatus=="LocalMeasured" && (usage.ChargedCost!=0 || usage.Currency!=null) || usage.BillingStatus=="LocalNoCharge" && (usage.ChargedCost!=0 || usage.Currency!=null || usage.InputTokens!=null || usage.OutputTokens!=null))
             throw new ApiError(422,"BUILDER_USAGE_INVALID","调用用量或费用记录无效，已保留调用事实并停止处理。");
     }
     public BuilderQuote Quote(BuilderProviderRequest request)=>inner.Quote(request);
@@ -39,8 +39,8 @@ public sealed class BuilderCallTracking(Database owner,BuilderRun run,int attemp
         if(response?.Usage is {} usage)
         {
             var quote=Json.Read<BuilderQuote>(call.QuotePayload!);var used=usage.InputTokens==null || usage.OutputTokens==null?(decimal?)null:(decimal)usage.InputTokens+usage.OutputTokens;
-            if(usage.ChargedCost>quote.MaxCost || used>quote.MaxTokens || usage.BillingStatus=="Confirmed" && usage.Currency!=quote.Currency)call.BudgetState="Overrun";
-            else if(usage.BillingStatus=="LocalNoCharge" || usage.BillingStatus=="Confirmed" && used!=null)call.BudgetState="Settled";
+            if(usage.ChargedCost>quote.MaxCost || !quote.LocalNoCharge && used>quote.MaxTokens || usage.BillingStatus=="Confirmed" && usage.Currency!=quote.Currency)call.BudgetState="Overrun";
+            else if(usage.BillingStatus is "LocalNoCharge" or "LocalMeasured" || usage.BillingStatus=="Confirmed" && used!=null)call.BudgetState="Settled";
         }
         await db.SaveChangesAsync(deadline.Token);await tx.CommitAsync(deadline.Token);
     }

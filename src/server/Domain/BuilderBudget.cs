@@ -40,7 +40,7 @@ public static class BuilderBudget
         foreach(var c in calls.Where(c=>c.Status!="Denied"))
         {
             decisions.TryGetValue(c.Id,out var decision);if(c.BudgetState=="Overrun" && decision==null)overruns++;var closed=decision!=null || c.Status=="Returned";if(!closed)active++;
-            var free=decision!=null?decision.Currency==null && decision.ChargedCost==0:c.BillingStatus=="LocalNoCharge";
+            var free=decision!=null?decision.Currency==null && decision.ChargedCost==0:c.BillingStatus is "LocalNoCharge" or "LocalMeasured";
             var knownCost=free || decision!=null || c.BillingStatus=="Confirmed" && c.ChargedCost!=null && c.Currency=="USD";
             var knownTokens=free || decision!=null && decision.InputTokens!=null && decision.OutputTokens!=null || decision==null && c.InputTokens!=null && c.OutputTokens!=null;
             var today=(c.BudgetDay??DateOnly.FromDateTime(c.StartedAt.UtcDateTime))==day;

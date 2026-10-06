@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Learning;
-public class Database(DbContextOptions<Database> options) : DbContext(options)
+public class Database(DbContextOptions<Database> options,IConfiguration? configuration=null) : DbContext(options)
 {
+    public IConfiguration RuntimeConfiguration {get;}=configuration??new ConfigurationBuilder().Build();
     public DbSet<Family> Families => Set<Family>();
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<AuthSession> AuthSessions => Set<AuthSession>();

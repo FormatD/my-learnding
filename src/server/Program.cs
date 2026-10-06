@@ -9,6 +9,8 @@ builder.Services.Configure<RouteHandlerOptions>(options=>options.ThrowOnBadReque
 builder.Services.AddDbContext<Database>(o => o.UseNpgsql(builder.Configuration.GetConnectionString("Learning") ?? $"Host=127.0.0.1;Port=55432;Database=learning;Username={Environment.UserName}"));
 builder.Services.AddOpenApi(OpenApiResponses.Configure);
 var privateRoot=Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath,"../../.local"));
+builder.Configuration.AddJsonFile(Path.Combine(privateRoot,"omlx.json"),optional:true,reloadOnChange:false);
+builder.Configuration["Omlx:ApiKeyFile"]??=Path.Combine(privateRoot,"omlx-api-key.txt");
 var keyRoot=Path.Combine(privateRoot,"keys");Directory.CreateDirectory(keyRoot);
 if(!OperatingSystem.IsWindows())
 {
