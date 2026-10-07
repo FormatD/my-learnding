@@ -208,6 +208,10 @@
     {
       "id": "20261007073312_BuilderSemanticCallLedger",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261007080012_BuilderSemanticResults",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -4256,6 +4260,282 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_BuilderSemanticReconciliation\" ON public.\"BuilderSemanticReconciliation\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BuilderSemanticResponse",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CallId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputComplete",
+          "type": "boolean",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_BuilderSemanticResponse_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticResponse_Output",
+          "kind": "c",
+          "definition": "CHECK (length(\"OutputHash\") = 64 AND length(\"OutputPayload\") <= 2000000)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticResponse_BuilderSemanticCall_FamilyId_CallId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CallId\") REFERENCES \"BuilderSemanticCall\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticResponse_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderSemanticResponse",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_BuilderSemanticResponse_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_BuilderSemanticResponse_FamilyId_Id\" ON public.\"BuilderSemanticResponse\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_BuilderSemanticResponse_CallId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticResponse_CallId\" ON public.\"BuilderSemanticResponse\" USING btree (\"CallId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticResponse_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticResponse_FamilyId\" ON public.\"BuilderSemanticResponse\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticResponse_FamilyId_CallId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticResponse_FamilyId_CallId\" ON public.\"BuilderSemanticResponse\" USING btree (\"FamilyId\", \"CallId\")"
+        },
+        {
+          "name": "PK_BuilderSemanticResponse",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderSemanticResponse\" ON public.\"BuilderSemanticResponse\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BuilderSemanticSuggestion",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PreparationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ResponseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ResultPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_BuilderSemanticSuggestion_Result",
+          "kind": "c",
+          "definition": "CHECK (jsonb_typeof(\"ResultPayload\"::jsonb) = 'object'::text AND length(\"InputHash\") = 64)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticSuggestion_BuilderSemanticPreparation_Family~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"PreparationId\") REFERENCES \"BuilderSemanticPreparation\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticSuggestion_BuilderSemanticResponse_FamilyId_~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ResponseId\") REFERENCES \"BuilderSemanticResponse\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticSuggestion_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderSemanticSuggestion",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_BuilderSemanticSuggestion_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticSuggestion_FamilyId\" ON public.\"BuilderSemanticSuggestion\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticSuggestion_FamilyId_PreparationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticSuggestion_FamilyId_PreparationId\" ON public.\"BuilderSemanticSuggestion\" USING btree (\"FamilyId\", \"PreparationId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticSuggestion_FamilyId_ResponseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticSuggestion_FamilyId_ResponseId\" ON public.\"BuilderSemanticSuggestion\" USING btree (\"FamilyId\", \"ResponseId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticSuggestion_PreparationId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticSuggestion_PreparationId\" ON public.\"BuilderSemanticSuggestion\" USING btree (\"PreparationId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticSuggestion_ResponseId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticSuggestion_ResponseId\" ON public.\"BuilderSemanticSuggestion\" USING btree (\"ResponseId\")"
+        },
+        {
+          "name": "PK_BuilderSemanticSuggestion",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderSemanticSuggestion\" ON public.\"BuilderSemanticSuggestion\" USING btree (\"Id\")"
         }
       ]
     },

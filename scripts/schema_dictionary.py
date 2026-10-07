@@ -9,6 +9,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "BuilderSemanticResponse": "独立提交的本机语义原输出字节、完整性和摘要，引用实际调用；验证失败或业务回滚仍保留，不补造未知返回。",
+    "BuilderSemanticSuggestion": "固定语义准备及实际返回形成的不可修改模型建议，与后台终态回执原子提交；不代表人工审核或自动内容发布。",
     "BuilderSemanticPreparation": "候选语义建议后台任务的不可变原输入、来源及正式库摘要、请求成员和固定本机配置；准备不冒充模型调用或审核。",
     "BuilderSemanticCall": "候选语义逐次物理调用、原固定输入/模型配置和实际返回用量或未知状态；独立提交，与建库及映射共享家庭预算。",
     "BuilderSemanticReconciliation": "家庭负责人追加的本机语义调用结束依据，保留原未知/实际值，不改写调用事实。",
@@ -117,7 +119,7 @@ def render(schema):
     if unknown:
         raise ValueError("新增表需补充用途说明：" + ", ".join(sorted(unknown)))
     lines = ["# 实际数据库数据字典", "",
-             "由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。", "",
+             "由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。 结构对应生成时实际连接的数据库；常驻服务是否已部署该版迁移，见[开发状态](STATUS.md)。", "",
              f"当前 {len(names)} 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。", "",
              "## 使用边界", "",
              "- `FamilyId` 是家庭范围，外键约束之外仍必须通过服务端授权；内容快照中的 UUID 不等于独立数据库外键。",

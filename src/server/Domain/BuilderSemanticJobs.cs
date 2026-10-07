@@ -15,7 +15,7 @@ public class BuilderSemanticPreparation:Row
 }
 public record BuilderSemanticFrozenInput(string Version,Guid FamilyId,Guid CandidateId,Guid RunId,Guid RequestedBy,Guid? LibraryReleaseId,string CandidatePayload,string RunSnapshot,string SourceSnapshot,string? LibraryHash,string ModelInputPayload,string ModelConfigPayload,string ModelConfigHash);
 
-// Queue preparation and revalidation only. No production endpoint/consumer until durable calls are connected.
+// Fixed preparation and revalidation; consumer implementation lives in BuilderSemanticProcessing.
 public static class BuilderSemanticJobs
 {
     public const string Type="BuilderSemanticDecision";

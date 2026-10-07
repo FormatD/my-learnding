@@ -44,6 +44,7 @@ public record BuilderSemanticReconciliationInput(bool ProviderFinished,long? Inp
 public sealed class BuilderSemanticCallTracking(Database owner,BuilderSemanticPreparation preparation,BuilderSemanticLocalConfiguration frozen,JobLease lease,IBuilderSemanticProvider inner):IBuilderSemanticProvider
 {
     readonly Guid executionId=Guid.NewGuid();int number;
+    public Guid? ResponseId {get;private set;}
     Database Open()=>BackgroundJobs.Open(owner);
     public async Task<BuilderProviderResponse> Generate(BuilderSemanticInput input,CancellationToken ct)
     {
@@ -78,8 +79,10 @@ public sealed class BuilderSemanticCallTracking(Database owner,BuilderSemanticPr
         using var timeout=new CancellationTokenSource(TimeSpan.FromSeconds(10));await using var db=Open();await using var tx=await db.Database.BeginTransactionAsync(timeout.Token);await BuilderBudget.Lock(db,preparation.FamilyId,timeout.Token);
         var call=await db.Set<BuilderSemanticCall>().SingleOrDefaultAsync(c=>c.Id==id && c.FamilyId==preparation.FamilyId,timeout.Token);if(call==null || call.Status!="Started")return;
         call.Status=status;call.FinishedAt=DateTimeOffset.UtcNow;call.ElapsedMilliseconds=elapsed;call.ErrorCode=error;call.BudgetState="Unresolved";
-        if(response!=null){call.OutputHash=Content.Hash(response.Output);call.InputTokens=response.Usage?.InputTokens;call.OutputTokens=response.Usage?.OutputTokens;call.ChargedCost=response.Usage?.ChargedCost;call.Currency=response.Usage?.Currency;call.BillingStatus=response.Usage?.BillingStatus??"Unknown";if(call.BillingStatus is "LocalMeasured" or "LocalNoCharge")call.BudgetState="Settled";}
+        BuilderSemanticResponse? receipt=null;
+        if(response!=null){call.OutputHash=Content.Hash(response.Output);call.InputTokens=response.Usage?.InputTokens;call.OutputTokens=response.Usage?.OutputTokens;call.ChargedCost=response.Usage?.ChargedCost;call.Currency=response.Usage?.Currency;call.BillingStatus=response.Usage?.BillingStatus??"Unknown";if(call.BillingStatus is "LocalMeasured" or "LocalNoCharge")call.BudgetState="Settled";receipt=new(){FamilyId=call.FamilyId,CallId=call.Id,OutputPayload=response.Output,OutputHash=call.OutputHash,OutputComplete=response.OutputComplete};db.Add(receipt);}
         await db.SaveChangesAsync(timeout.Token);await tx.CommitAsync(timeout.Token);
+        if(receipt!=null)ResponseId=receipt.Id;
     }
     public static async Task<BuilderSemanticReconciliation> Reconcile(Database db,Actor actor,Guid id,BuilderSemanticReconciliationInput input,CancellationToken ct=default)
     {

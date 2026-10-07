@@ -1,8 +1,8 @@
 # 实际数据库数据字典
 
-由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
+由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。 结构对应生成时实际连接的数据库；常驻服务是否已部署该版迁移，见[开发状态](STATUS.md)。
 
-当前 75 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 77 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -69,6 +69,7 @@
 | 20261007054043_LocalMappingResults | 10.0.4 |
 | 20261007071504_BuilderSemanticPreparation | 10.0.4 |
 | 20261007073312_BuilderSemanticCallLedger | 10.0.4 |
+| 20261007080012_BuilderSemanticResults | 10.0.4 |
 
 ## Accounts
 
@@ -844,6 +845,67 @@
 - `CREATE INDEX "IX_BuilderSemanticReconciliation_FamilyId_ActorId" ON public."BuilderSemanticReconciliation" USING btree ("FamilyId", "ActorId")`
 - `CREATE INDEX "IX_BuilderSemanticReconciliation_FamilyId_CallId" ON public."BuilderSemanticReconciliation" USING btree ("FamilyId", "CallId")`
 - `CREATE UNIQUE INDEX "PK_BuilderSemanticReconciliation" ON public."BuilderSemanticReconciliation" USING btree ("Id")`
+
+## BuilderSemanticResponse
+
+独立提交的本机语义原输出字节、完整性和摘要，引用实际调用；验证失败或业务回滚仍保留，不补造未知返回。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| CallId | uuid | 否 | 无 |
+| OutputPayload | text | 否 | 无 |
+| OutputHash | text | 否 | 无 |
+| OutputComplete | boolean | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_BuilderSemanticResponse_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_BuilderSemanticResponse_Output`：`CHECK (length("OutputHash") = 64 AND length("OutputPayload") <= 2000000)`
+- `FK_BuilderSemanticResponse_BuilderSemanticCall_FamilyId_CallId`：`FOREIGN KEY ("FamilyId", "CallId") REFERENCES "BuilderSemanticCall"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticResponse_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderSemanticResponse`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_BuilderSemanticResponse_FamilyId_Id" ON public."BuilderSemanticResponse" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticResponse_CallId" ON public."BuilderSemanticResponse" USING btree ("CallId")`
+- `CREATE INDEX "IX_BuilderSemanticResponse_FamilyId" ON public."BuilderSemanticResponse" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderSemanticResponse_FamilyId_CallId" ON public."BuilderSemanticResponse" USING btree ("FamilyId", "CallId")`
+- `CREATE UNIQUE INDEX "PK_BuilderSemanticResponse" ON public."BuilderSemanticResponse" USING btree ("Id")`
+
+## BuilderSemanticSuggestion
+
+固定语义准备及实际返回形成的不可修改模型建议，与后台终态回执原子提交；不代表人工审核或自动内容发布。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| PreparationId | uuid | 否 | 无 |
+| ResponseId | uuid | 否 | 无 |
+| ResultPayload | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_BuilderSemanticSuggestion_Result`：`CHECK (jsonb_typeof("ResultPayload"::jsonb) = 'object'::text AND length("InputHash") = 64)`
+- `FK_BuilderSemanticSuggestion_BuilderSemanticPreparation_Family~`：`FOREIGN KEY ("FamilyId", "PreparationId") REFERENCES "BuilderSemanticPreparation"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticSuggestion_BuilderSemanticResponse_FamilyId_~`：`FOREIGN KEY ("FamilyId", "ResponseId") REFERENCES "BuilderSemanticResponse"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticSuggestion_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderSemanticSuggestion`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_BuilderSemanticSuggestion_FamilyId" ON public."BuilderSemanticSuggestion" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderSemanticSuggestion_FamilyId_PreparationId" ON public."BuilderSemanticSuggestion" USING btree ("FamilyId", "PreparationId")`
+- `CREATE INDEX "IX_BuilderSemanticSuggestion_FamilyId_ResponseId" ON public."BuilderSemanticSuggestion" USING btree ("FamilyId", "ResponseId")`
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticSuggestion_PreparationId" ON public."BuilderSemanticSuggestion" USING btree ("PreparationId")`
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticSuggestion_ResponseId" ON public."BuilderSemanticSuggestion" USING btree ("ResponseId")`
+- `CREATE UNIQUE INDEX "PK_BuilderSemanticSuggestion" ON public."BuilderSemanticSuggestion" USING btree ("Id")`
 
 ## Candidates
 

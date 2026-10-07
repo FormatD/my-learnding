@@ -6,7 +6,7 @@ public static class JobCancellation
     public const string Code="JOB_CANCELLED_BY_USER";
     public static void Authorize(Actor actor,BackgroundJob j)
     {
-        if(j.Type==AssessmentRebuildJobs.Type)actor.Require("Parent");else if(j.Type is "BuilderCandidates" or "ParsePDF" or "MappingSuggestions")actor.Require("ContentEditor");else throw new ApiError(422,"JOB_CANCELLATION_UNSUPPORTED","学习结果同步必须完成，不能取消；故障时请使用结果恢复入口。");
+        if(j.Type==AssessmentRebuildJobs.Type)actor.Require("Parent");else if(j.Type is "BuilderCandidates" or "ParsePDF" or "MappingSuggestions" or BuilderSemanticJobs.Type)actor.Require("ContentEditor");else throw new ApiError(422,"JOB_CANCELLATION_UNSUPPORTED","学习结果同步必须完成，不能取消；故障时请使用结果恢复入口。");
     }
     public static async Task<JobCancellationSummary> Cancel(Database db,Actor actor,Guid id,string reason,CancellationToken ct=default)
     {

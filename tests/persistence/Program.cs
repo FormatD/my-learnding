@@ -11,6 +11,8 @@ Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
 if(args[0].StartsWith("semantic-ledger-crash")){await BuilderSemanticLedgerCases.Crash(db,args[0]);return;}
+if(args[0].StartsWith("semantic-result-")){await BuilderSemanticProcessingCases.Crash(db,args[0]);return;}
+if(args[0]=="semantic-processing"){await BuilderSemanticProcessingCases.Run(db);return;}
 if(args[0]=="semantic-ledger"){await BuilderSemanticLedgerCases.Run(db);return;}
 if(args[0]=="semantic-preparation"){await BuilderSemanticPreparationCases.Run(db);return;}
 if(args[0]=="builder-semantic-live"){await BuilderSemanticCases.Run(true);return;}
