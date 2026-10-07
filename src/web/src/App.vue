@@ -175,7 +175,7 @@ onMounted(()=>{window.addEventListener('online',()=>offline.value=false);window.
           <PublishedMappingView v-if="mappingReleaseId&&can('ContentEditor')" :key="mappingReleaseId" :release="content.releases.find((r:Item)=>r.id===mappingReleaseId)!" />
           <KnowledgeChanges v-if="can('ContentEditor')" :releases="content.releases" :publisher="can('Publisher')" :disabled="busy" />
           <IndependentMappingEditor v-if="can('ContentEditor')" :drafts="content.drafts" :releases="content.releases" :disabled="busy||!!draftId" @refresh="run(refresh)" @edit-draft="id=>{const d=content.drafts.find((d:Item)=>d.id===id);if(d)editDraft(d)}" />
-          <MappingWorkbench v-if="can('ContentEditor')" :drafts="content.drafts" :releases="content.releases" :disabled="busy||!!draftId" @refresh="run(refresh)" @edit-draft="id=>{const d=content.drafts.find((d:Item)=>d.id===id);if(d)editDraft(d)}" />
+          <MappingWorkbench :owner="me.family.ownerAccountId===me.actor.accountId" v-if="can('ContentEditor')" :drafts="content.drafts" :releases="content.releases" :disabled="busy||!!draftId" @refresh="run(refresh)" @edit-draft="id=>{const d=content.drafts.find((d:Item)=>d.id===id);if(d)editDraft(d)}" />
         </template>
         <template v-else-if="page==='assessment'">
           <div class="page-heading"><div><p class="eyebrow">EVIDENCE / 学习依据</p><h1>看见进步，也看见缺口</h1><p class="muted">掌握状态是安排学习的线索；每条贡献都能回溯。</p></div><button @click="run(refresh)" :disabled="busy">刷新后台结果</button></div>
