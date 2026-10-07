@@ -72,6 +72,7 @@ public class ProjectionWorker(IServiceScopeFactory scopes, ILogger<ProjectionWor
                 {
                     await Builder.ProcessOne(db,ct,logger);
                     db.ChangeTracker.Clear();await MappingJobs.ProcessOne(db,ct);
+                    db.ChangeTracker.Clear();await BuilderSemanticProcessing.ProcessOne(db,ct);
                 }
             }
             catch(OperationCanceledException)when(ct.IsCancellationRequested){break;}

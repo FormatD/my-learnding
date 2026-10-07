@@ -21,7 +21,7 @@ public static class BuilderSemanticJobs
     public const string Type="BuilderSemanticDecision";
     static ApiError Changed()=>new(422,"JOB_INPUT_SNAPSHOT_CHANGED","候选、来源、原能力库或固定语义输入已变化，请重新准备。");
     public static BuilderSemanticLocalConfiguration Current(IConfiguration configuration)=>new("semantic-local/1",configuration["Omlx:Endpoint"]??"http://127.0.0.1:8000/v1",configuration["Omlx:Model"]??"",configuration.GetValue<int?>("Omlx:MaxOutputTokens")??4096,configuration.GetValue<int?>("Omlx:TimeoutMilliseconds")??600000,BuilderSemanticProtocol.PromptHash);
-    static async Task<BuilderSemanticFrozenInput> Capture(Database db,Actor actor,Guid candidateId,BuilderSemanticLocalConfiguration config,CancellationToken ct)
+    static async Task<BuilderSemanticFrozenInput> Capture(Database db,Actor actor,Guid candidateId,BuilderSemanticLocalConfiguration config,CancellationToken ct,Guid? originalRequestedBy=null)
     {
         config.Validate();var context=await BuilderCandidateReviews.Read(db,actor,candidateId,ct);
         if(context.Candidate.Status!="Pending")throw new ApiError(422,"CANDIDATE_ALREADY_REVIEWED","候选已经处理，不能替换原人工决定。");
@@ -34,7 +34,7 @@ public static class BuilderSemanticJobs
         var sourceSnapshot=Content.Hash(Json.Write(new{source.Id,source.Title,source.Text,source.Hash,source.UsageScope,source.AllowExternalAI,fragments=context.Source.Fragments.OrderBy(f=>f.Id).Select(f=>new{f.Id,f.SourceId,f.Locator,f.Text}).ToArray()}));
         var payload=Json.Write(config);var c=context.Candidate;
         var candidatePayload=Json.Write(new{c.Id,c.RunId,c.ChunkId,c.Name,c.Behavior,c.Boundary,c.Type,c.Quote,c.Status,c.SuggestedAction,c.ProtocolPayload,c.Matches,c.Decision,c.ReviewReason,c.ExistingKCId,c.CreatedDraftId,c.CreatedKCId,c.ReviewedBy,c.ReviewedAt});
-        return new("semantic-job/1",actor.FamilyId,candidateId,context.Run.Id,actor.Id,context.Run.LibraryReleaseId,candidatePayload,BackgroundJobs.Snapshot(context.Run),sourceSnapshot,release==null?null:Content.Hash(release.Payload),BuilderSemanticProtocol.UserFor(input),payload,Content.Hash(payload));
+        return new("semantic-job/1",actor.FamilyId,candidateId,context.Run.Id,originalRequestedBy??actor.Id,context.Run.LibraryReleaseId,candidatePayload,BackgroundJobs.Snapshot(context.Run),sourceSnapshot,release==null?null:Content.Hash(release.Payload),BuilderSemanticProtocol.UserFor(input),payload,Content.Hash(payload));
     }
     public static async Task<BuilderSemanticPreparation> Enqueue(Database db,Actor actor,Guid candidateId,CancellationToken ct=default)
     {
@@ -57,12 +57,33 @@ public static class BuilderSemanticJobs
         if(p.JobId!=lease.Job.Id || p.Snapshot!=lease.Job.InputPayload || p.SnapshotHash!=lease.Job.InputHash || p.InputHash!=p.SnapshotHash || Content.Hash(p.Snapshot)!=p.SnapshotHash)throw Changed();
         BuilderSemanticFrozenInput f;try{f=Json.Read<BuilderSemanticFrozenInput>(p.Snapshot)??throw Changed();}catch(JsonException){throw Changed();}
         if(f.FamilyId!=p.FamilyId || f.CandidateId!=p.CandidateId || f.RunId!=p.RunId || f.RequestedBy!=p.RequestedBy || f.LibraryReleaseId!=p.LibraryReleaseId)throw Changed();var config=ResolveLocal(f);
-        // Retry authorization will be added with the explicit retry endpoint; never accept an unaudited retry round.
-        if(lease.Job.RetryRound!=0)throw new ApiError(422,"JOB_RETRY_AUTHORIZATION_MISSING","缺少本轮语义任务人工恢复依据。");
-        var roles=(await db.Set<FamilyMembership>().AsNoTracking().SingleOrDefaultAsync(m=>m.FamilyId==p.FamilyId && m.AccountId==p.RequestedBy,ct))?.Roles??"";var actor=new Actor(Guid.Empty,p.FamilyId,p.RequestedBy,null,"Parent",roles);
+        var authorizedBy=p.RequestedBy;var authorized=lease.Job.RetryRound==0;
+        if(lease.Job.RetryRound>0)
+        {
+            var audits=await db.Audits.AsNoTracking().Where(a=>a.FamilyId==p.FamilyId && a.Action=="BuilderSemanticPreparationManualRetry" && a.Details.Contains(p.Id.ToString())).OrderByDescending(a=>a.CreatedAt).ThenBy(a=>a.Id).ToArrayAsync(ct);
+            foreach(var audit in audits)
+            {
+                using var doc=JsonDocument.Parse(audit.Details);var d=doc.RootElement;
+                if(d.GetProperty("preparationId").GetGuid()==p.Id && d.GetProperty("jobId").GetGuid()==lease.Job.Id && d.GetProperty("retryRound").GetInt32()==lease.Job.RetryRound && d.GetProperty("snapshotHash").GetString()==p.SnapshotHash){authorizedBy=audit.ActorId;authorized=true;break;}
+            }
+        }
+        if(!authorized)throw new ApiError(422,"JOB_RETRY_AUTHORIZATION_MISSING","缺少本轮语义任务人工恢复依据。");
+        var roles=(await db.Set<FamilyMembership>().AsNoTracking().SingleOrDefaultAsync(m=>m.FamilyId==p.FamilyId && m.AccountId==authorizedBy,ct))?.Roles??"";var actor=new Actor(Guid.Empty,p.FamilyId,authorizedBy,null,"Parent",roles);
         if(!actor.Can("ContentEditor"))throw new ApiError(422,"JOB_REQUESTER_FORBIDDEN","内容维护权限已变化，未保存语义建议。");
         // Clear prior tracked definitions before the second read; a model wait cannot reuse stale candidate/source rows.
-        db.ChangeTracker.Clear();var current=await Capture(db,actor,p.CandidateId,config,ct);if(Json.Write(current)!=p.Snapshot)throw Changed();
-        var input=Json.Read<BuilderSemanticInput>(f.ModelInputPayload);BuilderSemanticProtocol.ValidateInput(input);return(p,f,input,p.RequestedBy);
+        db.ChangeTracker.Clear();var current=await Capture(db,actor,p.CandidateId,config,ct,p.RequestedBy);if(Json.Write(current)!=p.Snapshot)throw Changed();
+        var input=Json.Read<BuilderSemanticInput>(f.ModelInputPayload);BuilderSemanticProtocol.ValidateInput(input);return(p,f,input,authorizedBy);
     }
+    public static async Task<BuilderSemanticPreparation> Retry(Database db,Actor actor,Guid id,string reason,CancellationToken ct=default)
+    {
+        actor.Require("ContentEditor");if(string.IsNullOrWhiteSpace(reason) || reason.Length>4000)throw new ApiError(422,"REASON_REQUIRED","请填写重新处理的依据，最多4000字。");
+        var p=await db.Set<BuilderSemanticPreparation>().AsNoTracking().SingleOrDefaultAsync(p=>p.Id==id && p.FamilyId==actor.FamilyId,ct)??throw new ApiError(404,"NOT_FOUND","找不到本家庭语义任务。");
+        var j=await db.Set<BackgroundJob>().SingleAsync(j=>j.Id==p.JobId && j.FamilyId==p.FamilyId,ct);if(j.Status is not ("Failed" or "Cancelled"))throw new ApiError(409,"RUN_NOT_FAILED","只可重新处理已停止的失败任务。");
+        if(j.LastErrorCode is not ("SEMANTIC_PROCESSING_FAILED" or "JOB_ATTEMPTS_EXHAUSTED" or "JOB_REQUESTER_FORBIDDEN" or "JOB_CANCELLED_BY_USER" or "BUILDER_CONCURRENCY_LIMIT" or "BUILDER_USAGE_RECONCILIATION_REQUIRED" or "BUILDER_CALL_BUDGET_LIMIT" or "BUILDER_DAILY_BUDGET_LIMIT" or "LOCAL_PROVIDER_TIMEOUT" or "LOCAL_PROVIDER_HTTP_FAILED" or "LOCAL_PROVIDER_AUTH_FAILED" or "LOCAL_PROVIDER_KEY_REQUIRED" or "LOCAL_PROVIDER_KEY_NOT_PRIVATE" or "LOCAL_PROVIDER_OUTPUT_INCOMPLETE" or "LOCAL_PROVIDER_RESPONSE_INVALID" or "LOCAL_PROVIDER_MODEL_MISMATCH" or "BUILDER_SEMANTIC_OUTPUT_LIMIT" or "BUILDER_SEMANTIC_SCHEMA_INVALID" or "BUILDER_SEMANTIC_SOURCE_INVALID" or "BUILDER_SEMANTIC_TARGET_INVALID"))throw new ApiError(422,"RUN_RECREATE_REQUIRED","原输入需要重新核对，请重新准备建议。");
+        if(await db.Set<BuilderSemanticCall>().AnyAsync(c=>c.PreparationId==p.Id && c.FamilyId==p.FamilyId && (c.BudgetState=="Reserved" || c.BudgetState=="Unresolved") && !db.Set<BuilderSemanticReconciliation>().Any(r=>r.CallId==c.Id),ct))throw new ApiError(422,"BUILDER_USAGE_RECONCILIATION_REQUIRED","请由家庭负责人确认原本机调用实际结束后追加核对；停止等待不能证明模型已结束。");
+        var frozen=Json.Read<BuilderSemanticFrozenInput>(p.Snapshot);var current=await Capture(db,actor,p.CandidateId,ResolveLocal(frozen),ct,p.RequestedBy);if(Json.Write(current)!=p.Snapshot)throw Changed();
+        j.Status="Queued";j.AttemptCount=0;j.RetryRound++;j.LastErrorCode=null;j.NextRunAt=null;
+        db.Audits.Add(new(){FamilyId=p.FamilyId,ActorId=actor.Id,Action="BuilderSemanticPreparationManualRetry",Details=Json.Write(new{preparationId=p.Id,jobId=j.Id,j.RetryRound,p.SnapshotHash,reason=reason.Trim()})});return p;
+    }
+
 }

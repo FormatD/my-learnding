@@ -9,7 +9,7 @@ public static class Builder
 {
     public static void Map(RouteGroupBuilder api)
     {
-        Provenance.Map(api);BuilderCandidateReviews.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);BackgroundJobs.Map(api);ProjectionJobs.Map(api);DomainEvents.Map(api);
+        BuilderSemanticApi.Map(api);Provenance.Map(api);BuilderCandidateReviews.Map(api);BuilderCallTracking.Map(api);BuilderBudget.Map(api);BackgroundJobs.Map(api);ProjectionJobs.Map(api);DomainEvents.Map(api);
         api.MapGet("/builder",async (Database db,HttpContext ctx) =>
         {
             ctx.Actor().Require("ContentEditor");var family=ctx.Actor().FamilyId;var ct=ctx.RequestAborted;await using var transaction=await ReadSnapshot.Begin(db,ctx);

@@ -26,7 +26,7 @@ public static class BuilderSemanticProcessingCases
         foreach(var mode in new[]{"Success","Source","Reviewed","Role","Withdrawal","Cancelled","Malformed","Truncated","Timeout","Failure"})
         {
             var config=new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Omlx:Model","controlled-frozen-semantic"}}).Build();await using var db=new Database(new DbContextOptionsBuilder<Database>().UseNpgsql(owner.Database.GetConnectionString()).Options,config);
-            var (actor,p)=await BuilderSemanticPreparationCases.Seed(db);await db.Set<BackgroundJob>().Where(j=>j.Id==p.JobId).ExecuteUpdateAsync(u=>u.SetProperty(j=>j.LeaseSeconds,6).SetProperty(j=>j.HeartbeatSeconds,1));db.ChangeTracker.Clear();
+            var (actor,p)=await BuilderSemanticPreparationCases.Seed(db);await db.Families.Where(f=>f.Id==p.FamilyId).ExecuteUpdateAsync(u=>u.SetProperty(f=>f.OwnerAccountId,actor.AccountId));await db.Set<BackgroundJob>().Where(j=>j.Id==p.JobId).ExecuteUpdateAsync(u=>u.SetProperty(j=>j.LeaseSeconds,6).SetProperty(j=>j.HeartbeatSeconds,1));db.ChangeTracker.Clear();
             var candidateBefore=Json.Write(await db.Candidates.AsNoTracking().SingleAsync(c=>c.Id==p.CandidateId));config["Omlx:Model"]="later-runtime-model";
             var provider=new Paused(mode);var working=BuilderSemanticProcessing.ProcessOne(db,provider:provider);await provider.Started.Task.WaitAsync(TimeSpan.FromSeconds(8));
             await using(var writer=BackgroundJobs.Open(owner))using(var deadline=new CancellationTokenSource(TimeSpan.FromSeconds(3)))await using(var tx=await writer.Database.BeginTransactionAsync(deadline.Token))
@@ -60,6 +60,24 @@ public static class BuilderSemanticProcessingCases
             {
                 Check(receipt!=null && receipt.OutputPayload==provider.Output && receipt.OutputHash==Content.Hash(provider.Output) && receipt.OutputComplete==(mode!="Truncated") && call.Status=="Returned" && call.InputTokens==17 && call.OutputTokens==9 && call.BudgetState=="Settled","Rejected business result erased original raw return/usage");
                 try{await db.Set<BuilderSemanticResponse>().Where(r=>r.Id==receipt!.Id).ExecuteUpdateAsync(u=>u.SetProperty(r=>r.OutputPayload,"rewritten"));throw new Exception("Raw output overwritten");}catch(Npgsql.PostgresException ex){Check(ex.SqlState=="23514","Wrong receipt protection");}
+            }
+            if(mode is "Malformed" or "Truncated" or "Timeout" or "Failure" or "Cancelled" or "Role")
+            {
+                var retryActor=actor;
+                if(mode=="Role")
+                {
+                    var replacement=new Account{FamilyId=p.FamilyId,UserName="semantic-recovery-"+Guid.NewGuid()};db.AddRange(replacement,new FamilyMembership{FamilyId=p.FamilyId,AccountId=replacement.Id,Roles="Parent,ContentEditor"});await db.SaveChangesAsync();retryActor=new Actor(Guid.NewGuid(),p.FamilyId,replacement.Id,null,"Parent","Parent,ContentEditor");
+                }
+                if(mode is "Timeout" or "Failure" or "Cancelled")
+                {
+                    await using(var tx=await db.Database.BeginTransactionAsync()){await db.Lock(p.FamilyId);try{await BuilderSemanticJobs.Retry(db,actor,p.Id,"Cannot assume provider termination");throw new Exception("Unknown physical call allowed retry without reconciliation");}catch(ApiError ex){Check(ex.Code=="BUILDER_USAGE_RECONCILIATION_REQUIRED","Wrong unknown retry denial");}await tx.RollbackAsync();}
+                    await using(var tx=await db.Database.BeginTransactionAsync()){await BuilderSemanticCallTracking.Reconcile(db,actor,call.Id,new(true,null,null,"Observed controlled in-process provider task complete","Actual controlled task ended; no external oMLX involved"));await db.SaveChangesAsync();await tx.CommitAsync();}
+                }
+                var originalCall=Json.Write(call);var originalSnapshot=p.Snapshot;
+                await using(var tx=await db.Database.BeginTransactionAsync()){await db.Lock(p.FamilyId);await BuilderSemanticJobs.Retry(db,retryActor,p.Id,"Explicitly checked fixed input and completed original invocation");await db.SaveChangesAsync();await tx.CommitAsync();}
+                var replacementProvider=new Paused("Success");replacementProvider.Release.TrySetResult();await BuilderSemanticProcessing.ProcessOne(db,provider:replacementProvider);db.ChangeTracker.Clear();
+                Check((await db.Set<BackgroundJob>().SingleAsync(j=>j.Id==p.JobId)).Status=="Succeeded" && await db.Set<BuilderSemanticCall>().CountAsync(c=>c.PreparationId==p.Id)==2 && await db.Set<BuilderSemanticCall>().AnyAsync(c=>c.PreparationId==p.Id && c.RetryRound==1 && c.Model=="controlled-frozen-semantic") && Json.Write(await db.Set<BuilderSemanticCall>().AsNoTracking().SingleAsync(c=>c.Id==call.Id))==originalCall && (await db.Set<BuilderSemanticPreparation>().SingleAsync(x=>x.Id==p.Id)).Snapshot==originalSnapshot,"Explicit retry replaced original configuration/facts or failed");
+                Check(await db.Audits.AnyAsync(a=>a.Action=="BuilderSemanticSuggestionPrepared" && a.FamilyId==p.FamilyId && a.ActorId==retryActor.Id),"Recovery ignored actual current authorizer");
             }
             if(mode!="Reviewed")Check(Json.Write(await db.Candidates.AsNoTracking().SingleAsync(c=>c.Id==p.CandidateId))==candidateBefore,"Semantic suggestion performed a candidate/human review write");
             Check(!await db.Drafts.AnyAsync(d=>d.FamilyId==p.FamilyId),"Semantic suggestion auto-created a content draft");
