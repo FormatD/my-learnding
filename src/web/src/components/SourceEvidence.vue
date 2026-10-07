@@ -6,13 +6,13 @@ const source=computed(()=>sources.value[sourceIndex.value]),page=computed(()=>so
 watch(()=>[props.stage,props.taskId],async()=>{const current=++epoch;busy.value=true;error.value='';sources.value=[];sourceIndex.value=0;pageIndex.value=0;scale.value=1;try{const rows=await api(`/builder/reference-images/${props.stage}/${props.taskId}`);if(alive&&current===epoch)sources.value=rows}catch(e){if(alive&&current===epoch)error.value=(e as Error).message}finally{if(alive&&current===epoch)busy.value=false}},{immediate:true});
 async function attach(){
  if(!source.value||!imageFile.value||!documentFile.value||uploading.value)return;
- const current=epoch,sourceId=source.value.id,file=imageFile.value,document=documentFile.value;uploading.value=true;uploadError.value='';
+ const current=epoch,sourceId=source.value.id,expectedSourceHash=source.value.hash,file=imageFile.value,document=documentFile.value;uploading.value=true;uploadError.value='';
  try{
   if(file.size>10_000_000||!['image/png','image/jpeg'].includes(file.type)||document.size>100_000_000)throw new Error('请选择10 MB以内的PNG/JPEG原图和100 MB以内的原教材PDF。');
   const documentBytes=await document.arrayBuffer();if(new TextDecoder().decode(documentBytes.slice(0,5))!=='%PDF-')throw new Error('请选择原教材PDF。');
   const documentHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',documentBytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
   const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]!);reader.onerror=()=>reject(new Error('原图读取失败。'));reader.readAsDataURL(file)});
-  await api(`/content/sources/${sourceId}/images`,{name:file.name,mimeType:file.type,base64,expectedSourceHash:source.value.hash,documentHash,page:pdfPage.value,printedPage:printedPage.value});
+  await api(`/content/sources/${sourceId}/images`,{name:file.name,mimeType:file.type,base64,expectedSourceHash,documentHash,page:pdfPage.value,printedPage:printedPage.value});
   const rows=await api(`/builder/reference-images/${props.stage}/${props.taskId}`);if(alive&&epoch===current){sources.value=rows;imageFile.value=null;documentFile.value=null;}
  }catch(e){if(alive&&epoch===current)uploadError.value=(e as Error).message}finally{if(alive)uploading.value=false}
 }
