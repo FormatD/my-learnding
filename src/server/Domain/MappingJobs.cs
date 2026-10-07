@@ -30,6 +30,35 @@ public static class MappingJobs
         var job=new BackgroundJob{FamilyId=a.FamilyId,Type=Type,InputRef=p.Id,IdempotencyKey="mapping:"+p.Id,InputPayload=snapshot,InputHash=p.SnapshotHash};p.JobId=job.Id;db.AddRange(p,job);
         db.Audits.Add(new(){FamilyId=a.FamilyId,ActorId=a.Id,Action="MappingPreparationQueued",Details=Json.Write(new{preparationId=p.Id,p.JobId,p.RunId,p.SourceDraftId,p.LibraryReleaseId,p.InputHash,p.SnapshotHash})});return p;
     }
+    // Shared by capture and result commit: permissions and withdrawn libraries must be checked again after a model wait.
+    public static async Task<(MappingPreparation Preparation,MappingFrozenInput Input,Catalog Source,KC[] Library,Guid AuthorizedBy)> ValidateFrozen(Database db,JobLease lease,CancellationToken ct)
+    {
+        var p=await db.Set<MappingPreparation>().AsNoTracking().SingleOrDefaultAsync(p=>p.Id==lease.Job.InputRef && p.FamilyId==lease.Job.FamilyId,ct)??throw new ApiError(422,"JOB_INPUT_MISSING","映射任务原输入不存在。");
+        if(p.JobId!=lease.Job.Id || p.Snapshot!=lease.Job.InputPayload || p.SnapshotHash!=lease.Job.InputHash || Content.Hash(p.Snapshot)!=p.SnapshotHash)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","映射任务原输入摘要不一致，请重新准备。");
+        var f=Json.Read<MappingFrozenInput>(p.Snapshot);
+        if(f.Version!="mapping-job/1" || f.FamilyId!=p.FamilyId || f.RunId!=p.RunId || f.RequestedBy!=p.RequestedBy || f.SourceDraftId!=p.SourceDraftId || f.LibraryReleaseId!=p.LibraryReleaseId || f.InputHash!=p.InputHash || f.SourceTitle!=p.SourceTitle || Content.Hash(f.SourcePayload)!=f.SourceHash || Content.Hash(f.LibraryPayload)!=f.LibraryHash || f.Provider is not ("Mock" or "Manual") || f.Model!=(f.Provider=="Manual"?"None":Retrieval.Space) || f.PromptVersion!=(f.Provider=="Manual"?"manual-source/1":"mapping-suggestion/1"))throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","映射任务版本或固定输入不一致。");
+        var authorizedBy=p.RequestedBy;var recoveryAuthorized=lease.Job.RetryRound==0;
+        if(lease.Job.RetryRound>0)
+        {
+            var audits=await db.Audits.AsNoTracking().Where(a=>a.FamilyId==p.FamilyId && a.Action=="MappingPreparationManualRetry" && a.Details.Contains(p.Id.ToString())).OrderByDescending(a=>a.CreatedAt).ThenBy(a=>a.Id).ToArrayAsync(ct);
+            foreach(var audit in audits)
+            {
+                using var doc=JsonDocument.Parse(audit.Details);var data=doc.RootElement;
+                if(data.GetProperty("preparationId").GetGuid()==p.Id && data.GetProperty("jobId").GetGuid()==lease.Job.Id && data.GetProperty("retryRound").GetInt32()==lease.Job.RetryRound && data.GetProperty("runId").GetGuid()==p.RunId && data.GetProperty("snapshotHash").GetString()==p.SnapshotHash){authorizedBy=audit.ActorId;recoveryAuthorized=true;break;}
+            }
+        }
+        if(!recoveryAuthorized)throw new ApiError(422,"JOB_RETRY_AUTHORIZATION_MISSING","缺少本轮人工恢复依据，请核对后台任务记录。");
+        var roles=(await db.Set<FamilyMembership>().AsNoTracking().SingleOrDefaultAsync(m=>m.FamilyId==p.FamilyId && m.AccountId==authorizedBy,ct))?.Roles??"";
+        if(!new Actor(Guid.Empty,p.FamilyId,authorizedBy,null,"Parent",roles).Can("ContentEditor"))throw new ApiError(422,"JOB_REQUESTER_FORBIDDEN","内容维护权限已变化，请由有权限成员核对原输入后重新处理。");
+        var release=await db.Releases.AsNoTracking().SingleOrDefaultAsync(r=>r.Id==f.LibraryReleaseId && r.FamilyId==p.FamilyId,ct)??throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","冻结能力库不可用。");
+        if(release.Withdrawn)throw new ApiError(422,"LIBRARY_WITHDRAWN","冻结能力库已撤回，请重新准备映射建议。");
+        if(Content.Hash(release.Payload)!=f.LibraryHash)throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","冻结能力库摘要不一致。");
+        var source=Json.Read<Catalog>(f.SourcePayload);MappingBuilder.Shape(source);var library=Json.Read<Catalog>(f.LibraryPayload).Kcs;
+        if(f.Selections==null || f.Selections.Length is <1 or >100 || library.Length is <1 or >1000)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","固定选择超出本地处理范围。");
+        var expected=Content.Hash(Json.Write(new{id=f.SourceDraftId,version=f.SourceDraftVersion,sourceHash=f.SourceHash,releaseId=f.LibraryReleaseId,libraryHash=f.LibraryHash,selections=f.Selections,provider=f.Provider,model=f.Model,promptVersion=f.PromptVersion}));
+        if(expected!=f.InputHash)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","固定映射选择与输入摘要不一致。");
+        return(p,f,source,library,authorizedBy);
+    }
     public static async Task ProcessOne(Database db,CancellationToken stopping=default)
     {
         db.ChangeTracker.Clear();
@@ -40,30 +69,7 @@ public static class MappingJobs
             try
             {
                 if(!lease.CanExecute)throw new ApiError(422,"JOB_ATTEMPTS_EXHAUSTED","映射任务多次中断后已停止，请核对原输入后人工恢复。");
-                var p=await db.Set<MappingPreparation>().SingleOrDefaultAsync(p=>p.Id==lease.Job.InputRef && p.FamilyId==lease.Job.FamilyId,ct)??throw new ApiError(422,"JOB_INPUT_MISSING","映射任务原输入不存在。");
-                if(p.JobId!=lease.Job.Id || p.Snapshot!=lease.Job.InputPayload || p.SnapshotHash!=lease.Job.InputHash || Content.Hash(p.Snapshot)!=p.SnapshotHash)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","映射任务原输入摘要不一致，请重新准备。");
-                var f=Json.Read<MappingFrozenInput>(p.Snapshot);
-                if(f.Version!="mapping-job/1" || f.FamilyId!=p.FamilyId || f.RunId!=p.RunId || f.RequestedBy!=p.RequestedBy || f.SourceDraftId!=p.SourceDraftId || f.LibraryReleaseId!=p.LibraryReleaseId || f.InputHash!=p.InputHash || f.SourceTitle!=p.SourceTitle || Content.Hash(f.SourcePayload)!=f.SourceHash || Content.Hash(f.LibraryPayload)!=f.LibraryHash || f.Provider is not ("Mock" or "Manual") || f.Model!=(f.Provider=="Manual"?"None":Retrieval.Space) || f.PromptVersion!=(f.Provider=="Manual"?"manual-source/1":"mapping-suggestion/1"))throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","映射任务版本或固定输入不一致。");
-                var authorizedBy=p.RequestedBy;var recoveryAuthorized=lease.Job.RetryRound==0;
-                if(lease.Job.RetryRound>0)
-                {
-                    var audits=await db.Audits.AsNoTracking().Where(a=>a.FamilyId==p.FamilyId && a.Action=="MappingPreparationManualRetry" && a.Details.Contains(p.Id.ToString())).OrderByDescending(a=>a.CreatedAt).ThenBy(a=>a.Id).ToArrayAsync(ct);
-                    foreach(var audit in audits)
-                    {
-                        using var doc=JsonDocument.Parse(audit.Details);var data=doc.RootElement;
-                        if(data.GetProperty("preparationId").GetGuid()==p.Id && data.GetProperty("jobId").GetGuid()==lease.Job.Id && data.GetProperty("retryRound").GetInt32()==lease.Job.RetryRound && data.GetProperty("runId").GetGuid()==p.RunId && data.GetProperty("snapshotHash").GetString()==p.SnapshotHash){authorizedBy=audit.ActorId;recoveryAuthorized=true;break;}
-                    }
-                }
-                if(!recoveryAuthorized)throw new ApiError(422,"JOB_RETRY_AUTHORIZATION_MISSING","缺少本轮人工恢复依据，请核对后台任务记录。");
-                var roles=(await db.Set<FamilyMembership>().AsNoTracking().SingleOrDefaultAsync(m=>m.FamilyId==p.FamilyId && m.AccountId==authorizedBy,ct))?.Roles??"";
-                if(!new Actor(Guid.Empty,p.FamilyId,authorizedBy,null,"Parent",roles).Can("ContentEditor"))throw new ApiError(422,"JOB_REQUESTER_FORBIDDEN","内容维护权限已变化，请由有权限成员核对原输入后重新处理。");
-                var release=await db.Releases.SingleOrDefaultAsync(r=>r.Id==f.LibraryReleaseId && r.FamilyId==p.FamilyId,ct)??throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","冻结能力库不可用。");
-                if(release.Withdrawn)throw new ApiError(422,"LIBRARY_WITHDRAWN","冻结能力库已撤回，请重新准备映射建议。");
-                if(Content.Hash(release.Payload)!=f.LibraryHash)throw new ApiError(422,"INPUT_SNAPSHOT_UNKNOWN","冻结能力库摘要不一致。");
-                var source=Json.Read<Catalog>(f.SourcePayload);MappingBuilder.Shape(source);var library=Json.Read<Catalog>(f.LibraryPayload).Kcs;
-                if(f.Selections==null || f.Selections.Length is <1 or >100 || library.Length is <1 or >1000)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","固定选择超出本地处理范围。");
-                var expected=Content.Hash(Json.Write(new{id=f.SourceDraftId,version=f.SourceDraftVersion,sourceHash=f.SourceHash,releaseId=f.LibraryReleaseId,libraryHash=f.LibraryHash,selections=f.Selections,provider=f.Provider,model=f.Model,promptVersion=f.PromptVersion}));
-                if(expected!=f.InputHash)throw new ApiError(422,"JOB_INPUT_SNAPSHOT_CHANGED","固定映射选择与输入摘要不一致。");
+                var (p,f,source,library,authorizedBy)=await ValidateFrozen(db,lease,ct);
                 var run=await db.Set<MappingRun>().SingleOrDefaultAsync(r=>r.Id==f.RunId && r.FamilyId==p.FamilyId,ct);
                 if(run!=null)
                 {
