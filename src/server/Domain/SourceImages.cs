@@ -50,7 +50,7 @@ public static class SourceImages
         switch(stage)
         {
             case "sources":return [(await One<Source>()).Id];
-            case "parsing":case "extraction":return [(await One<BuilderRun>()).SourceId];
+            case "parsing":case "extraction":var builderRun=await One<BuilderRun>();if(builderRun.Type!=(stage=="parsing"?"ParsePDF":"Candidates"))throw new ApiError(404,"NOT_FOUND","此任务不属于所选阶段。");return [builderRun.SourceId];
             case "review":return await Run((await One<Candidate>()).RunId);
             case "semantic":return await Run((await One<BuilderSemanticPreparation>()).RunId);
             case "drafts":return await Drafts([(await One<ContentDraft>()).Id]);
@@ -67,8 +67,8 @@ public static class SourceImages
         {
             var a=ctx.Actor();a.Require("ContentEditor");var source=await db.Sources.SingleOrDefaultAsync(s=>s.FamilyId==a.FamilyId&&s.Id==id)??throw new ApiError(404,"NOT_FOUND","找不到来源。");
             if(source.Hash!=input.ExpectedSourceHash)throw new ApiError(412,"SOURCE_CHANGED","来源文字已变化，请重新核对原图。");
-            if(!Hash(input.DocumentHash)||input.Page is <1 or >10000||string.IsNullOrWhiteSpace(input.PrintedPage)||input.PrintedPage.Length>100||string.IsNullOrWhiteSpace(input.Name)||input.Name.Length>200||input.Name.Any(char.IsControl))throw new ApiError(422,"INVALID_SOURCE_IMAGE","请记录教材哈希、有效页码及文件名。");
-            byte[] bytes;try{bytes=Convert.FromBase64String(input.Base64);}catch(FormatException){throw new ApiError(422,"INVALID_SOURCE_IMAGE","图片编码无效。");}
+            if(!Hash(input.DocumentHash)||input.Page is <1 or >10000||string.IsNullOrWhiteSpace(input.PrintedPage)||input.PrintedPage.Length>100||string.IsNullOrWhiteSpace(input.Name)||input.Name.Length>200||input.Name.Any(char.IsControl)||string.IsNullOrWhiteSpace(Path.GetFileName(input.Name)))throw new ApiError(422,"INVALID_SOURCE_IMAGE","请记录教材哈希、有效页码及文件名。");
+            byte[] bytes;try{bytes=Convert.FromBase64String(input.Base64);}catch(Exception e)when(e is FormatException or ArgumentException){throw new ApiError(422,"INVALID_SOURCE_IMAGE","图片编码无效。");}
             if(bytes.Length is 0 or >10_000_000||input.MimeType is not ("image/png" or "image/jpeg")||!ResourceFiles.ValidHeader(input.MimeType,bytes))throw new ApiError(422,"INVALID_SOURCE_IMAGE","原图须为10 MB以内的PNG或JPEG。");
             var hash=Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();var old=await db.Set<SourceImage>().SingleOrDefaultAsync(p=>p.FamilyId==a.FamilyId&&p.SourceId==id&&p.DocumentHash==input.DocumentHash&&p.Page==input.Page);
             if(old!=null){var file=await db.Set<PrivateFile>().SingleAsync(f=>f.Id==old.FileId&&f.FamilyId==a.FamilyId);if(file.Hash!=hash||old.PrintedPage!=input.PrintedPage||old.SourceHash!=source.Hash)throw new ApiError(409,"SOURCE_IMAGE_CONFLICT","此页已关联另一份原图，请保留原证据并另建来源。");return old;}

@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。 结构对应生成时实际连接的数据库；常驻服务是否已部署该版迁移，见[开发状态](STATUS.md)。
 
-当前 78 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 79 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -71,6 +71,7 @@
 | 20261007073312_BuilderSemanticCallLedger | 10.0.4 |
 | 20261007080012_BuilderSemanticResults | 10.0.4 |
 | 20261007091159_DurableModelEmbeddingIndex | 10.0.4 |
+| 20261007144124_SourcePageImages | 10.0.4 |
 
 ## Accounts
 
@@ -2752,6 +2753,37 @@
 - `CREATE INDEX "IX_Sessions_FamilyId_StudentId" ON public."Sessions" USING btree ("FamilyId", "StudentId")`
 - `CREATE INDEX "IX_Sessions_FamilyId_TaskId" ON public."Sessions" USING btree ("FamilyId", "TaskId")`
 - `CREATE UNIQUE INDEX "PK_Sessions" ON public."Sessions" USING btree ("Id")`
+
+## SourceImage
+
+家庭私有教材原图及来源文字摘要、原教材摘要、PDF页序和印刷页码的不可修改关联；只作人工核对证据，不代表OCR或内容已审核。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| SourceId | uuid | 否 | 无 |
+| FileId | uuid | 否 | 无 |
+| SourceHash | text | 否 | 无 |
+| DocumentHash | text | 否 | 无 |
+| Page | integer | 否 | 无 |
+| PrintedPage | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_SourceImage_Provenance`：`CHECK (length("SourceHash") = 64 AND "DocumentHash" ~ '^[a-f0-9]{64}$'::text AND "Page" >= 1 AND "Page" <= 10000 AND length("PrintedPage") >= 1 AND length("PrintedPage") <= 100)`
+- `FK_SourceImage_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_SourceImage_PrivateFile_FamilyId_FileId`：`FOREIGN KEY ("FamilyId", "FileId") REFERENCES "PrivateFile"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_SourceImage_Sources_FamilyId_SourceId`：`FOREIGN KEY ("FamilyId", "SourceId") REFERENCES "Sources"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_SourceImage`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_SourceImage_FamilyId" ON public."SourceImage" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_SourceImage_FamilyId_FileId" ON public."SourceImage" USING btree ("FamilyId", "FileId")`
+- `CREATE UNIQUE INDEX "IX_SourceImage_FamilyId_SourceId_DocumentHash_Page" ON public."SourceImage" USING btree ("FamilyId", "SourceId", "DocumentHash", "Page")`
+- `CREATE UNIQUE INDEX "PK_SourceImage" ON public."SourceImage" USING btree ("Id")`
 
 ## Sources
 

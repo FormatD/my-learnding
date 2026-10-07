@@ -216,6 +216,10 @@
     {
       "id": "20261007091159_DurableModelEmbeddingIndex",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261007144124_SourcePageImages",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -13772,6 +13776,151 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Sessions\" ON public.\"Sessions\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "SourceImage",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FileId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "DocumentHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Page",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PrintedPage",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_SourceImage_Provenance",
+          "kind": "c",
+          "definition": "CHECK (length(\"SourceHash\") = 64 AND \"DocumentHash\" ~ '^[a-f0-9]{64}$'::text AND \"Page\" >= 1 AND \"Page\" <= 10000 AND length(\"PrintedPage\") >= 1 AND length(\"PrintedPage\") <= 100)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceImage_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceImage_PrivateFile_FamilyId_FileId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"FileId\") REFERENCES \"PrivateFile\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceImage_Sources_FamilyId_SourceId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SourceId\") REFERENCES \"Sources\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_SourceImage",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_SourceImage_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_SourceImage_FamilyId\" ON public.\"SourceImage\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_SourceImage_FamilyId_FileId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_SourceImage_FamilyId_FileId\" ON public.\"SourceImage\" USING btree (\"FamilyId\", \"FileId\")"
+        },
+        {
+          "name": "IX_SourceImage_FamilyId_SourceId_DocumentHash_Page",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_SourceImage_FamilyId_SourceId_DocumentHash_Page\" ON public.\"SourceImage\" USING btree (\"FamilyId\", \"SourceId\", \"DocumentHash\", \"Page\")"
+        },
+        {
+          "name": "PK_SourceImage",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_SourceImage\" ON public.\"SourceImage\" USING btree (\"Id\")"
         }
       ]
     },
