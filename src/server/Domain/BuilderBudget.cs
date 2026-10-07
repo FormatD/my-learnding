@@ -30,11 +30,17 @@ public record BuilderQuote(decimal MaxCost,long MaxTokens,string? Currency,bool 
 public record BuilderBudgetInput(decimal DailyCostLimit,long DailyTokenLimit,decimal PerCallCostLimit,long PerCallTokenLimit,int MaxConcurrentCalls,string Reason);
 public record BuilderReconciliationInput(bool ProviderFinished,decimal ChargedCost,string? Currency,long? InputTokens,long? OutputTokens,string Reason,string ReceiptReference);
 public record BuilderBudgetState(decimal CostCommitted,decimal TokensCommitted,int ActiveCalls,int UnboundedUnknownCalls,int UnresolvedCalls,int OverrunCalls);
+public record BudgetCallFacts(Guid Id,string Status,string? BudgetState,string BillingStatus,DateOnly? BudgetDay,DateTimeOffset StartedAt,decimal? ChargedCost,string? Currency,long? InputTokens,long? OutputTokens,decimal? ReservedCost,long? ReservedTokens);
+public record BudgetDecisionFacts(Guid CallId,decimal ChargedCost,string? Currency,long? InputTokens,long? OutputTokens);
 public static class BuilderBudget
 {
     public static Task Lock(Database db,Guid family,CancellationToken ct=default)=>db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"builder-budget:"+family.ToString()},0))",ct);
     public static void Validate(BuilderBudgetPolicy p){if(p.Currency!="USD" || p.DailyCostLimit<0 || p.DailyCostLimit>9_999_999_999.999999m || p.PerCallCostLimit<0 || p.PerCallCostLimit>p.DailyCostLimit || decimal.Round(p.DailyCostLimit,6)!=p.DailyCostLimit || decimal.Round(p.PerCallCostLimit,6)!=p.PerCallCostLimit || p.DailyTokenLimit<0 || p.DailyTokenLimit>1_000_000_000_000 || p.PerCallTokenLimit<0 || p.PerCallTokenLimit>p.DailyTokenLimit || p.MaxConcurrentCalls<1 || p.MaxConcurrentCalls>10)throw new ApiError(422,"BUILDER_BUDGET_INVALID","预算须为非负有效值，单次不超过每日额度，并发1～10。");}
     public static BuilderBudgetState Calculate(BuilderCall[] calls,BuilderBudgetReconciliation[] reconciliations,DateOnly day)
+        =>CalculateFacts(calls.Select(Facts).ToArray(),reconciliations.Select(r=>new BudgetDecisionFacts(r.CallId,r.ChargedCost,r.Currency,r.InputTokens,r.OutputTokens)).ToArray(),day);
+    static BudgetCallFacts Facts(BuilderCall c)=>new(c.Id,c.Status,c.BudgetState,c.BillingStatus,c.BudgetDay,c.StartedAt,c.ChargedCost,c.Currency,c.InputTokens,c.OutputTokens,c.ReservedCost,c.ReservedTokens);
+    static BudgetCallFacts Facts(MappingModelCall c)=>new(c.Id,c.Status,c.BudgetState,c.BillingStatus,c.BudgetDay,c.StartedAt,c.ChargedCost,c.Currency,c.InputTokens,c.OutputTokens,0,0);
+    static BuilderBudgetState CalculateFacts(BudgetCallFacts[] calls,BudgetDecisionFacts[] reconciliations,DateOnly day)
     {
         var decisions=reconciliations.ToDictionary(r=>r.CallId);decimal cost=0,tokens=0;int active=0,unknown=0,unresolved=0,overruns=0;
         foreach(var c in calls.Where(c=>c.Status!="Denied"))
@@ -50,22 +56,31 @@ public static class BuilderBudget
         }
         return new(cost,tokens,active,unknown,unresolved,overruns);
     }
-    public static async Task<BuilderBudgetState> State(Database db,Guid family,DateOnly day,CancellationToken ct=default)=>Calculate(await db.Set<BuilderCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct),await db.Set<BuilderBudgetReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct),day);
+    public static async Task<BuilderBudgetState> State(Database db,Guid family,DateOnly day,CancellationToken ct=default)
+    {
+        var builder=await db.Set<BuilderCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct);var mapping=await db.Set<MappingModelCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct);
+        var builderDecisions=await db.Set<BuilderBudgetReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct);var mappingDecisions=await db.Set<MappingCallReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct);
+        return CalculateFacts(builder.Select(Facts).Concat(mapping.Select(Facts)).ToArray(),builderDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,r.ChargedCost,r.Currency,r.InputTokens,r.OutputTokens)).Concat(mappingDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,0,null,r.InputTokens,r.OutputTokens))).ToArray(),day);
+    }
+    public static string? Denial(BuilderBudgetPolicy policy,BuilderBudgetState state,BuilderQuote quote)
+    {
+        if(state.OverrunCalls>0)return "BUILDER_USAGE_RECONCILIATION_REQUIRED";
+        if(state.ActiveCalls>=policy.MaxConcurrentCalls)return "BUILDER_CONCURRENCY_LIMIT";
+        if(!quote.LocalNoCharge && state.UnboundedUnknownCalls>0)return "BUILDER_USAGE_RECONCILIATION_REQUIRED";
+        if(quote.MaxCost>policy.PerCallCostLimit || quote.MaxTokens>policy.PerCallTokenLimit)return "BUILDER_CALL_BUDGET_LIMIT";
+        if(state.CostCommitted+quote.MaxCost>policy.DailyCostLimit || state.TokensCommitted+quote.MaxTokens>policy.DailyTokenLimit)return "BUILDER_DAILY_BUDGET_LIMIT";
+        return null;
+    }
     public static async Task<string?> Reserve(Database db,BuilderCall call,BuilderQuote quote,CancellationToken ct,JobLease? lease=null)
     {
         quote.Validate();await using var tx=await db.Database.BeginTransactionAsync(ct);await Lock(db,call.FamilyId,ct);if(lease!=null)await lease.PermitCall(db,ct);
         var policy=await db.Set<BuilderBudgetPolicy>().SingleOrDefaultAsync(p=>p.FamilyId==call.FamilyId,ct)??new BuilderBudgetPolicy{FamilyId=call.FamilyId};if(db.Entry(policy).State==EntityState.Detached)db.Add(policy);Validate(policy);
-        var day=DateOnly.FromDateTime(DateTime.UtcNow);var state=await State(db,call.FamilyId,day,ct);string? denied=null;
-        if(state.OverrunCalls>0)denied="BUILDER_USAGE_RECONCILIATION_REQUIRED";
-        else if(state.ActiveCalls>=policy.MaxConcurrentCalls)denied="BUILDER_CONCURRENCY_LIMIT";
-        else if(!quote.LocalNoCharge && state.UnboundedUnknownCalls>0)denied="BUILDER_USAGE_RECONCILIATION_REQUIRED";
-        else if(quote.MaxCost>policy.PerCallCostLimit || quote.MaxTokens>policy.PerCallTokenLimit)denied="BUILDER_CALL_BUDGET_LIMIT";
-        else if(state.CostCommitted+quote.MaxCost>policy.DailyCostLimit || state.TokensCommitted+quote.MaxTokens>policy.DailyTokenLimit)denied="BUILDER_DAILY_BUDGET_LIMIT";
+        var day=DateOnly.FromDateTime(DateTime.UtcNow);var state=await State(db,call.FamilyId,day,ct);var denied=Denial(policy,state,quote);
         call.BudgetDay=day;call.BudgetSnapshot=Json.Write(policy);call.QuotePayload=Json.Write(quote);call.BudgetState=denied==null?"Reserved":"Denied";
         if(denied==null){call.ReservedCost=quote.MaxCost;call.ReservedTokens=quote.MaxTokens;}else{call.Status="Denied";call.ErrorCode=denied;call.FinishedAt=DateTimeOffset.UtcNow;}
         db.Add(call);await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);return denied;
     }
-    static async Task Owner(Database db,Actor actor){actor.Require("ContentEditor");if((await db.Families.SingleAsync(f=>f.Id==actor.FamilyId)).OwnerAccountId!=actor.AccountId)throw new ApiError(403,"OWNER_REQUIRED","只有家庭负责人可以调整或核对调用预算。");}
+    public static async Task Owner(Database db,Actor actor){actor.Require("ContentEditor");if((await db.Families.SingleAsync(f=>f.Id==actor.FamilyId)).OwnerAccountId!=actor.AccountId)throw new ApiError(403,"OWNER_REQUIRED","只有家庭负责人可以调整或核对调用预算。");}
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/builder/budget",async(Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");await using var tx=await db.Database.BeginTransactionAsync();await Lock(db,a.FamilyId);var policy=await db.Set<BuilderBudgetPolicy>().SingleOrDefaultAsync(p=>p.FamilyId==a.FamilyId)??new BuilderBudgetPolicy{FamilyId=a.FamilyId};var day=DateOnly.FromDateTime(DateTime.UtcNow);var state=await State(db,a.FamilyId,day);await tx.CommitAsync();return new{policy,day,window="UTC",state};});

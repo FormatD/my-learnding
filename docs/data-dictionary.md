@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 70 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 72 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -65,6 +65,7 @@
 | 20261004172710_BoundedCheckpointDeltas | 10.0.4 |
 | 20261004224054_PrivateLearningResources | 10.0.4 |
 | 20261004233734_RestrictedFileUploadTickets | 10.0.4 |
+| 20261006184449_MappingModelCallLedger | 10.0.4 |
 
 ## Accounts
 
@@ -1645,6 +1646,91 @@
 - `CREATE UNIQUE INDEX "IX_KnowledgeMigration_ProposalId_FromKCId_ToKCId" ON public."KnowledgeMigration" USING btree ("ProposalId", "FromKCId", "ToKCId")`
 - `CREATE UNIQUE INDEX "PK_KnowledgeMigration" ON public."KnowledgeMigration" USING btree ("Id")`
 
+## MappingCallReconciliation
+
+家庭负责人追加的本机映射调用结束核对，保留原未知和已确认Token，不改写物理调用。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| CallId | uuid | 否 | 无 |
+| ActorId | uuid | 否 | 无 |
+| InputTokens | bigint | 是 | 无 |
+| OutputTokens | bigint | 是 | 无 |
+| Reason | text | 否 | 无 |
+| ReceiptReference | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_MappingCallReconciliation_Accounts_FamilyId_ActorId`：`FOREIGN KEY ("FamilyId", "ActorId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_MappingCallReconciliation_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingCallReconciliation_MappingModelCall_FamilyId_CallId`：`FOREIGN KEY ("FamilyId", "CallId") REFERENCES "MappingModelCall"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingCallReconciliation`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_MappingCallReconciliation_CallId" ON public."MappingCallReconciliation" USING btree ("CallId")`
+- `CREATE INDEX "IX_MappingCallReconciliation_FamilyId" ON public."MappingCallReconciliation" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_MappingCallReconciliation_FamilyId_ActorId" ON public."MappingCallReconciliation" USING btree ("FamilyId", "ActorId")`
+- `CREATE INDEX "IX_MappingCallReconciliation_FamilyId_CallId" ON public."MappingCallReconciliation" USING btree ("FamilyId", "CallId")`
+- `CREATE UNIQUE INDEX "PK_MappingCallReconciliation" ON public."MappingCallReconciliation" USING btree ("Id")`
+
+## MappingModelCall
+
+本机映射逐次物理调用、冻结内容/配置及实际返回用量或未知状态；独立提交，共用家庭预算，不借用BuilderRun身份。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| PreparationId | uuid | 否 | 无 |
+| ExecutionId | uuid | 否 | 无 |
+| RetryRound | integer | 否 | 无 |
+| AttemptNumber | integer | 否 | 无 |
+| CallNumber | integer | 否 | 无 |
+| Model | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| ModelConfigHash | text | 否 | 无 |
+| ModelConfigPayload | text | 否 | 无 |
+| InputPayload | text | 否 | 无 |
+| Status | text | 否 | 无 |
+| StartedAt | timestamp with time zone | 否 | 无 |
+| FinishedAt | timestamp with time zone | 是 | 无 |
+| ElapsedMilliseconds | bigint | 是 | 无 |
+| InputTokens | bigint | 是 | 无 |
+| OutputTokens | bigint | 是 | 无 |
+| ChargedCost | numeric(16,6) | 是 | 无 |
+| Currency | text | 是 | 无 |
+| BillingStatus | text | 否 | 无 |
+| OutputHash | text | 是 | 无 |
+| ErrorCode | text | 是 | 无 |
+| BudgetDay | date | 否 | 无 |
+| BudgetSnapshot | text | 否 | 无 |
+| BudgetState | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_MappingModelCall_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_MappingModelCall_Input`：`CHECK (length("InputHash") = 64 AND length("ModelConfigHash") = 64 AND "AttemptNumber" >= 1 AND "RetryRound" >= 0 AND "CallNumber" >= 1)`
+- `CK_MappingModelCall_Lifecycle`：`CHECK (("Status" = 'Started'::text AND "FinishedAt" IS NULL AND "BudgetState" = 'Reserved'::text OR "Status" <> 'Started'::text AND "FinishedAt" IS NOT NULL AND "FinishedAt" >= "StartedAt") AND ("ElapsedMilliseconds" IS NULL OR "ElapsedMilliseconds" >= 0) AND ("BudgetState" <> 'Settled'::text OR "Status" = 'Returned'::text AND "ChargedCost" = 0::numeric AND ("BillingStatus" = ANY (ARRAY['LocalMeasured'::text, 'LocalNoCharge'::text]))) AND ("Status" = 'Denied'::text) = ("BudgetState" = 'Denied'::text))`
+- `CK_MappingModelCall_Local`：`CHECK ("Currency" IS NULL AND ("ChargedCost" IS NULL OR "ChargedCost" = 0::numeric) AND ("BillingStatus" = ANY (ARRAY['Unknown'::text, 'LocalMeasured'::text, 'LocalNoCharge'::text])) AND ("InputTokens" IS NULL OR "InputTokens" >= 0) AND ("OutputTokens" IS NULL OR "OutputTokens" >= 0))`
+- `CK_MappingModelCall_Payload`：`CHECK (jsonb_typeof("InputPayload"::jsonb) = 'object'::text AND jsonb_typeof("ModelConfigPayload"::jsonb) = 'object'::text AND jsonb_typeof("BudgetSnapshot"::jsonb) = 'object'::text)`
+- `CK_MappingModelCall_Status`：`CHECK (("Status" = ANY (ARRAY['Started'::text, 'Returned'::text, 'Failed'::text, 'Cancelled'::text, 'Denied'::text])) AND ("BudgetState" = ANY (ARRAY['Reserved'::text, 'Settled'::text, 'Unresolved'::text, 'Denied'::text])))`
+- `FK_MappingModelCall_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_MappingModelCall_MappingPreparation_FamilyId_PreparationId`：`FOREIGN KEY ("FamilyId", "PreparationId") REFERENCES "MappingPreparation"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_MappingModelCall`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_MappingModelCall_FamilyId_Id" ON public."MappingModelCall" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "IX_MappingModelCall_ExecutionId_CallNumber" ON public."MappingModelCall" USING btree ("ExecutionId", "CallNumber")`
+- `CREATE INDEX "IX_MappingModelCall_FamilyId" ON public."MappingModelCall" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_MappingModelCall_FamilyId_PreparationId" ON public."MappingModelCall" USING btree ("FamilyId", "PreparationId")`
+- `CREATE UNIQUE INDEX "PK_MappingModelCall" ON public."MappingModelCall" USING btree ("Id")`
+
 ## MappingPreparation
 
 后台映射准备的不可变原输入、请求人、固定输出运行标识及统一任务引用；建议成功提交后才产生运行和待审结果，不补造历史领取。
@@ -1666,6 +1752,7 @@
 
 约束：
 
+- `AK_MappingPreparation_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
 - `CK_MappingPreparation_Snapshot`：`CHECK (jsonb_typeof("Snapshot"::jsonb) = 'object'::text AND length("SnapshotHash") = 64 AND length("InputHash") = 64 AND "RunId" <> '00000000-0000-0000-0000-000000000000'::uuid)`
 - `FK_MappingPreparation_Accounts_FamilyId_RequestedBy`：`FOREIGN KEY ("FamilyId", "RequestedBy") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
 - `FK_MappingPreparation_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
@@ -1676,6 +1763,7 @@
 
 索引（包含约束自动创建的索引）：
 
+- `CREATE UNIQUE INDEX "AK_MappingPreparation_FamilyId_Id" ON public."MappingPreparation" USING btree ("FamilyId", "Id")`
 - `CREATE INDEX "IX_MappingPreparation_FamilyId" ON public."MappingPreparation" USING btree ("FamilyId")`
 - `CREATE UNIQUE INDEX "IX_MappingPreparation_FamilyId_InputHash" ON public."MappingPreparation" USING btree ("FamilyId", "InputHash")`
 - `CREATE INDEX "IX_MappingPreparation_FamilyId_JobId" ON public."MappingPreparation" USING btree ("FamilyId", "JobId")`

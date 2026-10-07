@@ -91,6 +91,7 @@ public static class MappingJobs
     }
     public static void Map(RouteGroupBuilder api)
     {
+        MappingModelCallTracking.Map(api);
         api.MapPost("/builder/mapping-preparations",async(MappingRunInput input,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");var p=await Enqueue(db,a,input);var job=db.Set<BackgroundJob>().Local.FirstOrDefault(j=>j.Id==p.JobId)??await db.Set<BackgroundJob>().SingleAsync(j=>j.Id==p.JobId && j.FamilyId==a.FamilyId);return TypedResults.Accepted("/api/v1/builder/mapping-preparations/"+p.Id,Summary(p,job));});
         api.MapGet("/builder/mapping-preparations",async(Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");var rows=await(from p in db.Set<MappingPreparation>() join j in db.Set<BackgroundJob>() on p.JobId equals j.Id where p.FamilyId==a.FamilyId && j.FamilyId==a.FamilyId orderby p.CreatedAt descending,p.Id select new{p,j}).Take(50).ToArrayAsync();return rows.Select(r=>Summary(r.p,r.j)).ToArray();});
         api.MapGet("/builder/mapping-preparations/{id:guid}",async(Guid id,Database db,HttpContext ctx)=>{var a=ctx.Actor();a.Require("ContentEditor");var p=await db.Set<MappingPreparation>().SingleOrDefaultAsync(p=>p.Id==id && p.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","映射准备任务不存在。");return Summary(p,await db.Set<BackgroundJob>().SingleAsync(j=>j.Id==p.JobId && j.FamilyId==a.FamilyId));});

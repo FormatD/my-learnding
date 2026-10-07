@@ -31,6 +31,7 @@ from mapping_suggestion_acceptance import verify as verify_mappings
 from content_review_acceptance import verify as verify_content_reviews
 from published_mapping_acceptance import verify as verify_published_mappings
 from builder_budget_api_acceptance import verify as verify_builder_budget
+from mapping_call_api_acceptance import verify as verify_mapping_calls
 from job_lease_api_acceptance import verify as verify_jobs
 from background_cursor_acceptance import verify as verify_background_cursor
 from event_cursor_acceptance import verify as verify_event_cursor
@@ -120,7 +121,7 @@ def main():
                     if os.environ.get("OMLX_SMOKE")=="1":
                         from local_omlx_acceptance import verify as verify_local_omlx
                         verify_local_omlx(client)
-                    verify_mappings(document,client)
+                    mapping_isolation=verify_mappings(document,client)
                     verify_content_reviews(document,client)
                     verify_published_mappings(document,client)
                     verify_revocations(document,client)
@@ -128,6 +129,7 @@ def main():
                     verify_learning_references(document,client,env)
                     verify_builder_protocol(client)
                     verify_builder_budget(client,env)
+                    verify_mapping_calls(client,env,*mapping_isolation)
                     verify_jobs(client)
                     verify_background_cursor(client,env,credentials)
                     verify_event_cursor(client)

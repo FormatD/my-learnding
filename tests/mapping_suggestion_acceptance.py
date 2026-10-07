@@ -161,3 +161,5 @@ def verify(document,c):
     rejected=c.request(pending_path+'/suggestions:decide',{'decisions':[reject(pending_suggestion)]});assert rejected['draftId'] is None and rejected['pending']==0
     assert all('/api/v1'+p in document['paths'] for p in ['/builder/mapping-runs','/builder/mapping-runs/{id}','/builder/mapping-runs/{id}/suggestions:decide'])
     print('PASS withdrawn frozen library blocks acceptance without partial output, permits explicit rejection, and every new route is in the actual contract')
+
+    return other,child
