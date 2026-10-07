@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SourceEvidenceButton from './SourceEvidenceButton.vue';
 import {computed,onMounted,ref} from 'vue';
 import {api} from '../api';
 import {coverageLabel} from '../coverage';
@@ -10,5 +11,5 @@ function title(row:Item){const collection={Question:'questions',Resource:'resour
 function kc(row:Item){return data.value?.catalog.kcs.find((k:Item)=>k.id===row.kcId)?.name||'未命名能力';}
 onMounted(async()=>{try{data.value=await api(`/content/drafts/${props.draftId}/mapping-preview`)}catch(e){error.value=(e as Error).message;}});
 </script>
-<template><section class="card" aria-label="待审映射预览"><h2>待审教学覆盖与证据份额</h2><p v-if="error" class="warning" role="alert">{{error}}</p><template v-if="data"><p>{{data.title}} · 草稿版本 {{data.draftVersion}}</p><p class="muted">审核发布包括以下权重。教学覆盖用于表示内容关联；作答证据仍按题目的归因规则计算。继承表示有真实旧映射来源，新增默认值需核对；旧内容缺少修订时不会补造权重。</p><article v-for="(r,index) in rows.slice(page*20,(page+1)*20)" :key="index" class="content-editor-row"><h3>{{labels[r.ownerType]}} · {{title(r)}}</h3><p>{{kc(r)}}<span v-if="r.step"> · {{r.step}}</span></p><p>教学覆盖：{{r.coverageWeight}} · 作答证据份额：{{r.evidenceShare}} · {{coverageLabel(r)}}</p></article><p v-if="!rows.length">尚无具有明确修订的内容关联。</p><template v-if="rows.length"><button @click="page--" :disabled="page===0">上一页待审映射</button><span> 第 {{page+1}} 页 </span><button @click="page++" :disabled="(page+1)*20>=rows.length">下一页待审映射</button></template></template></section></template>
+<template><section class="card" aria-label="待审映射预览"><h2>待审教学覆盖与证据份额</h2><SourceEvidenceButton stage="drafts" :task-id="draftId"/><p v-if="error" class="warning" role="alert">{{error}}</p><template v-if="data"><p>{{data.title}} · 草稿版本 {{data.draftVersion}}</p><p class="muted">审核发布包括以下权重。教学覆盖用于表示内容关联；作答证据仍按题目的归因规则计算。继承表示有真实旧映射来源，新增默认值需核对；旧内容缺少修订时不会补造权重。</p><article v-for="(r,index) in rows.slice(page*20,(page+1)*20)" :key="index" class="content-editor-row"><h3>{{labels[r.ownerType]}} · {{title(r)}}</h3><p>{{kc(r)}}<span v-if="r.step"> · {{r.step}}</span></p><p>教学覆盖：{{r.coverageWeight}} · 作答证据份额：{{r.evidenceShare}} · {{coverageLabel(r)}}</p></article><p v-if="!rows.length">尚无具有明确修订的内容关联。</p><template v-if="rows.length"><button @click="page--" :disabled="page===0">上一页待审映射</button><span> 第 {{page+1}} 页 </span><button @click="page++" :disabled="(page+1)*20>=rows.length">下一页待审映射</button></template></template></section></template>
 <style scoped>h3,p{overflow-wrap:anywhere}</style>

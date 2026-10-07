@@ -13,6 +13,7 @@ python3 tests/model_embedding_index_acceptance.py
 python3 tests/builder_semantic_acceptance.py
 python3 tests/builder_semantic_preparation_acceptance.py
 python3 tests/builder_semantic_api_acceptance.py
+python3 tests/builder_stages_api_acceptance.py
 python3 tests/builder_semantic_processing_acceptance.py
 python3 tests/builder_semantic_result_crash_acceptance.py
 python3 tests/builder_semantic_ledger_acceptance.py

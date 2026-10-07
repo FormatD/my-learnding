@@ -84,6 +84,9 @@ public class Database(DbContextOptions<Database> options,IConfiguration? configu
         Foreign<Student,ReviewTargetConfirmation>(b,"StudentId");Foreign<Account,ReviewTargetConfirmation>(b,"ConfirmedBy");Foreign<ContentIdentity,ReviewTargetConfirmation>(b,"OriginalTargetId");Foreign<ContentIdentity,ReviewTargetConfirmation>(b,"ConfirmedTargetId");Foreign<Release,ReviewTargetConfirmation>(b,"MappingReleaseId");Foreign<ContentRevision,ReviewTargetConfirmation>(b,"QuestionRevisionId");Foreign<MappingSetRevision,ReviewTargetConfirmation>(b,"MappingSetRevisionId");
         b.Entity<CommandRecord>().HasIndex(x => new { x.FamilyId, x.ActorId, x.Scope, x.Key }).IsUnique();
         b.Entity<Source>().HasIndex(x => new { x.FamilyId, x.Hash }).IsUnique();
+        Foreign<Source,SourceImage>(b,"SourceId");Foreign<PrivateFile,SourceImage>(b,"FileId");
+        b.Entity<SourceImage>().HasIndex(x=>new{x.FamilyId,x.SourceId,x.DocumentHash,x.Page}).IsUnique();
+        b.Entity<SourceImage>().ToTable(t=>t.HasCheckConstraint("CK_SourceImage_Provenance","length(\"SourceHash\")=64 AND \"DocumentHash\" ~ '^[a-f0-9]{64}$' AND \"Page\" BETWEEN 1 AND 10000 AND length(\"PrintedPage\") BETWEEN 1 AND 100"));
         Foreign<Account, FamilyMembership>(b,"AccountId");
         b.Entity<FamilyMembership>().HasIndex(m=>new {m.FamilyId,m.AccountId}).IsUnique();
         b.Entity<Family>().HasOne<Account>().WithMany().HasForeignKey(f=>new {f.Id,f.OwnerAccountId}).HasPrincipalKey(a=>new {a.FamilyId,a.Id}).OnDelete(DeleteBehavior.Restrict);

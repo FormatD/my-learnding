@@ -69,6 +69,8 @@ try:
             assert detail['result']['decision']=='NeedsReview' and detail['input']['candidateId']==candidate['id'] and detail['suggestion']['responseId']
             calls=c.request('/builder/semantic-calls?preparationId='+p['id']);assert calls['total']==1 and calls['calls'][0]['inputTokens']==31 and calls['calls'][0]['outputTokens']==19 and len(calls['responses'])==1
             raw=c.request('/builder/semantic-responses/'+calls['responses'][0]['id']);assert raw['outputPayload']==outputs[0] and raw['outputHash']==hashlib.sha256(outputs[0].encode()).hexdigest()
+            stage=c.request('/builder/stages/semantic/tasks/'+p['id']);parts={x['id']:x for x in stage['data']}
+            assert stage['record']['candidateId']==candidate['id'] and parts['calls']['total']==1 and parts['responses']['items'][0]['outputPayload']==outputs[0] and parts['suggestions']['total']==1 and parts['jobs']['total']==1 and parts['leases']['total']>=1
             after=next(x for x in c.request('/builder')['candidates'] if x['id']==candidate['id']);assert json.dumps(after,sort_keys=True)==before
             assert c.request('/builder/candidates/'+candidate['id']+'/semantic-preparations',{},expected=202)['id']==p['id'] and len(requests)==1
             assert c.request('/builder/semantic-preparations?candidateId='+candidate['id'])['total']==1

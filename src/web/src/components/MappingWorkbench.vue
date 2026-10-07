@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SourceEvidenceButton from './SourceEvidenceButton.vue';
 import {computed,onMounted,onUnmounted,ref,watch} from 'vue';
 import {api,apiWithVersion} from '../api';
 import EvaluationDownload from './EvaluationDownload.vue';
@@ -97,7 +98,7 @@ onUnmounted(()=>{if(poll)clearInterval(poll);});
   <button @click="run(async()=>{await load();if(detail)await open(detail.run.id)})" :disabled="blocked">刷新映射审核</button><p v-if="reviewDirty" class="muted">当前有未提交校正。刷新映射审核会重新载入原建议并放弃这些校正；查看调用记录不会清除校正。</p>
   <button @click="viewCalls()" :disabled="blocked">查看映射调用记录</button>
   <MappingCalls v-if="showCalls" :owner="!!props.owner" :preparation-id="callPreparation" :preparations="preparations" />
-  <template v-if="detail">
+  <template v-if="detail"><SourceEvidenceButton stage="mapping-review" :task-id="detail.run.id"/>
     <p class="muted">{{providers[detail.run.provider]||detail.run.provider}} · 源草稿第 {{detail.run.sourceDraftVersion}} 版 · 固定能力库内容版本 {{releases.find(r=>r.id===detail!.run.libraryReleaseId)?.number||'历史'}}。源草稿后续修改与新发布版本不会替换本批输入。</p>
     <p>共 {{detail.quality.suggested}} 项 · 待处理 {{detail.quality.pending}} 项 · 接受 {{detail.quality.accepted}} 项 · 拒绝 {{detail.quality.rejected}} 项 · 接受时校正 {{detail.quality.corrected}} 项</p><p class="muted">{{detail.quality.note}}</p>
     <EvaluationDownload kind="mapping" :run-id="detail.run.id" :disabled="blocked" />

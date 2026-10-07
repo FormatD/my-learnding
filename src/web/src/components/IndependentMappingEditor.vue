@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SourceEvidenceButton from './SourceEvidenceButton.vue';
 import {computed,onMounted,ref,watch} from 'vue';
 import {api} from '../api';
 type Item=Record<string,any>;
@@ -36,7 +37,7 @@ async function save(){await run(async()=>{const p=prepared.value!;saved.value=aw
 async function open(id:string){await run(async()=>{saved.value=await api('/content/mapping-sets/'+id)})}
 onMounted(()=>run(loadHistory));
 </script>
-<template>
+<template><SourceEvidenceButton v-if="draftId" stage="drafts" :task-id="draftId"/>
 <section class="card independent-mapping" aria-label="独立映射草稿">
 <h2>独立映射草稿</h2><p class="muted">直接维护一个题目、课时或资源的能力关联。保存会建立新映射版次和待审核内容草稿，原发布与学习记录保持原依据。</p>
 <p v-if="error" class="warning" role="alert">{{error}}</p><p v-if="notice" role="status">{{notice}}</p>

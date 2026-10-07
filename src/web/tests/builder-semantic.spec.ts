@@ -15,6 +15,9 @@ async function fixture(page:any,owner=true,failed=false){
   else if(path==='/students')body=[];
   else if(path==='/content')body={drafts:[],releases:[]};
   else if(path==='/background-jobs/window')body={jobs:[],nextCursor:null};
+  else if(path==='/builder/stages')body=[];
+  else if(path==='/builder/stages/extraction/tasks')body={items:[],total:0,page:1};
+  else if(path.startsWith('/builder/reference-images/'))body=[{id:'source',title:'受控来源',text:fragment.text,chunks:[fragment],pages:[]}];
   else if(path==='/builder')body={sources:[],runs:[],attempts:[],candidates:[candidate],libraries:[],provider:'controlled'};
   else if(path==='/builder/candidates/candidate/review-context')body=context;
   else if(path==='/builder/candidates/candidate/semantic-preparations'){phase='Running';await route.fulfill({status:202,headers:{ETag:'"2"'},json:prep()});return;}
@@ -33,6 +36,7 @@ async function fixture(page:any,owner=true,failed=false){
 }
 test('语义建议原理由/引用安全显示，后台完成保留候选未提交审核内容',async({page})=>{
  const f=await fixture(page);await page.getByLabel('候选名称',{exact:true}).fill('尚未提交的候选修改');await page.getByLabel('本次审核依据',{exact:true}).fill('我正在核对的人工依据');
+ await f.panel.getByRole('button',{name:'对照原图与来源文字'}).click();const evidence=page.getByRole('dialog',{name:'原图与来源复核'});await expect(evidence).toContainText('受控原始引用 '+unsafe);await evidence.getByRole('button',{name:'关闭复核面板'}).click();await expect(page.getByLabel('候选名称',{exact:true})).toHaveValue('尚未提交的候选修改');await expect(page.getByLabel('本次审核依据',{exact:true})).toHaveValue('我正在核对的人工依据');
  await f.panel.getByRole('button',{name:'用本机模型准备语义建议'}).click();await expect(f.panel).toContainText('正在处理');f.ready();await f.panel.getByRole('button',{name:'刷新语义建议'}).click();
  await expect(f.panel.getByRole('region',{name:'原模型语义建议'})).toContainText('原模型中文理由 '+unsafe);await expect(f.panel).toContainText('受控原始引用 '+unsafe);await expect(page.getByLabel('候选名称',{exact:true})).toHaveValue('尚未提交的候选修改');await expect(page.getByLabel('本次审核依据',{exact:true})).toHaveValue('我正在核对的人工依据');
  await f.panel.getByText('原调用与返回记录',{exact:true}).click();await f.panel.getByRole('button',{name:'查看原模型返回'}).click();await expect(f.panel.locator('pre')).toContainText(unsafe);expect(await page.evaluate(()=>(window as any).__semanticUnsafe)).toBeUndefined();expect(f.posts.filter((p:any)=>p.path.includes(':decide'))).toHaveLength(0);
