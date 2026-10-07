@@ -40,6 +40,7 @@ public static class BuilderBudget
         =>CalculateFacts(calls.Select(Facts).ToArray(),reconciliations.Select(r=>new BudgetDecisionFacts(r.CallId,r.ChargedCost,r.Currency,r.InputTokens,r.OutputTokens)).ToArray(),day);
     static BudgetCallFacts Facts(BuilderCall c)=>new(c.Id,c.Status,c.BudgetState,c.BillingStatus,c.BudgetDay,c.StartedAt,c.ChargedCost,c.Currency,c.InputTokens,c.OutputTokens,c.ReservedCost,c.ReservedTokens);
     static BudgetCallFacts Facts(MappingModelCall c)=>new(c.Id,c.Status,c.BudgetState,c.BillingStatus,c.BudgetDay,c.StartedAt,c.ChargedCost,c.Currency,c.InputTokens,c.OutputTokens,0,0);
+    static BudgetCallFacts Facts(BuilderSemanticCall c)=>new(c.Id,c.Status,c.BudgetState,c.BillingStatus,c.BudgetDay,c.StartedAt,c.ChargedCost,c.Currency,c.InputTokens,c.OutputTokens,0,0);
     static BuilderBudgetState CalculateFacts(BudgetCallFacts[] calls,BudgetDecisionFacts[] reconciliations,DateOnly day)
     {
         var decisions=reconciliations.ToDictionary(r=>r.CallId);decimal cost=0,tokens=0;int active=0,unknown=0,unresolved=0,overruns=0;
@@ -60,7 +61,8 @@ public static class BuilderBudget
     {
         var builder=await db.Set<BuilderCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct);var mapping=await db.Set<MappingModelCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct);
         var builderDecisions=await db.Set<BuilderBudgetReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct);var mappingDecisions=await db.Set<MappingCallReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct);
-        return CalculateFacts(builder.Select(Facts).Concat(mapping.Select(Facts)).ToArray(),builderDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,r.ChargedCost,r.Currency,r.InputTokens,r.OutputTokens)).Concat(mappingDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,0,null,r.InputTokens,r.OutputTokens))).ToArray(),day);
+        var semantic=await db.Set<BuilderSemanticCall>().AsNoTracking().Where(c=>c.FamilyId==family).ToArrayAsync(ct);var semanticDecisions=await db.Set<BuilderSemanticReconciliation>().AsNoTracking().Where(r=>r.FamilyId==family).ToArrayAsync(ct);
+        return CalculateFacts(builder.Select(Facts).Concat(mapping.Select(Facts)).Concat(semantic.Select(Facts)).ToArray(),builderDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,r.ChargedCost,r.Currency,r.InputTokens,r.OutputTokens)).Concat(mappingDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,0,null,r.InputTokens,r.OutputTokens))).Concat(semanticDecisions.Select(r=>new BudgetDecisionFacts(r.CallId,0,null,r.InputTokens,r.OutputTokens))).ToArray(),day);
     }
     public static string? Denial(BuilderBudgetPolicy policy,BuilderBudgetState state,BuilderQuote quote)
     {

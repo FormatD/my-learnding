@@ -200,6 +200,14 @@
     {
       "id": "20261007054043_LocalMappingResults",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261007071504_BuilderSemanticPreparation",
+      "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261007073312_BuilderSemanticCallLedger",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -3549,6 +3557,705 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_BuilderRuns\" ON public.\"BuilderRuns\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BuilderSemanticCall",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "PreparationId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ExecutionId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RetryRound",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "AttemptNumber",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CallNumber",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Model",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ModelConfigHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ModelConfigPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Status",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "StartedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FinishedAt",
+          "type": "timestamp with time zone",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ElapsedMilliseconds",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ChargedCost",
+          "type": "numeric(16,6)",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Currency",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "BillingStatus",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputHash",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ErrorCode",
+          "type": "text",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "BudgetDay",
+          "type": "date",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "BudgetSnapshot",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "BudgetState",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_BuilderSemanticCall_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticCall_Input",
+          "kind": "c",
+          "definition": "CHECK (length(\"InputHash\") = 64 AND length(\"ModelConfigHash\") = 64 AND \"AttemptNumber\" >= 1 AND \"RetryRound\" >= 0 AND \"CallNumber\" >= 1)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticCall_Lifecycle",
+          "kind": "c",
+          "definition": "CHECK ((\"Status\" = 'Started'::text AND \"FinishedAt\" IS NULL AND \"BudgetState\" = 'Reserved'::text OR \"Status\" <> 'Started'::text AND \"FinishedAt\" IS NOT NULL AND \"FinishedAt\" >= \"StartedAt\") AND (\"ElapsedMilliseconds\" IS NULL OR \"ElapsedMilliseconds\" >= 0) AND (\"BudgetState\" <> 'Settled'::text OR \"Status\" = 'Returned'::text AND \"ChargedCost\" = 0::numeric AND (\"BillingStatus\" = ANY (ARRAY['LocalMeasured'::text, 'LocalNoCharge'::text]))) AND (\"Status\" = 'Denied'::text) = (\"BudgetState\" = 'Denied'::text))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticCall_Local",
+          "kind": "c",
+          "definition": "CHECK (\"Currency\" IS NULL AND (\"ChargedCost\" IS NULL OR \"ChargedCost\" = 0::numeric) AND (\"BillingStatus\" = ANY (ARRAY['Unknown'::text, 'LocalMeasured'::text, 'LocalNoCharge'::text])) AND (\"InputTokens\" IS NULL OR \"InputTokens\" >= 0) AND (\"OutputTokens\" IS NULL OR \"OutputTokens\" >= 0))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticCall_Payload",
+          "kind": "c",
+          "definition": "CHECK (jsonb_typeof(\"InputPayload\"::jsonb) = 'object'::text AND jsonb_typeof(\"ModelConfigPayload\"::jsonb) = 'object'::text AND jsonb_typeof(\"BudgetSnapshot\"::jsonb) = 'object'::text)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticCall_Status",
+          "kind": "c",
+          "definition": "CHECK ((\"Status\" = ANY (ARRAY['Started'::text, 'Returned'::text, 'Failed'::text, 'Cancelled'::text, 'Denied'::text])) AND (\"BudgetState\" = ANY (ARRAY['Reserved'::text, 'Settled'::text, 'Unresolved'::text, 'Denied'::text])))",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticCall_BuilderSemanticPreparation_FamilyId_Pre~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"PreparationId\") REFERENCES \"BuilderSemanticPreparation\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticCall_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderSemanticCall",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_BuilderSemanticCall_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_BuilderSemanticCall_FamilyId_Id\" ON public.\"BuilderSemanticCall\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_BuilderSemanticCall_ExecutionId_CallNumber",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticCall_ExecutionId_CallNumber\" ON public.\"BuilderSemanticCall\" USING btree (\"ExecutionId\", \"CallNumber\")"
+        },
+        {
+          "name": "IX_BuilderSemanticCall_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticCall_FamilyId\" ON public.\"BuilderSemanticCall\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticCall_FamilyId_PreparationId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticCall_FamilyId_PreparationId\" ON public.\"BuilderSemanticCall\" USING btree (\"FamilyId\", \"PreparationId\")"
+        },
+        {
+          "name": "PK_BuilderSemanticCall",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderSemanticCall\" ON public.\"BuilderSemanticCall\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BuilderSemanticPreparation",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CandidateId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RunId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "JobId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "RequestedBy",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryReleaseId",
+          "type": "uuid",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Snapshot",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SnapshotHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "AK_BuilderSemanticPreparation_FamilyId_Id",
+          "kind": "u",
+          "definition": "UNIQUE (\"FamilyId\", \"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "CK_BuilderSemanticPreparation_Snapshot",
+          "kind": "c",
+          "definition": "CHECK (jsonb_typeof(\"Snapshot\"::jsonb) = 'object'::text AND length(\"SnapshotHash\") = 64 AND length(\"InputHash\") = 64)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticPreparation_Accounts_FamilyId_RequestedBy",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"RequestedBy\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticPreparation_BackgroundJob_FamilyId_JobId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"JobId\") REFERENCES \"BackgroundJob\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticPreparation_BuilderRuns_FamilyId_RunId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"RunId\") REFERENCES \"BuilderRuns\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticPreparation_Candidates_FamilyId_CandidateId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CandidateId\") REFERENCES \"Candidates\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticPreparation_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticPreparation_Releases_FamilyId_LibraryRelease~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LibraryReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderSemanticPreparation",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "AK_BuilderSemanticPreparation_FamilyId_Id",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"AK_BuilderSemanticPreparation_FamilyId_Id\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"Id\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticPreparation_FamilyId\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId_CandidateId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticPreparation_FamilyId_CandidateId\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"CandidateId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId_InputHash",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticPreparation_FamilyId_InputHash\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"InputHash\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId_JobId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticPreparation_FamilyId_JobId\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"JobId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId_LibraryReleaseId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticPreparation_FamilyId_LibraryReleaseId\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"LibraryReleaseId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId_RequestedBy",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticPreparation_FamilyId_RequestedBy\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"RequestedBy\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_FamilyId_RunId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticPreparation_FamilyId_RunId\" ON public.\"BuilderSemanticPreparation\" USING btree (\"FamilyId\", \"RunId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticPreparation_JobId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticPreparation_JobId\" ON public.\"BuilderSemanticPreparation\" USING btree (\"JobId\")"
+        },
+        {
+          "name": "PK_BuilderSemanticPreparation",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderSemanticPreparation\" ON public.\"BuilderSemanticPreparation\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "BuilderSemanticReconciliation",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CallId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ActorId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "InputTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OutputTokens",
+          "type": "bigint",
+          "nullable": true,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ReceiptReference",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "FK_BuilderSemanticReconciliation_Accounts_FamilyId_ActorId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ActorId\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticReconciliation_BuilderSemanticCall_FamilyId_~",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"CallId\") REFERENCES \"BuilderSemanticCall\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_BuilderSemanticReconciliation_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_BuilderSemanticReconciliation",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_BuilderSemanticReconciliation_CallId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_BuilderSemanticReconciliation_CallId\" ON public.\"BuilderSemanticReconciliation\" USING btree (\"CallId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticReconciliation_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticReconciliation_FamilyId\" ON public.\"BuilderSemanticReconciliation\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticReconciliation_FamilyId_ActorId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticReconciliation_FamilyId_ActorId\" ON public.\"BuilderSemanticReconciliation\" USING btree (\"FamilyId\", \"ActorId\")"
+        },
+        {
+          "name": "IX_BuilderSemanticReconciliation_FamilyId_CallId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_BuilderSemanticReconciliation_FamilyId_CallId\" ON public.\"BuilderSemanticReconciliation\" USING btree (\"FamilyId\", \"CallId\")"
+        },
+        {
+          "name": "PK_BuilderSemanticReconciliation",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_BuilderSemanticReconciliation\" ON public.\"BuilderSemanticReconciliation\" USING btree (\"Id\")"
         }
       ]
     },

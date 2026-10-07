@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。
 
-当前 72 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 75 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -67,6 +67,8 @@
 | 20261004233734_RestrictedFileUploadTickets | 10.0.4 |
 | 20261006184449_MappingModelCallLedger | 10.0.4 |
 | 20261007054043_LocalMappingResults | 10.0.4 |
+| 20261007071504_BuilderSemanticPreparation | 10.0.4 |
+| 20261007073312_BuilderSemanticCallLedger | 10.0.4 |
 
 ## Accounts
 
@@ -714,6 +716,134 @@
 - `CREATE INDEX "IX_BuilderRuns_FamilyId_LibraryReleaseId" ON public."BuilderRuns" USING btree ("FamilyId", "LibraryReleaseId")`
 - `CREATE INDEX "IX_BuilderRuns_FamilyId_SourceId" ON public."BuilderRuns" USING btree ("FamilyId", "SourceId")`
 - `CREATE UNIQUE INDEX "PK_BuilderRuns" ON public."BuilderRuns" USING btree ("Id")`
+
+## BuilderSemanticCall
+
+候选语义逐次物理调用、原固定输入/模型配置和实际返回用量或未知状态；独立提交，与建库及映射共享家庭预算。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| PreparationId | uuid | 否 | 无 |
+| ExecutionId | uuid | 否 | 无 |
+| RetryRound | integer | 否 | 无 |
+| AttemptNumber | integer | 否 | 无 |
+| CallNumber | integer | 否 | 无 |
+| Model | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| ModelConfigHash | text | 否 | 无 |
+| ModelConfigPayload | text | 否 | 无 |
+| InputPayload | text | 否 | 无 |
+| Status | text | 否 | 无 |
+| StartedAt | timestamp with time zone | 否 | 无 |
+| FinishedAt | timestamp with time zone | 是 | 无 |
+| ElapsedMilliseconds | bigint | 是 | 无 |
+| InputTokens | bigint | 是 | 无 |
+| OutputTokens | bigint | 是 | 无 |
+| ChargedCost | numeric(16,6) | 是 | 无 |
+| Currency | text | 是 | 无 |
+| BillingStatus | text | 否 | 无 |
+| OutputHash | text | 是 | 无 |
+| ErrorCode | text | 是 | 无 |
+| BudgetDay | date | 否 | 无 |
+| BudgetSnapshot | text | 否 | 无 |
+| BudgetState | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_BuilderSemanticCall_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_BuilderSemanticCall_Input`：`CHECK (length("InputHash") = 64 AND length("ModelConfigHash") = 64 AND "AttemptNumber" >= 1 AND "RetryRound" >= 0 AND "CallNumber" >= 1)`
+- `CK_BuilderSemanticCall_Lifecycle`：`CHECK (("Status" = 'Started'::text AND "FinishedAt" IS NULL AND "BudgetState" = 'Reserved'::text OR "Status" <> 'Started'::text AND "FinishedAt" IS NOT NULL AND "FinishedAt" >= "StartedAt") AND ("ElapsedMilliseconds" IS NULL OR "ElapsedMilliseconds" >= 0) AND ("BudgetState" <> 'Settled'::text OR "Status" = 'Returned'::text AND "ChargedCost" = 0::numeric AND ("BillingStatus" = ANY (ARRAY['LocalMeasured'::text, 'LocalNoCharge'::text]))) AND ("Status" = 'Denied'::text) = ("BudgetState" = 'Denied'::text))`
+- `CK_BuilderSemanticCall_Local`：`CHECK ("Currency" IS NULL AND ("ChargedCost" IS NULL OR "ChargedCost" = 0::numeric) AND ("BillingStatus" = ANY (ARRAY['Unknown'::text, 'LocalMeasured'::text, 'LocalNoCharge'::text])) AND ("InputTokens" IS NULL OR "InputTokens" >= 0) AND ("OutputTokens" IS NULL OR "OutputTokens" >= 0))`
+- `CK_BuilderSemanticCall_Payload`：`CHECK (jsonb_typeof("InputPayload"::jsonb) = 'object'::text AND jsonb_typeof("ModelConfigPayload"::jsonb) = 'object'::text AND jsonb_typeof("BudgetSnapshot"::jsonb) = 'object'::text)`
+- `CK_BuilderSemanticCall_Status`：`CHECK (("Status" = ANY (ARRAY['Started'::text, 'Returned'::text, 'Failed'::text, 'Cancelled'::text, 'Denied'::text])) AND ("BudgetState" = ANY (ARRAY['Reserved'::text, 'Settled'::text, 'Unresolved'::text, 'Denied'::text])))`
+- `FK_BuilderSemanticCall_BuilderSemanticPreparation_FamilyId_Pre~`：`FOREIGN KEY ("FamilyId", "PreparationId") REFERENCES "BuilderSemanticPreparation"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticCall_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderSemanticCall`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_BuilderSemanticCall_FamilyId_Id" ON public."BuilderSemanticCall" USING btree ("FamilyId", "Id")`
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticCall_ExecutionId_CallNumber" ON public."BuilderSemanticCall" USING btree ("ExecutionId", "CallNumber")`
+- `CREATE INDEX "IX_BuilderSemanticCall_FamilyId" ON public."BuilderSemanticCall" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderSemanticCall_FamilyId_PreparationId" ON public."BuilderSemanticCall" USING btree ("FamilyId", "PreparationId")`
+- `CREATE UNIQUE INDEX "PK_BuilderSemanticCall" ON public."BuilderSemanticCall" USING btree ("Id")`
+
+## BuilderSemanticPreparation
+
+候选语义建议后台任务的不可变原输入、来源及正式库摘要、请求成员和固定本机配置；准备不冒充模型调用或审核。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| CandidateId | uuid | 否 | 无 |
+| RunId | uuid | 否 | 无 |
+| JobId | uuid | 否 | 无 |
+| RequestedBy | uuid | 否 | 无 |
+| LibraryReleaseId | uuid | 是 | 无 |
+| Snapshot | text | 否 | 无 |
+| SnapshotHash | text | 否 | 无 |
+| InputHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `AK_BuilderSemanticPreparation_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_BuilderSemanticPreparation_Snapshot`：`CHECK (jsonb_typeof("Snapshot"::jsonb) = 'object'::text AND length("SnapshotHash") = 64 AND length("InputHash") = 64)`
+- `FK_BuilderSemanticPreparation_Accounts_FamilyId_RequestedBy`：`FOREIGN KEY ("FamilyId", "RequestedBy") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticPreparation_BackgroundJob_FamilyId_JobId`：`FOREIGN KEY ("FamilyId", "JobId") REFERENCES "BackgroundJob"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticPreparation_BuilderRuns_FamilyId_RunId`：`FOREIGN KEY ("FamilyId", "RunId") REFERENCES "BuilderRuns"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticPreparation_Candidates_FamilyId_CandidateId`：`FOREIGN KEY ("FamilyId", "CandidateId") REFERENCES "Candidates"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticPreparation_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticPreparation_Releases_FamilyId_LibraryRelease~`：`FOREIGN KEY ("FamilyId", "LibraryReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_BuilderSemanticPreparation`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "AK_BuilderSemanticPreparation_FamilyId_Id" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "Id")`
+- `CREATE INDEX "IX_BuilderSemanticPreparation_FamilyId" ON public."BuilderSemanticPreparation" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderSemanticPreparation_FamilyId_CandidateId" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "CandidateId")`
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticPreparation_FamilyId_InputHash" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "InputHash")`
+- `CREATE INDEX "IX_BuilderSemanticPreparation_FamilyId_JobId" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "JobId")`
+- `CREATE INDEX "IX_BuilderSemanticPreparation_FamilyId_LibraryReleaseId" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "LibraryReleaseId")`
+- `CREATE INDEX "IX_BuilderSemanticPreparation_FamilyId_RequestedBy" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "RequestedBy")`
+- `CREATE INDEX "IX_BuilderSemanticPreparation_FamilyId_RunId" ON public."BuilderSemanticPreparation" USING btree ("FamilyId", "RunId")`
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticPreparation_JobId" ON public."BuilderSemanticPreparation" USING btree ("JobId")`
+- `CREATE UNIQUE INDEX "PK_BuilderSemanticPreparation" ON public."BuilderSemanticPreparation" USING btree ("Id")`
+
+## BuilderSemanticReconciliation
+
+家庭负责人追加的本机语义调用结束依据，保留原未知/实际值，不改写调用事实。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| CallId | uuid | 否 | 无 |
+| ActorId | uuid | 否 | 无 |
+| InputTokens | bigint | 是 | 无 |
+| OutputTokens | bigint | 是 | 无 |
+| Reason | text | 否 | 无 |
+| ReceiptReference | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `FK_BuilderSemanticReconciliation_Accounts_FamilyId_ActorId`：`FOREIGN KEY ("FamilyId", "ActorId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticReconciliation_BuilderSemanticCall_FamilyId_~`：`FOREIGN KEY ("FamilyId", "CallId") REFERENCES "BuilderSemanticCall"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_BuilderSemanticReconciliation_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `PK_BuilderSemanticReconciliation`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE UNIQUE INDEX "IX_BuilderSemanticReconciliation_CallId" ON public."BuilderSemanticReconciliation" USING btree ("CallId")`
+- `CREATE INDEX "IX_BuilderSemanticReconciliation_FamilyId" ON public."BuilderSemanticReconciliation" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_BuilderSemanticReconciliation_FamilyId_ActorId" ON public."BuilderSemanticReconciliation" USING btree ("FamilyId", "ActorId")`
+- `CREATE INDEX "IX_BuilderSemanticReconciliation_FamilyId_CallId" ON public."BuilderSemanticReconciliation" USING btree ("FamilyId", "CallId")`
+- `CREATE UNIQUE INDEX "PK_BuilderSemanticReconciliation" ON public."BuilderSemanticReconciliation" USING btree ("Id")`
 
 ## Candidates
 

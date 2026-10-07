@@ -22,7 +22,7 @@ async function fixture(page:any,owner=true,reviewed=false){
   else if(path==='/builder/mapping-runs')body=[{id:'old-run',provider:'LocalOmlx',sourceTitle:source.title,createdAt:new Date().toISOString()},...(phase==='ready'?[{id:'new-run',provider:'LocalOmlx',sourceTitle:source.title,createdAt:new Date().toISOString()}]:[])];
   else if(path.startsWith('/builder/mapping-runs/'))body=detail(path.split('/').at(-1)!);
   else if(path==='/builder/mapping-calls')body={calls:[call],reconciliations:reconciled?[{callId:call.id,...reconciled}]:[],page:1,pageSize:20,total:1};
-  else if(path==='/builder/mapping-calls/call:reconcile'){reconciled=req.postDataJSON();await route.fulfill({status:201,headers:{ETag:'"3"'},json:reconciled});return;}
+  else if(path==='/builder/mapping-calls/call:reconcile'){const posted=req.postDataJSON();if(call.inputTokens!=null&&posted.inputTokens!==call.inputTokens){await route.fulfill({status:422,json:{title:'实际返回的Token不能改写'}});return;}reconciled=posted;await route.fulfill({status:201,headers:{ETag:'"3"'},json:reconciled});return;}
   else if(path.includes('mapping-previews')||path.includes('independent-mappings'))body=[];
   else {await route.fulfill({status:403,json:{title:'受控页面未配置此辅助请求'}});return;}
   await route.fulfill({headers:{ETag:'"1"'},json:body});
@@ -44,7 +44,7 @@ test('本机映射选择保留超限选择，理由引用安全显示，后台�
 test('负责人核对不修改原已知用量，未知留空；普通成员不能核对',async({page})=>{
  const f=await fixture(page);await f.work.getByRole('button',{name:'查看映射调用记录',exact:true}).click();const ledger=f.work.getByRole('region',{name:'映射模型调用记录'});
  await expect(ledger).toContainText('7 / 未记录');await ledger.getByLabel('已实际确认本机模型调用结束').check();await ledger.getByLabel('核对原因').fill('已核对受控本机任务结束');await ledger.getByLabel('本机任务或进程结束依据').fill('受控结束记录');await ledger.getByRole('button',{name:'追加映射调用核对'}).click();
- await expect(ledger.getByText('已追加负责人核对，原调用记录及未知值保留。',{exact:true})).toBeVisible();expect(f.reconciled()).toMatchObject({providerFinished:true,inputTokens:null,outputTokens:null});expect(f.call.inputTokens).toBe(7);expect(f.call.outputTokens).toBeNull();await expect(ledger.getByRole('button',{name:'追加映射调用核对'})).toHaveCount(0);
+ await expect(ledger.getByText('已追加负责人核对，原调用记录及未知值保留。',{exact:true})).toBeVisible();expect(f.reconciled()).toMatchObject({providerFinished:true,inputTokens:7,outputTokens:null});expect(f.call.inputTokens).toBe(7);expect(f.call.outputTokens).toBeNull();await expect(ledger.getByRole('button',{name:'追加映射调用核对'})).toHaveCount(0);
  await page.unroute('**/api/v1/**');const editor=await fixture(page,false);await editor.work.getByRole('button',{name:'查看映射调用记录',exact:true}).click();const readOnly=editor.work.getByRole('region',{name:'映射模型调用记录'});await expect(readOnly).toContainText('需要家庭负责人确认本机模型结束后核对。');await expect(readOnly.getByRole('button',{name:'追加映射调用核对'})).toHaveCount(0);
 });
 

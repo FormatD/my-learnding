@@ -11,6 +11,8 @@ python3 tests/mapping_model_protocol_acceptance.py
 python3 tests/model_embedding_acceptance.py
 python3 tests/builder_semantic_acceptance.py
 python3 tests/builder_semantic_preparation_acceptance.py
+python3 tests/builder_semantic_ledger_acceptance.py
+python3 tests/builder_semantic_crash_acceptance.py
 python3 tests/mapping_local_job_acceptance.py
 python3 tests/mapping_local_job_crash_acceptance.py
 python3 tests/mapping_local_api_acceptance.py

@@ -6,7 +6,7 @@ public static class BuilderSemanticPreparationCases
     static void Check(bool ok,string message){if(!ok)throw new Exception(message);}
     static IConfiguration Configuration()=>new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string,string?>{{"Omlx:Model","controlled-semantic-model"}}).Build();
     static Database Open(Database owner,IConfiguration config)=>new(new DbContextOptionsBuilder<Database>().UseNpgsql(owner.Database.GetConnectionString()).Options,config);
-    static async Task<(Actor Actor,BuilderSemanticPreparation Preparation)> Seed(Database db,bool empty=false)
+    internal static async Task<(Actor Actor,BuilderSemanticPreparation Preparation)> Seed(Database db,bool empty=false)
     {
         var family=new Family();var account=new Account{FamilyId=family.Id,UserName="semantic-preparation-"+Guid.NewGuid()};var actor=new Actor(Guid.NewGuid(),family.Id,account.Id,null,"Parent","Parent,ContentEditor");
         var catalog=Content.Fixture();catalog=catalog with{Kcs=catalog.Kcs.Select(k=>k with{Subject="MATH"}).ToArray()};var payload=Json.Write(catalog);var release=empty?null:new Release{FamilyId=family.Id,Payload=payload,Hash=Content.Hash(payload),Number=1};

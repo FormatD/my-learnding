@@ -9,6 +9,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "BuilderSemanticPreparation": "候选语义建议后台任务的不可变原输入、来源及正式库摘要、请求成员和固定本机配置；准备不冒充模型调用或审核。",
+    "BuilderSemanticCall": "候选语义逐次物理调用、原固定输入/模型配置和实际返回用量或未知状态；独立提交，与建库及映射共享家庭预算。",
+    "BuilderSemanticReconciliation": "家庭负责人追加的本机语义调用结束依据，保留原未知/实际值，不改写调用事实。",
     "FileUploadTicket": "本人限时上传声明、凭据摘要及暂存状态；完成校验后才产生私有文件，过期暂存字节清除，凭据和暂存字节不进入家庭导出。",
     "AssessmentConsumerCursor": "实际顺序消费进度，关联原事件、回执与不可修改应用记录；旧数据不补造游标",
     "AssessmentCheckpoint": "实际评估的增量状态、原输入前缀摘要与不可修改状态负载；旧世代不补造。",
