@@ -10,6 +10,7 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit(args[0]=="builder-call-crash"));return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0]=="semantic-preparation"){await BuilderSemanticPreparationCases.Run(db);return;}
 if(args[0]=="builder-semantic-live"){await BuilderSemanticCases.Run(true);return;}
 if(args[0]=="builder-semantic"){await BuilderSemanticCases.Run();return;}
 if(args[0]=="model-embeddings"){await ModelEmbeddingCases.Run();return;}
