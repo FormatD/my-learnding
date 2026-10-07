@@ -66,6 +66,7 @@
 | 20261004224054_PrivateLearningResources | 10.0.4 |
 | 20261004233734_RestrictedFileUploadTickets | 10.0.4 |
 | 20261006184449_MappingModelCallLedger | 10.0.4 |
+| 20261007054043_LocalMappingResults | 10.0.4 |
 
 ## Accounts
 
@@ -1952,10 +1953,12 @@
 | Version | bigint | 否 | 无 |
 | FamilyId | uuid | 否 | 无 |
 | CreatedAt | timestamp with time zone | 否 | 无 |
+| ModelResultPayload | text | 是 | 无 |
 
 约束：
 
 - `AK_MappingSuggestion_FamilyId_Id`：`UNIQUE ("FamilyId", "Id")`
+- `CK_MappingSuggestion_ModelResult`：`CHECK ("ModelResultPayload" IS NULL OR jsonb_typeof("ModelResultPayload"::jsonb) = 'object'::text AND COALESCE(("ModelResultPayload"::jsonb ->> 'decision'::text) = ANY (ARRAY['Propose'::text, 'NeedsReview'::text]), false))`
 - `FK_MappingSuggestion_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
 - `FK_MappingSuggestion_MappingRun_FamilyId_RunId`：`FOREIGN KEY ("FamilyId", "RunId") REFERENCES "MappingRun"("FamilyId", "Id") ON DELETE CASCADE`
 - `PK_MappingSuggestion`：`PRIMARY KEY ("Id")`

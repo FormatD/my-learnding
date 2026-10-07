@@ -29,9 +29,10 @@ public static class MappingBuilder
         if(accepting && release.Withdrawn)throw new ApiError(422,"LIBRARY_WITHDRAWN","本次能力库已经撤回；可拒绝旧建议，请选择有效版本重新准备。");
         return Json.Read<Catalog>(release.Payload);
     }
-    public static async Task<(MappingRun Run,MappingOwnerSelection[] Selections,Catalog Source,KC[] Library,MappingOwner[] Owners)> Freeze(Database db,Actor a,MappingRunInput input)
+    public static async Task<(MappingRun Run,MappingOwnerSelection[] Selections,Catalog Source,KC[] Library,MappingOwner[] Owners)> Freeze(Database db,Actor a,MappingRunInput input,MappingLocalConfiguration? local=null)
     {
-            if(input.Provider is not "Mock" and not "Manual")throw new ApiError(422,"PROVIDER_UNCONFIGURED","模型稍后接入，当前支持本地模拟建议或手工维护，不外发内容。");
+            if(input.Provider is not ("Mock" or "Manual" or "LocalOmlx"))throw new ApiError(422,"PROVIDER_UNCONFIGURED","请选择本机模型、模拟建议或手工维护。");
+            if(input.Provider=="LocalOmlx"){if(local==null)throw new ApiError(422,"MAPPING_JOB_REQUIRED","本机模型需通过后台准备入口执行。");local.Validate();}else if(local!=null)throw new ApiError(422,"MAPPING_LOCAL_CONFIGURATION_INVALID","模拟或手工任务不得附带模型配置。");
             if(input.Owners==null || input.Owners.Length is <1 or >100 || input.Owners.Any(o=>o==null) || input.Owners.Select(o=>new{o.OwnerType,o.OwnerId}).Distinct().Count()!=input.Owners.Length)throw new ApiError(422,"INVALID_SELECTION","请选择1到100个不同对象和明确修订。");
             var draft=await db.Drafts.SingleOrDefaultAsync(d=>d.Id==input.DraftId && d.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","内容草稿不存在。");
             var release=await db.Releases.SingleOrDefaultAsync(r=>r.Id==input.LibraryReleaseId && r.FamilyId==a.FamilyId)??throw new ApiError(404,"NOT_FOUND","能力库版本不存在。");
@@ -40,8 +41,9 @@ public static class MappingBuilder
             if(library.Length is <1 or >1000)throw new ApiError(422,"LIBRARY_SIZE_INVALID","本地建议支持1到1000个正式能力，请选择合适的能力库版本。");
             var selections=input.Owners.OrderBy(o=>o.OwnerType,StringComparer.Ordinal).ThenBy(o=>o.OwnerId).ToArray();var owners=selections.Select(o=>MappingSuggestions.Owner(source,o)).ToArray();
             var sourceHash=Content.Hash(draft.Payload);var libraryHash=Content.Hash(release.Payload);
-            var model=input.Provider=="Manual"?"None":Retrieval.Space;var promptVersion=input.Provider=="Manual"?"manual-source/1":"mapping-suggestion/1";
-            var hash=Content.Hash(Json.Write(new{draft.Id,draft.Version,sourceHash,releaseId=release.Id,libraryHash,selections,input.Provider,model,promptVersion}));
+            if(local!=null)MappingModelProtocol.Capture(source,draft.Id,selections,library);
+            var model=local?.Model??(input.Provider=="Manual"?"None":Retrieval.Space);var promptVersion=local==null?(input.Provider=="Manual"?"manual-source/1":"mapping-suggestion/1"):MappingModelProtocol.Version;
+            var hash=MappingJobs.InputHash(draft.Id,draft.Version,sourceHash,release.Id,libraryHash,selections,input.Provider,model,promptVersion,local==null?null:Content.Hash(Json.Write(local)));
             var run=new MappingRun{FamilyId=a.FamilyId,SourceDraftId=draft.Id,SourceDraftVersion=draft.Version,SourceTitle=draft.Title,SourcePayload=draft.Payload,SourceHash=sourceHash,LibraryReleaseId=release.Id,LibraryHash=libraryHash,InputHash=hash,Provider=input.Provider,Model=model,PromptVersion=promptVersion};
         return(run,selections,source,library,owners);
     }

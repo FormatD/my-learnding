@@ -10,6 +10,7 @@ if(!connection.Contains("Database=learning_fault_",StringComparison.Ordinal))thr
 Database Open(bool crash=false){var options=new DbContextOptionsBuilder<Database>().UseNpgsql(connection);if(crash)options.AddInterceptors(new CrashBeforeCommit(args[0]=="builder-call-crash"));return new(options.Options);}
 void Assert(bool condition,string message){if(!condition)throw new Exception(message);}
 await using var db=Open();
+if(args[0].StartsWith("mapping-local-job")){await MappingLocalJobCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("mapping-call-crash")){await MappingCallCrashCases.Run(db,args[0]);return;}
 if(args[0]=="mapping-call-ledger"){await MappingCallLedgerCases.Run(db);return;}
 if(args[0].StartsWith("mapping-model")){await MappingModelProtocolCases.Run(args[0]);return;}

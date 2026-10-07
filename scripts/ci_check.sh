@@ -8,6 +8,9 @@ python3 tests/k1_mapping_results_acceptance.py
 python3 tests/k1_builder_report_acceptance.py
 if test -x .tools/dotnet/dotnet; then .tools/dotnet/dotnet build tests/persistence --no-restore; else dotnet build tests/persistence --no-restore; fi
 python3 tests/mapping_model_protocol_acceptance.py
+python3 tests/mapping_local_job_acceptance.py
+python3 tests/mapping_local_job_crash_acceptance.py
+python3 tests/mapping_local_api_acceptance.py
 python3 tests/mapping_call_ledger_acceptance.py
 python3 tests/mapping_call_crash_acceptance.py
 python3 tests/openapi_contract_acceptance.py

@@ -26,6 +26,8 @@ public class MappingSuggestion : Row
     public string EvidencePolicy { get; set; } = "NoEvidence";
     public string SuggestedItems { get; set; } = "[]";
     public string Matches { get; set; } = "[]";
+    [System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ModelResultPayload { get; set; }
     public string ValidationFlags { get; set; } = "[]";
     public string Status { get; set; } = "Pending";
     public long Version { get; set; } = 1;

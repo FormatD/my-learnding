@@ -125,6 +125,7 @@ public class Database(DbContextOptions<Database> options,IConfiguration? configu
         b.Entity<MappingRun>().HasIndex(r=>new{r.FamilyId,r.InputHash}).IsUnique();
         Foreign<MappingRun, MappingSuggestion>(b,"RunId");
         b.Entity<MappingSuggestion>().HasIndex(s=>new{s.RunId,s.OwnerType,s.OwnerId}).IsUnique();
+        b.Entity<MappingSuggestion>().ToTable(t=>t.HasCheckConstraint("CK_MappingSuggestion_ModelResult", "\"ModelResultPayload\" IS NULL OR (jsonb_typeof(\"ModelResultPayload\"::jsonb)='object' AND COALESCE((\"ModelResultPayload\"::jsonb->>'decision') IN ('Propose','NeedsReview'),false))"));
         Foreign<MappingSuggestion, MappingReviewDecision>(b,"SuggestionId"); Foreign<Account, MappingReviewDecision>(b,"ReviewerId"); Foreign<ContentDraft, MappingReviewDecision>(b,"CreatedDraftId");
         b.Entity<MappingReviewDecision>().HasIndex(d=>d.SuggestionId).IsUnique();
         Foreign<ContentDraft, MappingSetRevision>(b,"DraftId"); Foreign<MappingReviewDecision, MappingSetRevision>(b,"ReviewDecisionId"); Foreign<ContentReviewRecord, MappingSetRevision>(b,"ContentReviewRecordId");

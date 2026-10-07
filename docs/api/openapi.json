@@ -5376,6 +5376,12 @@
           "matches": {
             "type": "string"
           },
+          "modelResultPayload": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "ownerId": {
             "format": "uuid",
             "type": "string"
