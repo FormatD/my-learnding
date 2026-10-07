@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-ModelEmbeddings、ModelEmbeddingSpace及LocalEmbeddingProvider是E10真实向量检索的基础实现。当前生产建库仍使用原模拟向量及冻结builder-retrieval/4；没有把新提供者注册到生产，不能把此阶段计作真实语义检索或四类归并判断完成。
+ModelEmbeddings、ModelEmbeddingSpace及LocalEmbeddingProvider是E10真实向量检索的基础实现。当前生产建库仍使用原模拟向量及冻结builder-retrieval/4；没有把新提供者注册到生产，不能把此阶段计作真实模型向量检索完成。独立的四类语义建议已另行接入生产，见候选语义运行手册及当前状态；它目前仍使用原冻结召回。
 
 本机`GET /v1/models`已读取成功，列出当前Qwen/Gemma及MarkItDown，但响应不提供向量能力元数据，尚未确认可用向量模型。没有下载新模型或把聊天模型替作向量模型。接口依据[oMLX官方Embedding请求/响应定义](https://github.com/jundot/omlx/blob/main/omlx/api/embedding_models.py)：POST /v1/embeddings、float返回及按index对应输入；明确truncation=false，不请求降维。实际返回维度必须等于固定配置，否则拒绝整批。
 
@@ -25,3 +25,14 @@ ModelEmbeddings、ModelEmbeddingSpace及LocalEmbeddingProvider是E10真实向量
 构建tests/persistence后运行`python3 tests/model_embedding_acceptance.py`。程序只用真实受控本机HTTP，测试不访问实际模型或数据库，不代表语义质量评测。覆盖固定模型/float/禁止截断、原用量保留与未知值、权限/认证/超时，以及完整对象索引、空间版本/维度隔离、无效数值和跨年级召回。已纳入scripts/ci_check.sh。
 
 2026-10-07专项实际通过，构建零警告零错误，原66/66规则通过。本轮没有执行整套CI，没有新增API/数据库迁移、家庭索引/候选/发布或学生绑定变化，也没有重启主服务。真正向量模型联调、持久索引与运行记录、四类LLM语义判断、独立人工质量评测及完整V1条件仍开放。
+
+
+## 持久索引存储基础（2026-10-07）
+
+新增不可修改的 ModelEmbeddingIndex 整份快照，固定家庭、原发布及发布摘要、完整排序能力定义/修订、模型配置和空间、归一化向量与整体摘要。最多512能力、32MB；构建过程不保存可被误认为完整的部分索引。保存由调用方的家庭事务和锁包围；相同发布/空间只允许一个快照，相同内容复用，配置或向量变化拒绝。模型升级创建新空间，旧空间保持。数据库实际复合家庭发布外键、整份长度约束及 UPDATE 禁止触发器保护保存。
+
+读取使用一条数据库语句同时取得索引与原发布的当前撤回/摘要状态，核对预期发布和模型空间、整体摘要、完整能力定义及每个向量的修订/文字摘要/维度/数值。原发布撤回即拒绝使用，整家庭删除级联清理，不修改旧模拟向量。
+
+持久快照要求 ModelVersion 为 sha256: 加64位小写摘要，表示待核验的模型文件清单版本声明；不能仅凭显示模型名保存。这个字段格式校验不证明真实模型文件已核验。目前没有实际文件清单采集/核验、向量调用账本、共享预算与冻结后台任务衔接，也没有生产召回入口。因此实际主库不得通过本阶段测试补造模型向量，只有独立临时数据库使用明确受控向量验证保存。
+
+`python3 tests/model_embedding_index_acceptance.py` 使用真实隔离 PostgreSQL 完成迁移、重开连接读取、完整/错误向量拒绝、并发重复保存、不同配置/向量拒绝改写、升级隔离、事务回滚、不可修改触发器、跨家庭复合外键及撤回/家庭删除测试。测试不调用真实模型、不核验实际工件，也不计语义准确率。可用 --export-schema 从同一隔离实库生成结构交接材料。

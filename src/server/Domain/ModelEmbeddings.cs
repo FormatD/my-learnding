@@ -66,11 +66,19 @@ public static class ModelEmbeddings
         if(string.IsNullOrWhiteSpace(candidate.Name) || candidate.Name.Length>100 || string.IsNullOrWhiteSpace(candidate.MeasurableBehavior) || candidate.MeasurableBehavior.Length>4000 || string.IsNullOrWhiteSpace(candidate.Boundary) || candidate.Boundary.Length>4000 || candidate.GradeMin<1 || candidate.GradeMax>12 || candidate.GradeMin>candidate.GradeMax || aliases.Length>1000 || aliases.Any(a=>a==null || a.Id==Guid.Empty || a.KCId==Guid.Empty || a.CandidateId==Guid.Empty || a.ReviewedBy==Guid.Empty || string.IsNullOrWhiteSpace(a.Text) || a.Text.Length>100 || a.Normalized!=Retrieval.Normalize(a.Text)) || aliases.Select(a=>a.Id).Distinct().Count()!=aliases.Length || aliases.Select(a=>(a.KCId,a.Normalized)).Distinct().Count()!=aliases.Length)throw Invalid("EMBEDDING_INPUT_INVALID");
         var queryText=space.Prepare(candidate.Name+" "+candidate.MeasurableBehavior+" "+candidate.Boundary);
         Check(query,"Candidate",candidateRevisionId,queryText,space);
-        if(vectors.Length!=library.Length || vectors.Any(v=>v==null || v.EntityType!="KC") || vectors.Select(v=>v.EntityRevisionId).Distinct().Count()!=vectors.Length)throw Invalid("EMBEDDING_INDEX_INCOMPLETE");
-        var index=vectors.ToDictionary(v=>v.EntityRevisionId);foreach(var kc in library){if(!index.TryGetValue(kc.RevisionId,out var vector))throw Invalid("EMBEDDING_INDEX_INCOMPLETE");Check(vector,"KC",kc.RevisionId,space.Prepare(kc.Name+" "+kc.Behavior+" "+kc.Boundary),space);}
+        var index=LibraryVectors(library,space,vectors);
         var name=Retrieval.Normalize(candidate.Name);
         var matches=library.Where(k=>k.Subject==candidate.Subject && k.Type==candidate.KcType).Select(k=>new Match(k.Id,k.Name,k.Behavior,k.Boundary,Similarity(query,index[k.RevisionId],space),space.Id,aliases.Where(a=>a.KCId==k.Id && a.Normalized==name).ToArray())).ToArray();
         return BuilderLexicalRetrieval.Fuse(candidate,matches,topK);
+    }
+    public static Dictionary<Guid,ModelEmbeddingVector> LibraryVectors(KC[] library,ModelEmbeddingSpace space,ModelEmbeddingVector[] vectors)
+    {
+        space.Validate();
+        if(library==null || vectors==null || library.Any(k=>k==null || k.Id==Guid.Empty || k.RevisionId==Guid.Empty || string.IsNullOrWhiteSpace(k.Name) || string.IsNullOrWhiteSpace(k.Behavior) || string.IsNullOrWhiteSpace(k.Boundary)) || library.Select(k=>k.Id).Distinct().Count()!=library.Length || library.Select(k=>k.RevisionId).Distinct().Count()!=library.Length)throw Invalid("EMBEDDING_INPUT_INVALID");
+        if(vectors.Length!=library.Length || vectors.Any(v=>v==null || v.EntityType!="KC") || vectors.Select(v=>v.EntityRevisionId).Distinct().Count()!=vectors.Length)throw Invalid("EMBEDDING_INDEX_INCOMPLETE");
+        var index=vectors.ToDictionary(v=>v.EntityRevisionId);
+        foreach(var kc in library){if(!index.TryGetValue(kc.RevisionId,out var vector))throw Invalid("EMBEDDING_INDEX_INCOMPLETE");Check(vector,"KC",kc.RevisionId,space.Prepare(kc.Name+" "+kc.Behavior+" "+kc.Boundary),space);}
+        return index;
     }
     static void Check(ModelEmbeddingVector vector,string type,Guid revision,string text,ModelEmbeddingSpace space)
     {

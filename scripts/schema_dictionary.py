@@ -9,6 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 PURPOSES = {
+    "ModelEmbeddingIndex": "固定发布及完整能力修订文字、模型配置与声明的文件清单摘要所构成的不可修改整份向量快照；存储基础已实现，尚未接入实际文件验证、调用账本或生产召回，不代表真实模型质量。",
     "BuilderSemanticResponse": "独立提交的本机语义原输出字节、完整性和摘要，引用实际调用；验证失败或业务回滚仍保留，不补造未知返回。",
     "BuilderSemanticSuggestion": "固定语义准备及实际返回形成的不可修改模型建议，与后台终态回执原子提交；不代表人工审核或自动内容发布。",
     "BuilderSemanticPreparation": "候选语义建议后台任务的不可变原输入、来源及正式库摘要、请求成员和固定本机配置；准备不冒充模型调用或审核。",

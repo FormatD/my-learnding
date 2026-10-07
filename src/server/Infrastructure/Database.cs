@@ -189,6 +189,9 @@ public class Database(DbContextOptions<Database> options,IConfiguration? configu
         Foreign<Student, Mastery>(b,"StudentId"); Foreign<Student, Evidence>(b,"StudentId");
         Foreign<Student, PaperWrong>(b,"StudentId"); Foreign<PrivateFile, PaperWrong>(b,"FileId"); Foreign<ContentDraft, PaperWrong>(b,"DraftId"); Foreign<Release, PaperWrong>(b,"ReleaseId"); Foreign<Attempt, PaperWrong>(b,"AttemptId");
         b.Entity<PaperWrong>().HasIndex(x=>x.AttemptId).IsUnique();
+        Foreign<Release,ModelEmbeddingIndex>(b,"LibraryReleaseId");
+        b.Entity<ModelEmbeddingIndex>().HasIndex(i=>new{i.FamilyId,i.LibraryReleaseId,i.SpaceId}).IsUnique();
+        b.Entity<ModelEmbeddingIndex>().ToTable(t=>t.HasCheckConstraint("CK_ModelEmbeddingIndex_Snapshot","\"Count\" BETWEEN 1 AND 512 AND \"LibraryHash\" ~ '^[a-f0-9]{64}$' AND \"SnapshotHash\" ~ '^[a-f0-9]{64}$' AND jsonb_typeof(\"ConfigurationPayload\"::jsonb)='object' AND jsonb_typeof(\"LibraryPayload\"::jsonb)='array' AND jsonb_typeof(\"VectorsPayload\"::jsonb)='array' AND jsonb_array_length(\"LibraryPayload\"::jsonb)=\"Count\" AND jsonb_array_length(\"VectorsPayload\"::jsonb)=\"Count\" AND octet_length(\"ConfigurationPayload\")+octet_length(\"LibraryPayload\")+octet_length(\"VectorsPayload\")<=32000000"));
         b.Entity<Embedding>().HasIndex(e=>new {e.FamilyId,e.EntityRevisionId,e.Space}).IsUnique();
         b.Entity<Alias>().HasIndex(a=>new {a.FamilyId,a.KCId,a.Normalized}).IsUnique();
         Foreign<Release, KCChangeProposal>(b,"FromReleaseId"); Foreign<Release, KCChangeProposal>(b,"EffectiveReleaseId");

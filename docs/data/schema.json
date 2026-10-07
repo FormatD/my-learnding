@@ -212,6 +212,10 @@
     {
       "id": "20261007080012_BuilderSemanticResults",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261007091159_DurableModelEmbeddingIndex",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -11060,6 +11064,153 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Masteries\" ON public.\"Masteries\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "ModelEmbeddingIndex",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryReleaseId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SpaceId",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ConfigurationPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "LibraryPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "VectorsPayload",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SnapshotHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Count",
+          "type": "integer",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_ModelEmbeddingIndex_Snapshot",
+          "kind": "c",
+          "definition": "CHECK (\"Count\" >= 1 AND \"Count\" <= 512 AND \"LibraryHash\" ~ '^[a-f0-9]{64}$'::text AND \"SnapshotHash\" ~ '^[a-f0-9]{64}$'::text AND jsonb_typeof(\"ConfigurationPayload\"::jsonb) = 'object'::text AND jsonb_typeof(\"LibraryPayload\"::jsonb) = 'array'::text AND jsonb_typeof(\"VectorsPayload\"::jsonb) = 'array'::text AND jsonb_array_length(\"LibraryPayload\"::jsonb) = \"Count\" AND jsonb_array_length(\"VectorsPayload\"::jsonb) = \"Count\" AND (octet_length(\"ConfigurationPayload\") + octet_length(\"LibraryPayload\") + octet_length(\"VectorsPayload\")) <= 32000000)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ModelEmbeddingIndex_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_ModelEmbeddingIndex_Releases_FamilyId_LibraryReleaseId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"LibraryReleaseId\") REFERENCES \"Releases\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_ModelEmbeddingIndex",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_ModelEmbeddingIndex_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_ModelEmbeddingIndex_FamilyId\" ON public.\"ModelEmbeddingIndex\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_ModelEmbeddingIndex_FamilyId_LibraryReleaseId_SpaceId",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_ModelEmbeddingIndex_FamilyId_LibraryReleaseId_SpaceId\" ON public.\"ModelEmbeddingIndex\" USING btree (\"FamilyId\", \"LibraryReleaseId\", \"SpaceId\")"
+        },
+        {
+          "name": "PK_ModelEmbeddingIndex",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_ModelEmbeddingIndex\" ON public.\"ModelEmbeddingIndex\" USING btree (\"Id\")"
         }
       ]
     },

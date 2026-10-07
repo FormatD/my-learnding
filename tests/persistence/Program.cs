@@ -17,6 +17,7 @@ if(args[0]=="semantic-ledger"){await BuilderSemanticLedgerCases.Run(db);return;}
 if(args[0]=="semantic-preparation"){await BuilderSemanticPreparationCases.Run(db);return;}
 if(args[0]=="builder-semantic-live"){await BuilderSemanticCases.Run(true);return;}
 if(args[0]=="builder-semantic"){await BuilderSemanticCases.Run();return;}
+if(args[0]=="model-embedding-index"){await ModelEmbeddingIndexCases.Run(db);return;}
 if(args[0]=="model-embeddings"){await ModelEmbeddingCases.Run();return;}
 if(args[0].StartsWith("mapping-local-job")){await MappingLocalJobCases.Run(db,args[0]);return;}
 if(args[0].StartsWith("mapping-call-crash")){await MappingCallCrashCases.Run(db,args[0]);return;}

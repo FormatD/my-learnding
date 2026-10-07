@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。 结构对应生成时实际连接的数据库；常驻服务是否已部署该版迁移，见[开发状态](STATUS.md)。
 
-当前 77 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 78 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -70,6 +70,7 @@
 | 20261007071504_BuilderSemanticPreparation | 10.0.4 |
 | 20261007073312_BuilderSemanticCallLedger | 10.0.4 |
 | 20261007080012_BuilderSemanticResults | 10.0.4 |
+| 20261007091159_DurableModelEmbeddingIndex | 10.0.4 |
 
 ## Accounts
 
@@ -2200,6 +2201,37 @@
 - `CREATE INDEX "IX_Masteries_FamilyId_StudentId" ON public."Masteries" USING btree ("FamilyId", "StudentId")`
 - `CREATE UNIQUE INDEX "IX_Masteries_GenerationId_KCId" ON public."Masteries" USING btree ("GenerationId", "KCId")`
 - `CREATE UNIQUE INDEX "PK_Masteries" ON public."Masteries" USING btree ("Id")`
+
+## ModelEmbeddingIndex
+
+固定发布及完整能力修订文字、模型配置与声明的文件清单摘要所构成的不可修改整份向量快照；存储基础已实现，尚未接入实际文件验证、调用账本或生产召回，不代表真实模型质量。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| LibraryReleaseId | uuid | 否 | 无 |
+| LibraryHash | text | 否 | 无 |
+| SpaceId | text | 否 | 无 |
+| ConfigurationPayload | text | 否 | 无 |
+| LibraryPayload | text | 否 | 无 |
+| VectorsPayload | text | 否 | 无 |
+| SnapshotHash | text | 否 | 无 |
+| Count | integer | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_ModelEmbeddingIndex_Snapshot`：`CHECK ("Count" >= 1 AND "Count" <= 512 AND "LibraryHash" ~ '^[a-f0-9]{64}$'::text AND "SnapshotHash" ~ '^[a-f0-9]{64}$'::text AND jsonb_typeof("ConfigurationPayload"::jsonb) = 'object'::text AND jsonb_typeof("LibraryPayload"::jsonb) = 'array'::text AND jsonb_typeof("VectorsPayload"::jsonb) = 'array'::text AND jsonb_array_length("LibraryPayload"::jsonb) = "Count" AND jsonb_array_length("VectorsPayload"::jsonb) = "Count" AND (octet_length("ConfigurationPayload") + octet_length("LibraryPayload") + octet_length("VectorsPayload")) <= 32000000)`
+- `FK_ModelEmbeddingIndex_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_ModelEmbeddingIndex_Releases_FamilyId_LibraryReleaseId`：`FOREIGN KEY ("FamilyId", "LibraryReleaseId") REFERENCES "Releases"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_ModelEmbeddingIndex`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_ModelEmbeddingIndex_FamilyId" ON public."ModelEmbeddingIndex" USING btree ("FamilyId")`
+- `CREATE UNIQUE INDEX "IX_ModelEmbeddingIndex_FamilyId_LibraryReleaseId_SpaceId" ON public."ModelEmbeddingIndex" USING btree ("FamilyId", "LibraryReleaseId", "SpaceId")`
+- `CREATE UNIQUE INDEX "PK_ModelEmbeddingIndex" ON public."ModelEmbeddingIndex" USING btree ("Id")`
 
 ## Outbox
 
