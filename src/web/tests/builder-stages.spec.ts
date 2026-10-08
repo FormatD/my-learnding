@@ -38,3 +38,26 @@ test('切换任务拒绝失败后保留明确错误，不把旧数据当成新�
  });
  await page.goto('/');await page.getByRole('button',{name:'✧　辅助建库',exact:true}).click();const panel=page.getByRole('region',{name:'建库阶段任务'});await panel.getByRole('button',{name:'查看任务数据'}).click();await expect(panel.getByRole('alert')).toContainText('原阶段记录已不可用');await expect(panel.getByRole('article',{name:'当前阶段任务数据'})).toHaveCount(0);
 });
+test('来源就地修改预览分段、保存新校对版并单独确认，原记录保持',async({page})=>{
+ const posts:any[]=[],original={id:'source-original',title:'受控原OCR',text:'受控原OCR文字',hash:'old-hash'},revised={id:'source-revised',title:'',text:'',hash:'new-hash'};let saved=false,confirmed=false;
+ await page.route('**/api/v1/**',async route=>{
+  const req=route.request(),path=new URL(req.url()).pathname.replace('/api/v1','');let body:any;
+  if(req.method()==='POST')posts.push({path,body:req.postDataJSON()});
+  if(path==='/me')body={family:{ownerAccountId:'owner'},actor:{accountId:'owner',role:'Parent',roles:'ContentEditor'}};
+  else if(path==='/students')body=[];else if(path==='/builder')body={sources:[],runs:[],attempts:[],candidates:[],libraries:[],provider:'controlled'};else if(path==='/content')body={drafts:[],releases:[]};else if(path==='/background-jobs/window')body={jobs:[],nextCursor:null};
+  else if(path==='/builder/stages')body=[{id:'sources',title:'1 · 来源与分段',total:saved?2:1,notice:''}];
+  else if(path==='/builder/stages/extraction/tasks')body={items:[],total:0,page:1};
+  else if(path==='/builder/stages/sources/tasks')body={page:1,total:saved?2:1,items:(saved?[revised,original]:[original]).map(s=>({...s,status:'Imported',provider:'Local',createdAt:'2026-10-08T00:00:00Z'}))};
+  else if(path.startsWith('/builder/stages/sources/tasks/'))body={id:path.endsWith(revised.id)?revised.id:original.id,record:path.endsWith(revised.id)?revised:original,data:[]};
+  else if(path.startsWith('/builder/reference-images/'))body=[{id:original.id,title:'受控教材',text:original.text,chunks:[],pages:[]}];
+  else if(path.endsWith('/review')){const s=path.includes(revised.id)?revised:original;body={source:s,fragments:[{locator:'段落1',text:s.text}],snapshotHash:'fixed-snapshot',confirmed:s.id===revised.id&&confirmed,history:[]};}
+  else if(path.endsWith('/corrections')){const b=req.postDataJSON();revised.title=b.title;revised.text=b.text;saved=true;body=revised;}
+  else if(path.endsWith('/confirmations')){confirmed=true;body={id:'confirmation'};}
+  else {await route.fulfill({status:403,json:{title:'未配置受控页面辅助请求'}});return;}
+  await route.fulfill({headers:{ETag:'"1"'},json:body});
+ });
+ await page.goto('/');await page.getByRole('button',{name:'✧　辅助建库',exact:true}).click();await page.getByRole('button',{name:'1 · 来源与分段 · 1',exact:true}).click();await page.getByRole('region',{name:'建库阶段任务'}).getByRole('button',{name:'校对与确认',exact:true}).click();const dialog=page.getByRole('dialog'),review=dialog.getByRole('region',{name:'来源修改与确认'});
+ await expect(review).toContainText('待人工复核');await review.getByRole('button',{name:'修改文字与分段'}).click();await review.getByLabel('校对文字（每行一个分段）',{exact:true}).fill('受控校正后的除法题目\n保留完整竖式条件');await review.getByLabel('校对说明',{exact:true}).fill('对照受控教材校正除号并调整分段');await expect(review).toContainText('保存后的分段预览 · 2 段');await expect(review.getByRole('button',{name:'确认复核通过'})).toHaveCount(0);await review.getByRole('button',{name:'保存校对版'}).click();await expect(review).toContainText('待人工复核');await expect(dialog.getByRole('article',{name:'当前阶段任务数据'})).toContainText('受控校正后的除法题目');
+ await review.getByLabel('复核依据',{exact:true}).fill('已核对原图及两段文字');await review.getByRole('button',{name:'确认复核通过'}).click();await expect(review).toContainText('已人工复核当前文字与分段');expect(original.text).toBe('受控原OCR文字');expect(posts.map(p=>p.path)).toEqual(['/content/sources/source-original/corrections','/content/sources/source-revised/confirmations']);
+ await page.keyboard.press('Escape');await page.getByRole('region',{name:'建库阶段任务'}).getByRole('article').filter({hasText:'source-original'}).getByRole('button',{name:'查看任务数据'}).click();await expect(review).toContainText('待人工复核');
+});

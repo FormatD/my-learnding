@@ -220,6 +220,10 @@
     {
       "id": "20261007144124_SourcePageImages",
       "productVersion": "10.0.4"
+    },
+    {
+      "id": "20261008154205_SourceHumanReview",
+      "productVersion": "10.0.4"
     }
   ],
   "tables": [
@@ -13776,6 +13780,173 @@
           "unique": true,
           "valid": true,
           "definition": "CREATE UNIQUE INDEX \"PK_Sessions\" ON public.\"Sessions\" USING btree (\"Id\")"
+        }
+      ]
+    },
+    {
+      "name": "SourceCheck",
+      "columns": [
+        {
+          "name": "Id",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "OriginalSourceId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SourceId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "ActorId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Operation",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Reason",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "Snapshot",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "SnapshotHash",
+          "type": "text",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "FamilyId",
+          "type": "uuid",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        },
+        {
+          "name": "CreatedAt",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "identity": "",
+          "generated": "",
+          "default": null
+        }
+      ],
+      "constraints": [
+        {
+          "name": "CK_SourceCheck_Evidence",
+          "kind": "c",
+          "definition": "CHECK ((\"Operation\" = ANY (ARRAY['Revision'::text, 'Confirmation'::text])) AND length(\"Reason\") >= 1 AND length(\"Reason\") <= 4000 AND length(\"SnapshotHash\") = 64 AND jsonb_typeof(\"Snapshot\"::jsonb) = 'object'::text)",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceCheck_Accounts_FamilyId_ActorId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"ActorId\") REFERENCES \"Accounts\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceCheck_Families_FamilyId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\") REFERENCES \"Families\"(\"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceCheck_Sources_FamilyId_OriginalSourceId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"OriginalSourceId\") REFERENCES \"Sources\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "FK_SourceCheck_Sources_FamilyId_SourceId",
+          "kind": "f",
+          "definition": "FOREIGN KEY (\"FamilyId\", \"SourceId\") REFERENCES \"Sources\"(\"FamilyId\", \"Id\") ON DELETE CASCADE",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        },
+        {
+          "name": "PK_SourceCheck",
+          "kind": "p",
+          "definition": "PRIMARY KEY (\"Id\")",
+          "validated": true,
+          "deferrable": false,
+          "initiallyDeferred": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "IX_SourceCheck_FamilyId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_SourceCheck_FamilyId\" ON public.\"SourceCheck\" USING btree (\"FamilyId\")"
+        },
+        {
+          "name": "IX_SourceCheck_FamilyId_ActorId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_SourceCheck_FamilyId_ActorId\" ON public.\"SourceCheck\" USING btree (\"FamilyId\", \"ActorId\")"
+        },
+        {
+          "name": "IX_SourceCheck_FamilyId_OriginalSourceId",
+          "unique": false,
+          "valid": true,
+          "definition": "CREATE INDEX \"IX_SourceCheck_FamilyId_OriginalSourceId\" ON public.\"SourceCheck\" USING btree (\"FamilyId\", \"OriginalSourceId\")"
+        },
+        {
+          "name": "IX_SourceCheck_FamilyId_SourceId_Operation_SnapshotHash",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"IX_SourceCheck_FamilyId_SourceId_Operation_SnapshotHash\" ON public.\"SourceCheck\" USING btree (\"FamilyId\", \"SourceId\", \"Operation\", \"SnapshotHash\")"
+        },
+        {
+          "name": "PK_SourceCheck",
+          "unique": true,
+          "valid": true,
+          "definition": "CREATE UNIQUE INDEX \"PK_SourceCheck\" ON public.\"SourceCheck\" USING btree (\"Id\")"
         }
       ]
     },

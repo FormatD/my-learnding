@@ -4426,6 +4426,59 @@ namespace Learning.Api.Infrastructure.Migrations
                     b.ToTable("Sources");
                 });
 
+            modelBuilder.Entity("Learning.SourceCheck", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OriginalSourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SnapshotHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("FamilyId", "ActorId");
+
+                    b.HasIndex("FamilyId", "OriginalSourceId");
+
+                    b.HasIndex("FamilyId", "SourceId", "Operation", "SnapshotHash").IsUnique();
+
+                    b.ToTable("SourceCheck", t =>
+                        {
+                            t.HasCheckConstraint("CK_SourceCheck_Evidence", "\"Operation\" IN ('Revision','Confirmation') AND length(\"Reason\") BETWEEN 1 AND 4000 AND length(\"SnapshotHash\")=64 AND jsonb_typeof(\"Snapshot\"::jsonb)='object'");
+                        });
+                });
+
             modelBuilder.Entity("Learning.SourceImage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6463,6 +6516,36 @@ namespace Learning.Api.Infrastructure.Migrations
                         .HasForeignKey("FamilyId", "FileId")
                         .HasPrincipalKey("FamilyId", "Id")
                         .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Learning.SourceCheck", b =>
+                {
+                    b.HasOne("Learning.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Learning.Account", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId", "ActorId")
+                        .HasPrincipalKey("FamilyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Learning.Source", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId", "OriginalSourceId")
+                        .HasPrincipalKey("FamilyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Learning.Source", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId", "SourceId")
+                        .HasPrincipalKey("FamilyId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Learning.SourceImage", b =>

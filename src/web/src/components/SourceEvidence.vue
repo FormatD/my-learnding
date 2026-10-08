@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed,ref,watch,onUnmounted} from 'vue';import {api} from '../api';
-type Item=Record<string,any>;const props=withDefaults(defineProps<{stage:string;taskId:string;showText?:boolean}>(),{showText:true});
+type Item=Record<string,any>;const emit=defineEmits<{imagesChanged:[]}>();const props=withDefaults(defineProps<{stage:string;taskId:string;showText?:boolean}>(),{showText:true});
 const sources=ref<Item[]>([]),sourceIndex=ref(0),pageIndex=ref(0),scale=ref(1),error=ref(''),imageError=ref(false),busy=ref(false),uploading=ref(false),uploadError=ref(''),imageFile=ref<File|null>(null),documentFile=ref<File|null>(null),pdfPage=ref(1),printedPage=ref('');let epoch=0,alive=true;
 const source=computed(()=>sources.value[sourceIndex.value]),page=computed(()=>source.value?.pages[pageIndex.value]);
 watch(()=>[props.stage,props.taskId],async()=>{const current=++epoch;busy.value=true;error.value='';sources.value=[];sourceIndex.value=0;pageIndex.value=0;scale.value=1;try{const rows=await api(`/builder/reference-images/${props.stage}/${props.taskId}`);if(alive&&current===epoch)sources.value=rows}catch(e){if(alive&&current===epoch)error.value=(e as Error).message}finally{if(alive&&current===epoch)busy.value=false}},{immediate:true});
@@ -13,7 +13,7 @@ async function attach(){
   const documentHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',documentBytes))).map(x=>x.toString(16).padStart(2,'0')).join('');
   const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]!);reader.onerror=()=>reject(new Error('原图读取失败。'));reader.readAsDataURL(file)});
   await api(`/content/sources/${sourceId}/images`,{name:file.name,mimeType:file.type,base64,expectedSourceHash,documentHash,page:pdfPage.value,printedPage:printedPage.value});
-  const rows=await api(`/builder/reference-images/${props.stage}/${props.taskId}`);if(alive&&epoch===current){sources.value=rows;imageFile.value=null;documentFile.value=null;}
+  const rows=await api(`/builder/reference-images/${props.stage}/${props.taskId}`);if(alive&&epoch===current){sources.value=rows;imageFile.value=null;documentFile.value=null;emit('imagesChanged');}
  }catch(e){if(alive&&epoch===current)uploadError.value=(e as Error).message}finally{if(alive)uploading.value=false}
 }
 watch(sourceIndex,()=>{pageIndex.value=0;scale.value=1});watch(page,()=>imageError.value=false);onUnmounted(()=>{alive=false;epoch++});

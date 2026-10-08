@@ -2,7 +2,7 @@
 
 由 `scripts/schema_dictionary.py` 从 PostgreSQL public 目录的只读事务生成。仅包含结构及迁移版本，不包含家庭记录、来源正文、附件、口令或连接配置。 结构对应生成时实际连接的数据库；常驻服务是否已部署该版迁移，见[开发状态](STATUS.md)。
 
-当前 79 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
+当前 80 张表；列类型、数据库默认值、主键、外键删除规则、唯一性及索引均以实际数据库为准。对应机器可读快照：[schema.json](data/schema.json)。
 
 ## 使用边界
 
@@ -72,6 +72,7 @@
 | 20261007080012_BuilderSemanticResults | 10.0.4 |
 | 20261007091159_DurableModelEmbeddingIndex | 10.0.4 |
 | 20261007144124_SourcePageImages | 10.0.4 |
+| 20261008154205_SourceHumanReview | 10.0.4 |
 
 ## Accounts
 
@@ -2753,6 +2754,40 @@
 - `CREATE INDEX "IX_Sessions_FamilyId_StudentId" ON public."Sessions" USING btree ("FamilyId", "StudentId")`
 - `CREATE INDEX "IX_Sessions_FamilyId_TaskId" ON public."Sessions" USING btree ("FamilyId", "TaskId")`
 - `CREATE UNIQUE INDEX "PK_Sessions" ON public."Sessions" USING btree ("Id")`
+
+## SourceCheck
+
+人工来源校对版的原输入及来源复核确认快照、摘要、操作者和依据；仅追加，校对保存与确认分别记录，不自动审核候选或发布。
+
+| 字段 | PostgreSQL 类型 | 可空 | 数据库默认值/生成规则 |
+|---|---|---|---|
+| Id | uuid | 否 | 无 |
+| OriginalSourceId | uuid | 否 | 无 |
+| SourceId | uuid | 否 | 无 |
+| ActorId | uuid | 否 | 无 |
+| Operation | text | 否 | 无 |
+| Reason | text | 否 | 无 |
+| Snapshot | text | 否 | 无 |
+| SnapshotHash | text | 否 | 无 |
+| FamilyId | uuid | 否 | 无 |
+| CreatedAt | timestamp with time zone | 否 | 无 |
+
+约束：
+
+- `CK_SourceCheck_Evidence`：`CHECK (("Operation" = ANY (ARRAY['Revision'::text, 'Confirmation'::text])) AND length("Reason") >= 1 AND length("Reason") <= 4000 AND length("SnapshotHash") = 64 AND jsonb_typeof("Snapshot"::jsonb) = 'object'::text)`
+- `FK_SourceCheck_Accounts_FamilyId_ActorId`：`FOREIGN KEY ("FamilyId", "ActorId") REFERENCES "Accounts"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_SourceCheck_Families_FamilyId`：`FOREIGN KEY ("FamilyId") REFERENCES "Families"("Id") ON DELETE CASCADE`
+- `FK_SourceCheck_Sources_FamilyId_OriginalSourceId`：`FOREIGN KEY ("FamilyId", "OriginalSourceId") REFERENCES "Sources"("FamilyId", "Id") ON DELETE CASCADE`
+- `FK_SourceCheck_Sources_FamilyId_SourceId`：`FOREIGN KEY ("FamilyId", "SourceId") REFERENCES "Sources"("FamilyId", "Id") ON DELETE CASCADE`
+- `PK_SourceCheck`：`PRIMARY KEY ("Id")`
+
+索引（包含约束自动创建的索引）：
+
+- `CREATE INDEX "IX_SourceCheck_FamilyId" ON public."SourceCheck" USING btree ("FamilyId")`
+- `CREATE INDEX "IX_SourceCheck_FamilyId_ActorId" ON public."SourceCheck" USING btree ("FamilyId", "ActorId")`
+- `CREATE INDEX "IX_SourceCheck_FamilyId_OriginalSourceId" ON public."SourceCheck" USING btree ("FamilyId", "OriginalSourceId")`
+- `CREATE UNIQUE INDEX "IX_SourceCheck_FamilyId_SourceId_Operation_SnapshotHash" ON public."SourceCheck" USING btree ("FamilyId", "SourceId", "Operation", "SnapshotHash")`
+- `CREATE UNIQUE INDEX "PK_SourceCheck" ON public."SourceCheck" USING btree ("Id")`
 
 ## SourceImage
 

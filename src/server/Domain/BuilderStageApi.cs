@@ -71,7 +71,7 @@ public static class BuilderStageApi
             switch(stage)
             {
                 case "sources":
-                    var source=await One<Source>();record=Element(source);await Data("chunks","实际来源片段",Owned<Chunk>().Where(c=>c.SourceId==id));await Data("runs","来源对应的解析与生成任务",Owned<BuilderRun>().Where(r=>r.SourceId==id));break;
+                    var source=await One<Source>();record=Element(source);await Data("source-checks","来源校对与人工复核记录",Owned<SourceCheck>().Where(c=>c.SourceId==id||c.OriginalSourceId==id));await Data("chunks","实际来源片段",Owned<Chunk>().Where(c=>c.SourceId==id));await Data("runs","来源对应的解析与生成任务",Owned<BuilderRun>().Where(r=>r.SourceId==id));break;
                 case "parsing":case "extraction":
                     var run=await One<BuilderRun>();record=Element(run);await Data("source","原来源（当前保存文本）",Owned<Source>().Where(s=>s.Id==run.SourceId));await Data("chunks","来源片段",Owned<Chunk>().Where(c=>c.SourceId==run.SourceId));await Data("attempts","每次处理尝试",Owned<BuilderAttempt>().Where(t=>t.RunId==id));await Data("candidates","原候选、召回及审核数据",Owned<Candidate>().Where(c=>c.RunId==id));await Data("calls","每次模型调用与用量",Owned<BuilderCall>().Where(c=>c.RunId==id));var builderCalls=Owned<BuilderCall>().Where(c=>c.RunId==id);await Data("call-reconciliations","调用结束核对依据",Owned<BuilderBudgetReconciliation>().Where(r=>builderCalls.Select(c=>c.Id).Contains(r.CallId)));if(run.LibraryReleaseId!=null)await Data("library","创建时选择的正式能力库",Owned<Release>().Where(r=>r.Id==run.LibraryReleaseId));await Job(id);break;
                 case "indexes":record=Element(await One<ModelEmbeddingIndex>());break;

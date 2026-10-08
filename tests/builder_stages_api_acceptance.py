@@ -17,7 +17,8 @@ try:
    child=subprocess.Popen([dotnet(root),str(root/'src/server/bin/Debug/net10.0/Learning.Api.dll'),'--urls',origin],cwd=root/'src/server',env=env,stdout=log,stderr=log)
    deadline=time.monotonic()+40
    while time.monotonic()<deadline:
-    assert child.poll() is None,'isolated API stopped'
+    if child.poll() is not None:
+     private_log=root/'.local/source-checks-api-startup.log';private_log.write_text((temp/'process.log').read_text());private_log.chmod(0o600);raise AssertionError('isolated API stopped; private startup diagnostic saved')
     try:
      with urllib.request.urlopen(origin+'/api/health',timeout=1) as response:
       if json.load(response)['status']=='ok':break
@@ -53,6 +54,25 @@ try:
    a.request('/builder/stages/parsing/tasks/'+run['id'],expected=404)
    for path in ['/builder/stages/unknown/tasks','/builder/stages/sources/tasks?page=0','/builder/stages/sources/tasks?pageSize=51','/builder/stages/sources/tasks/'+source['id']+'?related=unknown','/builder/stages/sources/tasks/'+source['id']+'?relatedPage=0']:a.request(path,expected=422)
    for st,record in [('extraction',run),('review',candidate)]:assert a.request('/builder/reference-images/'+st+'/'+record['id'])[0]['pages'][0]['id']==image['id']
+   original_review=a.request('/content/sources/'+source['id']+'/review');assert not original_review['confirmed']
+   confirmation_input={'expectedSnapshotHash':original_review['snapshotHash'],'reason':'已对照受控原图核对文字与分段，仅流程测试'}
+   a.request('/content/sources/'+source['id']+'/confirmations',{**confirmation_input,'reason':''},expected=422)
+   a.request('/content/sources/'+source['id']+'/confirmations',{**confirmation_input,'expectedSnapshotHash':'0'*64},expected=412)
+   confirmation=a.request('/content/sources/'+source['id']+'/confirmations',confirmation_input);assert a.request('/content/sources/'+source['id']+'/confirmations',confirmation_input)['id']==confirmation['id']
+   assert a.request('/content/sources/'+source['id']+'/review')['confirmed']
+   correction={'expectedSnapshotHash':original_review['snapshotHash'],'title':'受控校对版','text':text+'\n受控人工校对补充：此行是新分段。','reason':'修正受控数学符号并预览分段'}
+   corrected=a.request('/content/sources/'+source['id']+'/corrections',correction);corrected_review=a.request('/content/sources/'+corrected['id']+'/review');assert not corrected_review['confirmed'] and len(corrected_review['fragments'])==42
+   assert a.request('/builder/reference-images/sources/'+corrected['id'])[0]['pages'][0]['imageHash']==original[0]['pages'][0]['imageHash']
+   assert a.request('/content/sources/'+source['id']+'/review')['source']['text']==text
+   assert a.request('/builder/stages/extraction/tasks/'+run['id'])['record']['sourceId']==source['id'] and a.request('/builder/stages/review/tasks/'+candidate['id'])['record']['status']=='Pending'
+   a.request('/content/sources/'+source['id']+'/corrections',correction,expected=409)
+   a.request('/content/sources/'+source['id']+'/corrections',{**correction,'text':text},expected=422)
+   a.request('/content/sources/'+source['id']+'/images',{**image_input,'page':8,'printedPage':'受控第4页'})
+   changed_review=a.request('/content/sources/'+source['id']+'/review');assert not changed_review['confirmed'] and changed_review['snapshotHash']!=original_review['snapshotHash']
+   a.request('/content/sources/'+source['id']+'/confirmations',confirmation_input,expected=412)
+   corrected_confirmation=a.request('/content/sources/'+corrected['id']+'/confirmations',{'expectedSnapshotHash':corrected_review['snapshotHash'],'reason':'确认受控校对版文字及42段'});assert a.request('/content/sources/'+corrected['id']+'/review')['confirmed']
+   for table,record in [('SourceCheck',confirmation),('SourceCheck',corrected_confirmation)]:
+    result=subprocess.run(['psql','-X','-q','--set=ON_ERROR_STOP=1'],input='UPDATE "'+table+'" SET "Reason"=\'overwrite\' WHERE "Id"=\''+record['id']+'\';',text=True,env=env,capture_output=True);assert result.returncode!=0 and 'immutable' in result.stderr
    accepted=a.request('/builder/candidates/'+candidate['id']+':decide',{'decision':'CreateDraft','reason':'受控工作流验证，不是正式内容审核','name':'受控运算次序','behavior':'能先算乘除再算加减','boundary':'仅无括号整数运算'})
    assert a.request('/builder/reference-images/drafts/'+accepted['createdDraftId'])[0]['pages'][0]['id']==image['id']
    fixture=a.request('/content/fixture',{});catalog=json.loads(fixture['payload']);catalog['textbooks'][0]['sourceId']=source['id'];a.request('/content/drafts/'+fixture['id'],{'title':'受控教材草稿','catalog':catalog},method='PUT');a.request('/content/drafts/'+fixture['id']+':review',{});preview=a.request('/content/drafts/'+fixture['id']+'/preview');release=a.request('/content/drafts/'+fixture['id']+':publish',{'previewHash':preview['hash']})
@@ -70,7 +90,7 @@ try:
    published=a.request('/builder/stages/publication/tasks/'+release['id']);assert next(x for x in published['data'] if x['id']=='reviews')['total']==1
    other=Client();other.request('/auth/register',{'userName':'stage-other-'+uuid.uuid4().hex,'password':secrets.token_hex(24)},expected=201);other.request('/me');assert all(s['total']==0 for s in other.request('/builder/stages'))
    for stage,record in [('sources',source),('extraction',run),('review',candidate),('mapping',mapping),('mapping-review',{'id':mapping['runId']}),('drafts',draft),('publication',release)]:other.request('/builder/stages/'+stage+'/tasks/'+record['id'],expected=404)
-   other.request('/builder/reference-images/sources/'+source['id'],expected=404);other.request('/content/source-images/'+image['id'],expected=404)
+   other.request('/content/sources/'+source['id']+'/review',expected=404);other.request('/content/sources/'+source['id']+'/corrections',correction,expected=404);other.request('/content/sources/'+source['id']+'/confirmations',confirmation_input,expected=404);other.request('/builder/reference-images/sources/'+source['id'],expected=404);other.request('/content/source-images/'+image['id'],expected=404)
    student=a.request('/students',{'name':'受控孩子','grade':3},expected=201);kid=Client()
    for cookie in a.jar:kid.jar.set_cookie(copy.copy(cookie))
    actor=a.request('/me')['actor'];family=actor['familyId']
@@ -80,7 +100,8 @@ try:
    protected=editor.request('/builder/stages/sources/tasks/'+source['id']);assert all('unrelated-learning-fixture' not in row['details'] for part in protected['data'] if part['id']=='audits' for row in part['items'])
    protected=a.request('/builder/stages/sources/tasks/'+source['id']);assert all('unrelated-learning-fixture' not in row['details'] for part in protected['data'] if part['id']=='audits' for row in part['items'])
    kid.etag=a.etag;kid.request('/students/'+student['id']+'/child-sessions',{})
-   for path in ['/builder/reference-images/sources/'+source['id'],'/content/source-images/'+image['id'],'/builder/stages','/builder/stages/sources/tasks','/builder/stages/sources/tasks/'+source['id']]:kid.request(path,expected=403)
+   for path in ['/content/sources/'+source['id']+'/review','/builder/reference-images/sources/'+source['id'],'/content/source-images/'+image['id'],'/builder/stages','/builder/stages/sources/tasks','/builder/stages/sources/tasks/'+source['id']]:kid.request(path,expected=403)
+   kid.request('/content/sources/'+source['id']+'/corrections',correction,expected=403);kid.request('/content/sources/'+source['id']+'/confirmations',confirmation_input,expected=403)
    immutable_sql='UPDATE "SourceImage" SET "Page"=8 WHERE "Id"=\''+image['id']+'\';'
    immutable=subprocess.run(['psql','-X','-q','--set=ON_ERROR_STOP=1'],input=immutable_sql,text=True,env=env,capture_output=True);assert immutable.returncode!=0 and 'immutable' in immutable.stderr
    print('PASS source image provenance/hash conflict, immutable database record, private image bytes and downstream review/draft/mapping/publication lineage; actual isolated stage counts/task and related-data pagination, original source/candidate/recall/config/job/lease/calls read without writes, real Mock mapping preparation/review and content publication lineage; invalid stage/page/relation, child/other-family and content-only editor learning-audit isolation; no actual model quality claim')
