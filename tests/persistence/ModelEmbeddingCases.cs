@@ -12,6 +12,10 @@ public static class ModelEmbeddingCases
         var space=new ModelEmbeddingSpace("LocalOmlx","controlled-embedding-model","fixed-content-digest-v1",3,ModelEmbeddingSpace.Preprocessing);space.Validate();
         Check(space.Id==(space with{}).Id && space.Id!=(space with{ModelVersion="v2"}).Id && space.Id!=(space with{Dimensions=4}).Id && space.Id!=(space with{Model="other"}).Id,"Space omits model/version/dimensions");
         Reject(()=>(space with{PreprocessingVersion="unknown"}).Validate(),"EMBEDDING_CONFIGURATION_INVALID");
+        var sts=space with{InputRecipeVersion="embeddinggemma2-sts/1"};
+        Check(space.Id=="embedding/1/"+Content.Hash(Json.Write(new{space.Provider,space.Model,space.ModelVersion,space.Dimensions,space.PreprocessingVersion})),"Legacy space identity changed");
+        Check(sts.Id!=space.Id && sts.Prepare("  数学 A  ")=="task: sentence similarity | query: 数学 a","Task recipe is not frozen into identity and actual input");
+        Reject(()=>(space with{InputRecipeVersion="unknown"}).Validate(),"EMBEDDING_CONFIGURATION_INVALID");
         var kc=new KC(Guid.NewGuid(),Guid.NewGuid(),"E1","有余数除法","独立计算整数除法的商与余数","余数小于除数",Subject:"MATH",GradeMin:2,GradeMax:2);
         var cross=kc with{Id=Guid.NewGuid(),RevisionId=Guid.NewGuid(),Subject="LANGUAGE",Name="同词但不同学科"};var concept=kc with{Id=Guid.NewGuid(),RevisionId=Guid.NewGuid(),Type="Concept"};
         var candidate=new BuilderCandidateOutput("有余数除法","MATH","Procedure",3,3,kc.Behavior,kc.Boundary,[Guid.NewGuid()],["原来源引文"],.99m);

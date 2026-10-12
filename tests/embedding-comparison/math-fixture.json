@@ -1,0 +1,270 @@
+{
+  "library": [
+    {
+      "id": "equal",
+      "name": "等分除法求每份数",
+      "behavior": "已知总数与份数，用除法求每份数量",
+      "boundary": "每份相同，不求份数"
+    },
+    {
+      "id": "groups",
+      "name": "包含除法求份数",
+      "behavior": "已知总数和每份数，用除法求份数",
+      "boundary": "每份相同，不求每份数"
+    },
+    {
+      "id": "division",
+      "name": "有余数除法竖式",
+      "behavior": "列竖式算出商与余数，余数小于除数",
+      "boundary": "只测计算，不处理情境余数"
+    },
+    {
+      "id": "ceiling",
+      "name": "余数情境向上取整",
+      "behavior": "结合载人或装运情境，余下也需一份，商加一",
+      "boundary": "余数为零时不加一"
+    },
+    {
+      "id": "floor",
+      "name": "余数情境取完整份",
+      "behavior": "根据材料限额求能做的完整份数，剩余舍去",
+      "boundary": "不把余数凑成完整份"
+    },
+    {
+      "id": "remainder",
+      "name": "求除后剩余数量",
+      "behavior": "用总数减去整份使用量求剩余",
+      "boundary": "不把剩余当成完整份"
+    },
+    {
+      "id": "add",
+      "name": "不进位加法竖式",
+      "behavior": "数位对齐，从个位起算两位数加法",
+      "boundary": "不涉及进位和减法"
+    },
+    {
+      "id": "subtract",
+      "name": "不退位减法竖式",
+      "behavior": "数位对齐，从个位起算两位数减法",
+      "boundary": "不涉及退位和加法"
+    },
+    {
+      "id": "borrow",
+      "name": "退位减法",
+      "behavior": "个位不够减时向十位退一再减",
+      "boundary": "不把退位当成加法进位"
+    },
+    {
+      "id": "carry",
+      "name": "进位加法",
+      "behavior": "个位和满十时向十位进一",
+      "boundary": "不涉及减法退位"
+    },
+    {
+      "id": "multiply",
+      "name": "一位数乘法",
+      "behavior": "用乘法口诀计算两个一位数的积",
+      "boundary": "不测除法或两步列式"
+    },
+    {
+      "id": "order",
+      "name": "乘除优先混合运算",
+      "behavior": "无括号算式先算乘除后算加减",
+      "boundary": "不测括号优先或同级顺序"
+    },
+    {
+      "id": "bracket",
+      "name": "小括号优先运算",
+      "behavior": "先算小括号里的部分，再算外面",
+      "boundary": "不能忽略括号先做乘除"
+    },
+    {
+      "id": "left",
+      "name": "同级运算从左到右",
+      "behavior": "纯加减或纯乘除按书写顺序算",
+      "boundary": "不含不同级运算和括号"
+    },
+    {
+      "id": "story",
+      "name": "两步问题列综合算式",
+      "behavior": "根据两步情境表达数量关系，写一个综合算式",
+      "boundary": "只测列式，不测运算结果"
+    },
+    {
+      "id": "estimate",
+      "name": "估算检验",
+      "behavior": "用接近的整十数估计结果是否合理",
+      "boundary": "不以估算代替精确计算"
+    }
+  ],
+  "queries": [
+    {
+      "id": "q01",
+      "name": "分给几个孩子",
+      "behavior": "把24颗糖平分给6个小朋友，每人拿多少",
+      "boundary": "已知人数，求一人数量",
+      "expected": "equal"
+    },
+    {
+      "id": "q02",
+      "name": "每袋装同样多",
+      "behavior": "24个苹果每袋放6个，可以装几袋",
+      "boundary": "给了单袋数量，求袋数",
+      "expected": "groups"
+    },
+    {
+      "id": "q03",
+      "name": "商和剩下的数",
+      "behavior": "算47除以6，写清商、余数以及竖式",
+      "boundary": "只核对除法计算",
+      "expected": "division"
+    },
+    {
+      "id": "q04",
+      "name": "最后一个人也要坐船",
+      "behavior": "每船坐6人，25人至少租几船",
+      "boundary": "剩下的人也要有船",
+      "expected": "ceiling"
+    },
+    {
+      "id": "q05",
+      "name": "布料能做完整几件",
+      "behavior": "每件衣服用3米布，20米够做多少件",
+      "boundary": "零头不足一件不能计入",
+      "expected": "floor"
+    },
+    {
+      "id": "q06",
+      "name": "装完还剩几个",
+      "behavior": "29颗珠子每串5颗，做成整串以后剩下多少颗",
+      "boundary": "问的是没用掉的珠子",
+      "expected": "remainder"
+    },
+    {
+      "id": "q07",
+      "name": "竖着算加法",
+      "behavior": "按个位十位对齐计算23加14",
+      "boundary": "各列不用进一",
+      "expected": "add"
+    },
+    {
+      "id": "q08",
+      "name": "竖着算减法",
+      "behavior": "算47减23，个位十位分别相减",
+      "boundary": "不用借位",
+      "expected": "subtract"
+    },
+    {
+      "id": "q09",
+      "name": "个位不足怎么办",
+      "behavior": "52减28，个位的2不够减8",
+      "boundary": "从十位借一个十",
+      "expected": "borrow"
+    },
+    {
+      "id": "q10",
+      "name": "满十往前挪",
+      "behavior": "计算28加35，个位13要把十放到十位",
+      "boundary": "相加时处理进位",
+      "expected": "carry"
+    },
+    {
+      "id": "q11",
+      "name": "几组一样多",
+      "behavior": "7盘，每盘8颗，求一共多少",
+      "boundary": "一步求总量",
+      "expected": "multiply"
+    },
+    {
+      "id": "q12",
+      "name": "没有括号先做哪一步",
+      "behavior": "8加3乘4，先做乘法再加",
+      "boundary": "不要从左边直接相加",
+      "expected": "order"
+    },
+    {
+      "id": "q13",
+      "name": "括起来的先算",
+      "behavior": "3乘括号内的8加4",
+      "boundary": "先计算括号内的和",
+      "expected": "bracket"
+    },
+    {
+      "id": "q14",
+      "name": "相同级别按次序",
+      "behavior": "24除以3再乘2，按写出的先后顺序",
+      "boundary": "不要把后两个数先相乘",
+      "expected": "left"
+    },
+    {
+      "id": "q15",
+      "name": "用一个算式说清两步",
+      "behavior": "每盒6支，有3盒，又买5支，把过程写成一个式子",
+      "boundary": "不要只写最终数量",
+      "expected": "story"
+    },
+    {
+      "id": "q16",
+      "name": "不用精确计算先看合理吗",
+      "behavior": "39加42的结果接近80，判断答案大小是否合适",
+      "boundary": "这里只判断数量级",
+      "expected": "estimate"
+    },
+    {
+      "id": "q17",
+      "name": "分享饼干",
+      "behavior": "36块饼干平均发给9人，算一个人的份额",
+      "boundary": "份数已经给出",
+      "expected": "equal"
+    },
+    {
+      "id": "q18",
+      "name": "一桌能坐四位",
+      "behavior": "19人参加聚会每桌坐4人，要准备的桌子数",
+      "boundary": "最后几人仍需要一桌",
+      "expected": "ceiling"
+    },
+    {
+      "id": "q19",
+      "name": "纸片最多做几个盒子",
+      "behavior": "每盒需6张纸，25张纸能做几个完整盒子",
+      "boundary": "零散纸不算盒子",
+      "expected": "floor"
+    },
+    {
+      "id": "q20",
+      "name": "同是余数但只是计算",
+      "behavior": "列竖式做29除以5，最后写商5余4",
+      "boundary": "不决定增加船数或舍去尾数",
+      "expected": "division"
+    },
+    {
+      "id": "q21",
+      "name": "花掉一部分再求剩余",
+      "behavior": "每包装4支，23支笔分装完整包装后余几支",
+      "boundary": "只求未装的支数",
+      "expected": "remainder"
+    },
+    {
+      "id": "q22",
+      "name": "别把乘法优先当括号优先",
+      "behavior": "括号里9减3，外面乘5，先求括号里的差",
+      "boundary": "这里不是直接先算乘法",
+      "expected": "bracket"
+    },
+    {
+      "id": "q23",
+      "name": "含减法的先乘除",
+      "behavior": "30减4乘5，先算积再从30扣除",
+      "boundary": "没有括号",
+      "expected": "order"
+    },
+    {
+      "id": "q24",
+      "name": "一律按左边开始",
+      "behavior": "24减8加6，先求24减8的差",
+      "boundary": "加和减同级",
+      "expected": "left"
+    }
+  ]
+}

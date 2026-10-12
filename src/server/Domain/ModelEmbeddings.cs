@@ -3,15 +3,15 @@ using System.Text.Json;
 namespace Learning;
 
 // This space belongs to a real embedding provider. Existing mock space/recipes stay unchanged.
-public record ModelEmbeddingSpace(string Provider,string Model,string ModelVersion,int Dimensions,string PreprocessingVersion)
+public record ModelEmbeddingSpace(string Provider,string Model,string ModelVersion,int Dimensions,string PreprocessingVersion,[property:System.Text.Json.Serialization.JsonIgnore(Condition=System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? InputRecipeVersion=null)
 {
     public const string Preprocessing="nfkc-trim-lower-invariant/1";
-    public string Id=>"embedding/1/"+Content.Hash(Json.Write(new{Provider,Model,ModelVersion,Dimensions,PreprocessingVersion}));
+    public string Id=>"embedding/1/"+Content.Hash(InputRecipeVersion==null?Json.Write(new{Provider,Model,ModelVersion,Dimensions,PreprocessingVersion}):Json.Write(new{Provider,Model,ModelVersion,Dimensions,PreprocessingVersion,InputRecipeVersion}));
     public void Validate()
     {
-        if(Provider!="LocalOmlx" || string.IsNullOrWhiteSpace(Model) || Model.Length>200 || string.IsNullOrWhiteSpace(ModelVersion) || ModelVersion.Length>200 || Dimensions is <1 or >8192 || PreprocessingVersion!=Preprocessing || Model.Any(char.IsControl) || ModelVersion.Any(char.IsControl))throw new ApiError(422,"EMBEDDING_CONFIGURATION_INVALID","本机向量模型、固定版本、维度或文本处理方式无效。");
+        if(Provider!="LocalOmlx" || string.IsNullOrWhiteSpace(Model) || Model.Length>200 || string.IsNullOrWhiteSpace(ModelVersion) || ModelVersion.Length>200 || Dimensions is <1 or >8192 || PreprocessingVersion!=Preprocessing || InputRecipeVersion is not (null or "embeddinggemma2-sts/1") || Model.Any(char.IsControl) || ModelVersion.Any(char.IsControl))throw new ApiError(422,"EMBEDDING_CONFIGURATION_INVALID","本机向量模型、固定版本、维度或文本处理方式无效。");
     }
-    public string Prepare(string text){Validate();if(text==null)throw new ApiError(422,"EMBEDDING_INPUT_INVALID","向量输入不能为空。");return text.Normalize(NormalizationForm.FormKC).Trim().ToLowerInvariant();}
+    public string Prepare(string text){Validate();if(text==null)throw new ApiError(422,"EMBEDDING_INPUT_INVALID","向量输入不能为空。");var normalized=text.Normalize(NormalizationForm.FormKC).Trim().ToLowerInvariant();return InputRecipeVersion=="embeddinggemma2-sts/1"?"task: sentence similarity | query: "+normalized:normalized;}
 }
 public record ModelEmbeddingInput(Guid EntityRevisionId,string EntityType,string Text);
 public record ModelEmbeddingVector(Guid EntityRevisionId,string EntityType,string TextHash,string Space,int Dimensions,double[] Vector);

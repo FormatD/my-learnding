@@ -10,6 +10,8 @@ ModelEmbeddings、ModelEmbeddingSpace及LocalEmbeddingProvider是E10真实向量
 
 空间身份包含Provider、Model、明确ModelVersion、Dimensions、PreprocessingVersion，摘要使用完整结构，不能只按模型名称比较。当前仅支持LocalOmlx与NFKC/trim/小写固定处理；模型固定版本需在后续配置/索引任务中关联实际模型工件，HTTP响应的模型名本身不能证明权重版本。认证路径与密钥不进入空间身份。
 
+2026-10-10 实验增加可选 InputRecipeVersion=`embeddinggemma2-sts/1`，在原处理后为能力和查询均加 `task: sentence similarity | query: `。指定配方进入空间摘要；不指定时保持原空间摘要和序列化结构，以免影响已有快照。此配方仅用于独立联调，未启用生产。
+
 单批最多64对象/24000处理后字符；KC与Candidate分别保存实体修订、原实际发送文本摘要、空间及维度。按服务返回index重排，不依赖返回顺序；缺失、重复、越界、错误模型、base64、错误维度、重复字段、空/零/非有限向量拒绝整批，不静默补向量。以最大坐标缩放后归一化，避免有限大值平方溢出。相似度需明确预期空间，连同空间声明被篡改的维度也拒绝；旧mock空间不能混入。
 
 小规模内存召回验证完整冻结库及每个向量修订/实际文本摘要，不能拿部分索引假装完整。同已记录学科、同能力类型筛选，不按年级排除；实际余弦排序与原关键词BM25/RRF、人工Alias融合。分数只是排序依据，不能自动接受或当成概率。原Mock算法、快照与旧维度规则不变。
@@ -36,3 +38,13 @@ ModelEmbeddings、ModelEmbeddingSpace及LocalEmbeddingProvider是E10真实向量
 持久快照要求 ModelVersion 为 sha256: 加64位小写摘要，表示待核验的模型文件清单版本声明；不能仅凭显示模型名保存。这个字段格式校验不证明真实模型文件已核验。目前没有实际文件清单采集/核验、向量调用账本、共享预算与冻结后台任务衔接，也没有生产召回入口。因此实际主库不得通过本阶段测试补造模型向量，只有独立临时数据库使用明确受控向量验证保存。
 
 `python3 tests/model_embedding_index_acceptance.py` 使用真实隔离 PostgreSQL 完成迁移、重开连接读取、完整/错误向量拒绝、并发重复保存、不同配置/向量拒绝改写、升级隔离、事务回滚、不可修改触发器、跨家庭复合外键及撤回/家庭删除测试。测试不调用真实模型、不核验实际工件，也不计语义准确率。可用 --export-schema 从同一隔离实库生成结构交接材料。
+
+## EmbeddingGemma 2 实际联调（2026-10-10）
+
+更新（2026-10-11）：用户已部署 0.7.1.dev1；实际返回完整 768 维向量，原输入和 STS 各 40 条文本均通过校验。同组 24 条查询的 STS 纯向量首位命中 18/24、前三覆盖 22/24、前十覆盖 24/24。生产提供者未注册；CLI 权重清单仍未核验，使用明确的临时实验空间。详见 [实际结果](../analysis/embeddinggemma-2-results-2026-10-11.md)。以下保留初次失败的历史记录。
+
+后续已升级至 0.7.0 稳定版，向量调用仍报架构不支持。官方 0.7.1.dev1 新增该架构，但安装前系统评估拒绝未公证应用，尚未运行。详见 [升级重试记录](../analysis/omlx-upgrade-retry-2026-10-10.md)。
+
+已通过 oMLX 下载 `mlx-community/embeddinggemma-2-bf16`，并把新模型的类型覆盖设为 embedding。安装的 oMLX 0.4.4rc1 内置 mlx-embeddings 不支持 `embedding_gemma2`，实际 `/v1/embeddings` 返回 500，尚无有效向量。CLI 无权读取下载目录，未核验工件摘要。这些事实更新上文 10 月 7 日的模型盘点，不代表生产向量功能已完成。
+
+独立对照工具见 `tests/embedding-comparison/README.md`。详情见 [实际联调报告](../analysis/embeddinggemma-2-trial-2026-10-10.md)。需先解决后端模型架构支持，再采集可读取的真实权重文件清单；不能把空文件清单、模型名称或下载字节数当成固定权重摘要。
