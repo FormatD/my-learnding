@@ -14,7 +14,7 @@ public class SourceImage : Row
 }
 public record SourceImageInput(string Name,string MimeType,string Base64,string ExpectedSourceHash,string DocumentHash,int Page,string PrintedPage);
 public record SourceImagePage(Guid Id,int Page,string PrintedPage,string DocumentHash,string ImageHash,string Url);
-public record SourceImageContext(Guid Id,string Title,string Text,string Hash,Chunk[] Chunks,SourceImagePage[] Pages);
+public record SourceImageContext(Guid Id,string Title,string Text,string Hash,Guid? FileId,Chunk[] Chunks,SourceImagePage[] Pages);
 public static class SourceImages
 {
     static bool Hash(string? value)=>value is {Length:64} && value.All(c=>char.IsAsciiHexDigit(c)&&!char.IsUpper(c));
@@ -81,7 +81,7 @@ public static class SourceImages
             foreach(var source in await db.Sources.AsNoTracking().Where(s=>s.FamilyId==a.FamilyId&&ids.Contains(s.Id)).OrderBy(s=>s.CreatedAt).ThenBy(s=>s.Id).ToArrayAsync(ct))
             {
                 var pages=await (from p in db.Set<SourceImage>().AsNoTracking() join f in db.Set<PrivateFile>() on p.FileId equals f.Id where p.FamilyId==a.FamilyId&&f.FamilyId==a.FamilyId&&p.SourceId==source.Id select new{p,f.Hash}).OrderBy(x=>x.p.DocumentHash).ThenBy(x=>x.p.Page).ToArrayAsync(ct);
-                result.Add(new(source.Id,source.Title,source.Text,source.Hash,await db.Chunks.AsNoTracking().Where(c=>c.FamilyId==a.FamilyId&&c.SourceId==source.Id).OrderBy(c=>c.CreatedAt).ThenBy(c=>c.Id).ToArrayAsync(ct),pages.Select(x=>new SourceImagePage(x.p.Id,x.p.Page,x.p.PrintedPage,x.p.DocumentHash,x.Hash,$"/api/v1/content/source-images/{x.p.Id}")).ToArray()));
+                result.Add(new(source.Id,source.Title,source.Text,source.Hash,source.FileId,await db.Chunks.AsNoTracking().Where(c=>c.FamilyId==a.FamilyId&&c.SourceId==source.Id).OrderBy(c=>c.CreatedAt).ThenBy(c=>c.Id).ToArrayAsync(ct),pages.Select(x=>new SourceImagePage(x.p.Id,x.p.Page,x.p.PrintedPage,x.p.DocumentHash,x.Hash,$"/api/v1/content/source-images/{x.p.Id}")).ToArray()));
             }
             await snapshot.CommitAsync(ct);return result.ToArray();
         });
